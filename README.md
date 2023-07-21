@@ -3,10 +3,10 @@
 Onboarding for users - important part of any service.
 @gravity-ui/onboarding helps you to create hint based onboarding scenarios. Can use with React, any other frameworks and vanilla JS.
 
-- Small. ~3Kb(minified and gzipped) with zero dependencies
-- Well tested. ~90% test coverage
-- Small code footprint. Create onboarding scenario config and connect each step to UI with couple lines of code.
-- No UI. Use your own components
+- **Small**. ~3Kb(minified and gzipped) with zero dependencies
+- **Well tested**. ~90% test coverage
+- **Small code footprint**. Create onboarding scenario config and connect each step to UI with couple lines of code.
+- **No UI**. Use your own components
 - Good TypeScript support
 
 ```typescript jsx
