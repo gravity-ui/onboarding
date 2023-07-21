@@ -1,5 +1,5 @@
 {
-  "name": "@gravity-ui/package-example",
+  "name": "@gravity-ui/onboarding",
   "version": "0.0.1",
   "description": "",
   "license": "MIT",
@@ -9,21 +9,21 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gravity-ui/package-example.git"
+    "url": "git+https://github.com/gravity-ui/onboarding.git"
   },
   "bugs": {
-    "url": "https://github.com/gravity-ui/package-example/issues"
+    "url": "https://github.com/gravity-ui/onboarding/issues"
   },
-  "homepage": "https://github.com/gravity-ui/package-example#readme",
+  "homepage": "https://github.com/gravity-ui/onboarding#readme",
   "scripts": {
     "prepare": "husky install",
     "lint:js": "eslint --ext .js,.jsx,.ts,.tsx .",
-    "lint:styles": "stylelint 'src/**/*.scss'",
     "lint": "run-p lint:*",
     "typecheck": "tsc --noEmit",
-    "test": "jest",
+    "test": "jest && npm run size",
+    "test-watch": "jest",
     "build": "tsc",
-    "start": "TS_NODE_PROJECT=.storybook/tsconfig.json start-storybook",
+    "size": "size-limit",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {},
@@ -32,42 +32,41 @@
     "@commitlint/config-conventional": "^17.0.0",
     "@gravity-ui/eslint-config": "^1.0.0",
     "@gravity-ui/prettier-config": "^1.0.0",
-    "@gravity-ui/stylelint-config": "^1.0.0",
     "@gravity-ui/tsconfig": "^1.0.0",
-    "@storybook/addon-essentials": "^6.0.0",
-    "@storybook/preset-scss": "^1.0.0",
-    "@storybook/react": "^6.0.0",
-    "@types/jest": "^28.0.0",
-    "@types/react": "^17.0.0",
-    "@types/react-dom": "^17.0.0",
+    "@size-limit/esbuild-why": "^8.2.6",
+    "@size-limit/preset-small-lib": "^8.2.6",
+    "@types/jest": "^29.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
     "eslint": "^8.0.0",
-    "jest": "^28.0.0",
     "husky": "^8.0.0",
+    "jest": "^29.0.0",
+    "jest-environment-jsdom": "^29.6.1",
     "nano-staged": "^0.6.0",
     "npm-run-all": "^4.0.0",
     "prettier": "^2.0.0",
-    "react": "^17.0.0",
-    "react-dom": "^17.0.0",
-    "sass": "^1.0.0",
-    "sass-loader": "^10.0.0",
-    "style-loader": "^2.0.0",
-    "stylelint": "^14.0.0",
-    "ts-jest": "^28.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "size-limit": "^8.2.6",
+    "ts-jest": "^29.0.0",
     "typescript": "^4.0.0"
   },
   "peerDependencies": {
-    "react": "^17.0.0",
-    "react-dom": "^17.0.0"
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
   },
   "nano-staged": {
-    "*.{scss}": [
-      "stylelint --fix --quiet"
-    ],
     "*.{js,jsx,ts,tsx}": [
       "eslint --fix --quiet"
     ],
     "*.md": [
       "prettier --write"
     ]
-  }
+  },
+  "size-limit": [
+    {
+      "path": "src/index.ts",
+      "limit": "5 kB"
+    }
+  ]
 }
