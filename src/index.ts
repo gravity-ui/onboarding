@@ -6,9 +6,9 @@ import type {
     PresetStep,
     InferStepsFromPreset,
     InferHintParamsFromPreset,
-    InferHintParamsFromConfig,
-    InferStepsFromConfig,
-    InferPresetsFromConfig,
+    InferHintParamsFromOptions,
+    InferStepsFromOptions,
+    InferPresetsFromOptions,
 } from './types';
 
 let closeHintRef: () => void | undefined;
@@ -39,9 +39,9 @@ export function createPreset<T>(preset: T) {
 
 export function createOnboarding<T extends InitOptions<any, any, any>>(options: T) {
     const controller = new Controller<
-        InferHintParamsFromConfig<T>,
-        InferPresetsFromConfig<T>,
-        InferStepsFromConfig<T>
+        InferHintParamsFromOptions<T>,
+        InferPresetsFromOptions<T>,
+        InferStepsFromOptions<T>
     >(options);
 
     closeHintRef = controller.closeHint;
