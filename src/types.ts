@@ -87,10 +87,20 @@ export type InitOptions<HintParams, Presets extends string, Steps extends string
 };
 
 // type inference utils
-type UnionToIntersection<U> = (U extends any ? (arg: U) => any : never) extends (
-    arg: infer I,
-) => void
-    ? I
+type CommonKeys<T extends object> = keyof T;
+type AllKeys<T> = T extends any ? keyof T : never;
+type Subtract<A, C> = A extends C ? never : A;
+type NonCommonKeys<T extends object> = Subtract<AllKeys<T>, CommonKeys<T>>;
+type PickType<T, K extends AllKeys<T>> = T extends {[k in K]?: any} ? T[K] : undefined;
+
+export type Merge<T extends object> = {
+    [k in keyof T]: PickTypeOf<T, k>;
+} & {
+    [k in NonCommonKeys<T>]?: PickTypeOf<T, k>;
+};
+
+type PickTypeOf<T, K extends string | number | symbol> = K extends AllKeys<T>
+    ? PickType<T, K>
     : never;
 
 export type InferStepsFromPreset<T> = T extends {steps: Array<infer U>}
@@ -101,22 +111,23 @@ export type InferStepsFromPreset<T> = T extends {steps: Array<infer U>}
 
 export type InferHintParamsFromPreset<T> = T extends {steps: Array<infer U>}
     ? U extends PresetStep<any, infer HintParams>
-        ? UnionToIntersection<HintParams>
+        ? HintParams
         : never
     : never;
 
-export type InferStepsFromConfig<T extends InitOptions<any, any, any>> =
+export type InferStepsFromOptions<T extends InitOptions<any, any, any>> =
     T['config']['presets'] extends Record<any, infer U>
         ? U extends Preset<any, infer Steps>
             ? Steps
             : never
         : never;
 
-export type InferPresetsFromConfig<T> = T extends InitOptions<any, infer U, any> ? U : never;
+export type InferPresetsFromOptions<T> = T extends InitOptions<any, infer U, any> ? U : never;
 
-export type InferHintParamsFromConfig<T extends InitOptions<any, any, any>> =
+export type InferHintParamsFromOptions<T extends InitOptions<any, any, any>> = Merge<
     T['config']['presets'] extends Record<any, infer U>
         ? U extends Preset<infer HintParams, any>
-            ? UnionToIntersection<HintParams>
+            ? HintParams
             : never
-        : never;
+        : never
+>;
