@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/gravity-ui/onboarding/compare/v0.2.0...v0.2.1) (2023-07-24)
+
+
+### Bug Fixes
+
+* HintParams typings ([9fa53b9](https://github.com/gravity-ui/onboarding/commit/9fa53b9b87795beccaf01510fa53b29bb3bc3354))
+
 ## [0.2.0](https://github.com/gravity-ui/onboarding/compare/v0.1.0...v0.2.0) (2023-07-24)
 
 
