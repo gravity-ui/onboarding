@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/gravity-ui/onboarding/compare/v0.1.0...v0.2.0) (2023-07-24)
+
+
+### Features
+
+* better type inference ([97e2d44](https://github.com/gravity-ui/onboarding/commit/97e2d44cb7e071d41ff533f34237b5dcc16ded3d))
+
 ## 0.1.0 (2023-07-21)
 
 
