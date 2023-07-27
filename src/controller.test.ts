@@ -10,7 +10,7 @@ const getOptions = (
             presets: {
                 createProject: {
                     name: 'Creating project',
-                    description: '',
+                    description: [''],
                     steps: [
                         {
                             slug: 'openBoard',
@@ -31,7 +31,7 @@ const getOptions = (
                 },
                 createQueue: {
                     name: 'Creating queue',
-                    description: '',
+                    description: [''],
                     steps: [],
                 },
             },

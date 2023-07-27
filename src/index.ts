@@ -48,14 +48,25 @@ export function createOnboarding<T extends InitOptions<any, any, any>>(options: 
     // @ts-ignore
     passStepRef = controller.passStep;
 
-    const {useOnboarding, useOnboardingPreset, useOnboardingStep, useOnboardingHint} =
-        getHooks(controller);
+    const {
+        useOnboarding,
+        useOnboardingPreset,
+        useOnboardingStep,
+        useOnboardingHint,
+        useResetOnboarding,
+    } = getHooks(controller);
+
+    const presetsNames = Object.keys(
+        controller.options.config.presets,
+    ) as unknown as keyof typeof controller.options.config.presets;
 
     return {
         useOnboardingStep,
         useOnboardingPreset,
         useOnboardingHint,
         useOnboarding,
+        useResetOnboarding,
         controller,
+        presetsNames,
     };
 }

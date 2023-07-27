@@ -66,10 +66,19 @@ export function getHooks<HintParams, Presets extends string, Steps extends strin
         };
     };
 
+    const useResetOnboarding = (preset: Presets) => {
+        const resetPresetProgress = async () => {
+            await controller.resetPresetProgress([preset]);
+        };
+
+        return resetPresetProgress;
+    };
+
     return {
         useOnboardingPreset,
         useOnboardingStep,
         useOnboardingHint,
         useOnboarding,
+        useResetOnboarding,
     };
 }
