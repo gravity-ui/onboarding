@@ -39,9 +39,14 @@ export function getHooks<HintParams, Presets extends string, Steps extends strin
             await controller.finishPreset(preset);
         };
 
+        const resetPresetProgress = async () => {
+            await controller.resetPresetProgress([preset]);
+        };
+
         return {
             addPreset,
             finishPreset,
+            resetPresetProgress,
         };
     };
 

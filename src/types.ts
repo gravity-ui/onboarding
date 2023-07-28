@@ -1,3 +1,4 @@
+import type {ReactNode} from 'react';
 import type {LoggerOptions} from './logger';
 
 type HintPlacement =
@@ -30,7 +31,7 @@ export type PresetStep<Steps extends string, HintParams> = {
 
 export type Preset<HintParams, Steps extends string> = {
     name: string;
-    description: string;
+    description?: ReactNode[];
     type?: 'default' | 'hidden';
     steps: PresetStep<Steps, HintParams | undefined>[];
     hidden?: boolean;
