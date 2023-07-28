@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/gravity-ui/onboarding/compare/v0.2.1...v0.3.0) (2023-07-28)
+
+
+### Features
+
+* add useOnboardingPreset, add presetsNames to export ([bd44b7c](https://github.com/gravity-ui/onboarding/commit/bd44b7cbae7b509ed0c1d27f283066c83650c20d))
+
 ## [0.2.1](https://github.com/gravity-ui/onboarding/compare/v0.2.0...v0.2.1) (2023-07-24)
 
 
