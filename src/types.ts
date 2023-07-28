@@ -31,7 +31,7 @@ export type PresetStep<Steps extends string, HintParams> = {
 
 export type Preset<HintParams, Steps extends string> = {
     name: string;
-    description: ReactNode[];
+    description?: ReactNode[];
     type?: 'default' | 'hidden';
     steps: PresetStep<Steps, HintParams | undefined>[];
     hidden?: boolean;
