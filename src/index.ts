@@ -64,3 +64,5 @@ export function createOnboarding<T extends InitOptions<any, any, any>>(options: 
         presetsNames,
     };
 }
+
+export * from './types';
