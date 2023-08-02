@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/gravity-ui/onboarding/compare/v0.3.0...v0.3.1) (2023-08-02)
+
+
+### Bug Fixes
+
+* load progress only once ([21fec7e](https://github.com/gravity-ui/onboarding/commit/21fec7e8b49819460d87dfd92ea302e0feab5913))
+
 ## [0.3.0](https://github.com/gravity-ui/onboarding/compare/v0.2.1...v0.3.0) (2023-07-28)
 
 
