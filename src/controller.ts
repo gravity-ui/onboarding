@@ -42,6 +42,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         progress?: ProgressState;
     };
     status: 'idle' | 'active';
+    progressLoadingPromise: Promise<Partial<ProgressState>> | undefined;
     showedHints: Set<Steps>;
     reachedHints: Map<Steps, ReachElementParams<Presets, Steps>>;
     hintStore: HintStore<HintParams, Presets, Steps>;
@@ -415,9 +416,13 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
+        if (!this.progressLoadingPromise) {
+            this.progressLoadingPromise = this.options.getProgressState();
+        }
+
         this.logger.debug('Loading onboarding progress data');
         try {
-            const newProgressState = await this.options.getProgressState();
+            const newProgressState = await this.progressLoadingPromise;
             this.state.progress = {
                 ...defaultProgress,
                 ...newProgressState,

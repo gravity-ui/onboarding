@@ -21,7 +21,7 @@
     "lint": "run-p lint:*",
     "typecheck": "tsc --noEmit",
     "test": "jest && npm run size",
-    "test-watch": "jest",
+    "test-watch": "jest --watch",
     "build": "tsc",
     "size": "size-limit",
     "prepublishOnly": "npm run build"

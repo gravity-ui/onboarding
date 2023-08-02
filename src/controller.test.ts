@@ -652,6 +652,28 @@ describe('hints', function () {
             expect(snapshot.anchorRef.current).toBeDefined();
         });
     });
+
+    it('load progress only once', async function () {
+        const options = getOptions();
+
+        const controller = new Controller(options);
+
+        const element1 = getAnchorElement();
+        const element2 = getAnchorElement();
+
+        const promise1 = controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: element1,
+        });
+        const promise2 = controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: element2,
+        });
+
+        await Promise.all([promise1, promise2]);
+
+        expect(options.getProgressState).toHaveBeenCalledTimes(1);
+    });
 });
 
 describe('find next step', function () {
