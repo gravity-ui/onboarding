@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/gravity-ui/onboarding/compare/v0.3.1...v0.4.0) (2023-08-03)
+
+
+### Features
+
+* add step pass hook ([beae3e0](https://github.com/gravity-ui/onboarding/commit/beae3e06d4e246cdb9390cc80e74ff9e1085a356))
+
 ## [0.3.1](https://github.com/gravity-ui/onboarding/compare/v0.3.0...v0.3.1) (2023-08-02)
 
 
