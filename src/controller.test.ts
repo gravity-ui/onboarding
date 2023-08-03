@@ -327,6 +327,20 @@ describe('pass step', function () {
         expect(newProgressState.finishedPresets).toEqual(['createProject']);
         expect(options.onSave.progress).toHaveBeenCalledTimes(1);
     });
+
+    describe('step hooks', function () {
+        it('pass step -> call onPass hook', async function () {
+            const options = getOptions();
+            const mock = jest.fn();
+
+            options.config.presets.createProject.steps[1].hooks = {onStepPass: mock};
+
+            const controller = new Controller(options);
+            await controller.passStep('createSprint');
+
+            expect(mock).toHaveBeenCalled();
+        });
+    });
 });
 
 describe('hints', function () {

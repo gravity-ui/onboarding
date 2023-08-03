@@ -115,6 +115,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
 
         this.options.hooks?.onStepPass?.({preset, step: stepSlug});
+        step?.hooks?.onStepPass?.();
 
         await this.savePassedStepData(preset, stepSlug, () => {
             if (step?.passMode !== 'onShowHint') {

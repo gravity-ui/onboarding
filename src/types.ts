@@ -27,6 +27,9 @@ export type PresetStep<Steps extends string, HintParams> = {
     hintParams?: HintParams;
     closeOnElementUnmount?: boolean;
     passRestriction?: 'afterPrevious';
+    hooks?: {
+        onStepPass?: () => void;
+    };
 };
 
 export type Preset<HintParams, Steps extends string> = {
