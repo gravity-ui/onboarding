@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/gravity-ui/onboarding/compare/v0.4.0...v0.4.1) (2023-08-04)
+
+
+### Bug Fixes
+
+* emit state change after load progress ([799336b](https://github.com/gravity-ui/onboarding/commit/799336bbe8c446c97f11435aaaf6e97d6501f97b))
+
 ## [0.4.0](https://github.com/gravity-ui/onboarding/compare/v0.3.1...v0.4.0) (2023-08-03)
 
 
