@@ -429,6 +429,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
                 ...newProgressState,
             };
             this.status = 'active';
+            this.emitChange();
 
             this.logger.debug('Onboarding progress data loaded');
         } catch (e) {

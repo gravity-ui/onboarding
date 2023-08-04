@@ -920,6 +920,21 @@ describe('store api', function () {
         expect(cb).not.toHaveBeenCalled();
     });
 
+    it('load progress -> trigger callback', async function () {
+        const options = getOptions();
+
+        const controller = new Controller(options);
+        const cb = jest.fn();
+        controller.subscribe(cb);
+
+        await controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: getAnchorElement(),
+        });
+
+        expect(cb).toHaveBeenCalled();
+    });
+
     it('change state -> trigger callback', async function () {
         const options = getOptions();
 
