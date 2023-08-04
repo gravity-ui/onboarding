@@ -158,6 +158,11 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         this.reachedHints.set(stepSlug, stepData);
 
+        if (!this.checkIsActivePreset(preset)) {
+            this.logger.debug('Preset is not active', preset, stepSlug);
+            return;
+        }
+
         if (!this.state.base.wizardActive) {
             this.logger.debug('Wizard is not active', preset, stepSlug);
             return;
@@ -269,6 +274,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.state.base.activePresets.push(preset);
         this.state.base.suggestedPresets.push(preset);
         await this.updateBaseState();
+
+        this.checkReachedHints();
     };
 
     suggestPresetOnce = async (preset: Presets) => {
@@ -340,11 +347,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     }
 
     private findPresetWithStep(stepSlug: Steps) {
-        const presets = this.state.base.activePresets.filter((presetName) => {
-            if (!this.options.config.presets[presetName as Presets]) {
-                return false;
-            }
-
+        const presets = Object.keys(this.options.config.presets).filter((presetName) => {
             return this.options.config.presets[presetName as Presets].steps.some(
                 (step) => step.slug === stepSlug,
             );

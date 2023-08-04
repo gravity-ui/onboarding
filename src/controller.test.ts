@@ -65,6 +65,8 @@ const getOptions = (
     };
 };
 
+const waitForNextTick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
 const getAnchorElement = () => {
     const element = document.createElement('div');
     document.body.appendChild(element);
@@ -432,6 +434,21 @@ describe('hints', function () {
         });
 
         expect(options.showHint).not.toHaveBeenCalled();
+    });
+
+    it('add preset -> show hint for existing element', async function () {
+        const options = getOptions({activePresets: []});
+
+        const controller = new Controller(options);
+        await controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: getAnchorElement(),
+        });
+
+        await controller.addPreset('createProject');
+        await waitForNextTick();
+
+        await expect(options.showHint).toHaveBeenCalled();
     });
 
     describe('close hint', function () {
