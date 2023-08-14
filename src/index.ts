@@ -48,7 +48,7 @@ export function createOnboarding<T extends InitOptions<any, any, any>>(options: 
     // @ts-ignore
     passStepRef = controller.passStep;
 
-    const {useOnboarding, useOnboardingPreset, useOnboardingStep, useOnboardingHint} =
+    const {useWizard, useOnboardingPreset, useOnboardingStep, useOnboardingHint} =
         getHooks(controller);
 
     const presetsNames = Object.keys(
@@ -59,7 +59,7 @@ export function createOnboarding<T extends InitOptions<any, any, any>>(options: 
         useOnboardingStep,
         useOnboardingPreset,
         useOnboardingHint,
-        useOnboarding,
+        useWizard,
         controller,
         presetsNames,
     };
