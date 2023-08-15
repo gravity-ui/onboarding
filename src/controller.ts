@@ -126,16 +126,6 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         });
     };
 
-    // enableWizard = async () => {
-    //     this.state.base.wizardStyle = true;
-    //     await this.updateBaseState();
-    // };
-    //
-    // disableWizard = async () => {
-    //     this.state.base.wizardStyle = false;
-    //     await this.updateBaseState();
-    // };
-
     setWizardState = async (state: BaseState['wizardState']) => {
         this.state.base.wizardState = state;
         await this.updateBaseState();
