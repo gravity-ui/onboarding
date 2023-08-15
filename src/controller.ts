@@ -5,7 +5,8 @@ import {createLogger} from './logger';
 type Listener = () => void;
 
 let instanceCounter = 0;
-const defaultBaseState = {
+const defaultBaseState: BaseState = {
+    availablePresets: [],
     activePresets: [],
     suggestedPresets: [],
     wizardState: 'visible' as const,
@@ -259,22 +260,18 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.logger.debug('Add new preset', preset);
 
         this.options.hooks?.onAddPreset?.({preset});
-        this.options.config.presets[preset]?.hooks?.onStart?.();
 
         if (!this.options.config.presets[preset]) {
             this.logger.error('No preset in config', preset);
             return;
         }
 
-        if (this.state.base.activePresets.includes(preset)) {
+        if (this.state.base.availablePresets.includes(preset)) {
             return;
         }
 
-        this.state.base.activePresets.push(preset);
-        this.state.base.suggestedPresets.push(preset);
+        this.state.base.availablePresets.push(preset);
         await this.updateBaseState();
-
-        this.checkReachedHints();
     };
 
     suggestPresetOnce = async (preset: Presets) => {
@@ -286,7 +283,33 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
 
         await this.setWizardState('visible');
-        await this.addPreset(preset);
+        await this.runPreset(preset);
+    };
+
+    runPreset = async (preset: Presets) => {
+        this.logger.debug('Run preset', preset);
+
+        this.options.hooks?.onRunPreset?.({preset});
+        this.options.config.presets[preset]?.hooks?.onStart?.();
+
+        if (!this.options.config.presets[preset]) {
+            this.logger.error('No preset in config', preset);
+            return;
+        }
+
+        if (!this.state.base.availablePresets.includes(preset)) {
+            this.state.base.availablePresets.push(preset);
+        }
+
+        if (this.state.base.activePresets.includes(preset)) {
+            return;
+        }
+
+        this.state.base.activePresets.push(preset);
+        this.state.base.suggestedPresets.push(preset);
+        await this.updateBaseState();
+
+        this.checkReachedHints();
     };
 
     finishPreset = async (preset: Presets, shouldSave = true) => {

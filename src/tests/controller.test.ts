@@ -1,17 +1,7 @@
 import {Controller} from '../controller';
-import {getAnchorElement, getOptions} from './utils';
+import {getAnchorElement, getOptions, getOptionsWithHooks} from './utils';
 
 describe('hooks', function () {
-    const getOptionsWithHooks = (...args: Parameters<typeof getOptions>) => ({
-        ...getOptions(...args),
-        hooks: {
-            onShowHint: jest.fn(),
-            onStepPass: jest.fn(),
-            onAddPreset: jest.fn(),
-            onFinishPreset: jest.fn(),
-        },
-    });
-
     it('reachElement -> onShowHint called', async function () {
         const options = getOptionsWithHooks();
         const controller = new Controller(options);
@@ -97,42 +87,7 @@ describe('hooks', function () {
         });
     });
 
-    it('add preset -> calls onAddPreset', async function () {
-        const options = getOptionsWithHooks();
-
-        const controller = new Controller(options);
-        await controller.addPreset('createQueue');
-
-        expect(options.hooks.onAddPreset).toHaveBeenCalledWith({
-            preset: 'createQueue',
-        });
-    });
-
-    describe('preset hooks', function () {
-        it('start preset -> calls onStart', async function () {
-            const options = getOptions();
-            const mock = jest.fn();
-            // @ts-ignore
-            options.config.presets.createQueue.hooks = {onStart: mock};
-
-            const controller = new Controller(options);
-            await controller.addPreset('createQueue');
-
-            expect(mock).toHaveBeenCalled();
-        });
-
-        it('finish preset -> calls enEnd', async function () {
-            const options = getOptions();
-            const mock = jest.fn();
-            // @ts-ignore
-            options.config.presets.createProject.hooks = {onEnd: mock};
-
-            const controller = new Controller(options);
-            await controller.finishPreset('createProject');
-
-            expect(mock).toHaveBeenCalled();
-        });
-    });
+    describe('preset hooks', function () {});
 });
 
 describe('store api', function () {

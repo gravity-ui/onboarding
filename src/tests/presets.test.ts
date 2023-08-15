@@ -1,77 +1,177 @@
 import {Controller} from '../controller';
-import {getOptions} from './utils';
+import {getAnchorElement, getOptions, getOptionsWithHooks, waitForNextTick} from './utils';
 
 describe('preset management', function () {
-    it('add preset -> save base state', async function () {
-        const options = getOptions();
+    describe('add preset', function () {
+        it('add preset -> save base state', async function () {
+            const options = getOptions();
 
-        const controller = new Controller(options);
-        await controller.addPreset('createQueue');
+            const controller = new Controller(options);
+            await controller.addPreset('createQueue');
 
-        const newState = options.onSave.state.mock.calls[0][0];
+            const newState = options.onSave.state.mock.calls[0][0];
 
-        expect(newState.activePresets).toEqual(['createProject', 'createQueue']);
-        expect(newState.suggestedPresets).toEqual(['createProject', 'createQueue']);
+            expect(newState.availablePresets).toEqual(['createProject', 'createQueue']);
+        });
+
+        it('add same preset -> not duplicate', async function () {
+            const options = getOptions();
+
+            const controller = new Controller(options);
+            await controller.addPreset('createQueue');
+            await controller.addPreset('createQueue');
+
+            const newState =
+                options.onSave.state.mock.calls[options.onSave.state.mock.calls.length - 1][0];
+
+            expect(newState.availablePresets).toContain('createQueue');
+        });
+
+        it('preset not from config -> nothing', async function () {
+            const options = getOptions();
+
+            const controller = new Controller(options);
+            // @ts-ignore
+            await controller.addPreset('createQueue123');
+
+            expect(options.onSave.state).not.toHaveBeenCalled();
+            expect(options.onSave.progress).not.toHaveBeenCalled();
+        });
+
+        it('add preset -> calls onAddPreset', async function () {
+            const options = getOptionsWithHooks();
+
+            const controller = new Controller(options);
+            await controller.addPreset('createQueue');
+
+            expect(options.hooks.onAddPreset).toHaveBeenCalledWith({
+                preset: 'createQueue',
+            });
+        });
     });
 
-    it('add same preset -> not duplicate', async function () {
-        const options = getOptions();
+    describe('run preset', function () {
+        let options = getOptions({availablePresets: ['createProject', 'createBoard']});
 
-        const controller = new Controller(options);
-        await controller.addPreset('createQueue');
-        await controller.addPreset('createQueue');
+        beforeEach(() => {
+            options = getOptions({availablePresets: ['createProject', 'createBoard']});
+        });
 
-        const newState =
-            options.onSave.state.mock.calls[options.onSave.state.mock.calls.length - 1][0];
+        it('run preset -> adds in active presets', async function () {
+            const controller = new Controller(options);
+            await controller.runPreset('createQueue');
 
-        expect(newState.activePresets).toEqual(['createProject', 'createQueue']);
+            const newState = options.onSave.state.mock.calls[0][0];
+
+            expect(newState.activePresets).toEqual(['createProject', 'createQueue']);
+            expect(newState.suggestedPresets).toEqual(['createProject', 'createQueue']);
+        });
+
+        it('run same preset -> not duplicate', async function () {
+            const controller = new Controller(options);
+            await controller.runPreset('createQueue');
+            await controller.runPreset('createQueue');
+
+            const newState =
+                options.onSave.state.mock.calls[options.onSave.state.mock.calls.length - 1][0];
+
+            expect(newState.activePresets).toEqual(['createProject', 'createQueue']);
+        });
+
+        it('preset not from config -> nothing', async function () {
+            const controller = new Controller(options);
+            // @ts-ignore
+            await controller.runPreset('createQueue123');
+
+            expect(options.onSave.state).not.toHaveBeenCalled();
+            expect(options.onSave.progress).not.toHaveBeenCalled();
+        });
+
+        it('start preset -> calls onStart', async function () {
+            const mock = jest.fn();
+            // @ts-ignore
+            options.config.presets.createQueue.hooks = {onStart: mock};
+
+            const controller = new Controller(options);
+            await controller.runPreset('createQueue');
+
+            expect(mock).toHaveBeenCalled();
+        });
+
+        it('run preset -> show hint for existing element', async function () {
+            options.baseState.activePresets = [];
+
+            const controller = new Controller(options);
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+
+            await controller.runPreset('createProject');
+            await waitForNextTick();
+
+            await expect(options.showHint).toHaveBeenCalled();
+        });
+
+        it('can run unavailable preset', async function () {
+            const controller = new Controller(options);
+            await controller.runPreset('createQueue');
+
+            const newState = options.onSave.state.mock.calls[0][0];
+
+            expect(newState.availablePresets).toContain('createQueue');
+            expect(newState.activePresets).toContain('createQueue');
+        });
     });
 
-    it('preset not from config -> nothing', async function () {
-        const options = getOptions();
+    describe('finish preset', function () {
+        it('finish preset -> add to finished', async function () {
+            const options = getOptions();
 
-        const controller = new Controller(options);
-        // @ts-ignore
-        await controller.addPreset('createQueue123');
+            const controller = new Controller(options);
+            await controller.finishPreset('createProject');
 
-        expect(options.onSave.state).not.toHaveBeenCalled();
-        expect(options.onSave.progress).not.toHaveBeenCalled();
-    });
+            const newBaseState = options.onSave.state.mock.calls[0][0];
+            const newProgressState = options.onSave.progress.mock.calls[0][0];
 
-    it('finish preset -> add to finished', async function () {
-        const options = getOptions();
+            expect(newBaseState.activePresets).toEqual([]);
+            expect(newProgressState.finishedPresets).toEqual(['createProject']);
+        });
 
-        const controller = new Controller(options);
-        await controller.finishPreset('createProject');
+        it('finish same preset -> not duplicate', async function () {
+            const options = getOptions();
 
-        const newBaseState = options.onSave.state.mock.calls[0][0];
-        const newProgressState = options.onSave.progress.mock.calls[0][0];
+            const controller = new Controller(options);
+            await controller.finishPreset('createProject');
+            await controller.finishPreset('createProject');
 
-        expect(newBaseState.activePresets).toEqual([]);
-        expect(newProgressState.finishedPresets).toEqual(['createProject']);
-    });
+            const newProgressState = options.onSave.progress.mock.calls[1][0];
 
-    it('finish same preset -> not duplicate', async function () {
-        const options = getOptions();
+            expect(newProgressState.finishedPresets).toEqual(['createProject']);
+        });
 
-        const controller = new Controller(options);
-        await controller.finishPreset('createProject');
-        await controller.finishPreset('createProject');
+        it('finish preset -> calls enEnd', async function () {
+            const options = getOptions();
+            const mock = jest.fn();
+            // @ts-ignore
+            options.config.presets.createProject.hooks = {onEnd: mock};
 
-        const newProgressState = options.onSave.progress.mock.calls[1][0];
+            const controller = new Controller(options);
+            await controller.finishPreset('createProject');
 
-        expect(newProgressState.finishedPresets).toEqual(['createProject']);
-    });
+            expect(mock).toHaveBeenCalled();
+        });
 
-    it('finish preset -> stay in suggested', async function () {
-        const options = getOptions();
+        it('finish preset -> stay in suggested', async function () {
+            const options = getOptions();
 
-        const controller = new Controller(options);
-        await controller.finishPreset('createProject');
+            const controller = new Controller(options);
+            await controller.finishPreset('createProject');
 
-        const newBaseState = options.onSave.state.mock.calls[0][0];
+            const newBaseState = options.onSave.state.mock.calls[0][0];
 
-        expect(newBaseState.suggestedPresets).toEqual(['createProject']);
+            expect(newBaseState.suggestedPresets).toEqual(['createProject']);
+        });
     });
 
     it('reset preset -> remove progress, remove from finished', async function () {

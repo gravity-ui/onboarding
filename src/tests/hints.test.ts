@@ -1,4 +1,4 @@
-import {getAnchorElement, getOptions, waitForNextTick} from './utils';
+import {getAnchorElement, getOptions} from './utils';
 import {Controller} from '../controller';
 
 it('reachElement -> show hint', async function () {
@@ -89,21 +89,6 @@ it('not active onboarding -> nothing', async function () {
     });
 
     expect(options.showHint).not.toHaveBeenCalled();
-});
-
-it('add preset -> show hint for existing element', async function () {
-    const options = getOptions({activePresets: []});
-
-    const controller = new Controller(options);
-    await controller.stepElementReached({
-        stepSlug: 'createSprint',
-        element: getAnchorElement(),
-    });
-
-    await controller.addPreset('createProject');
-    await waitForNextTick();
-
-    await expect(options.showHint).toHaveBeenCalled();
 });
 
 describe('close hint', function () {

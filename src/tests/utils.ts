@@ -35,6 +35,7 @@ export const getOptions = (
         },
         baseState: {
             wizardState: 'visible' as const,
+            availablePresets: ['createProject'],
             activePresets: ['createProject'],
             suggestedPresets: ['createProject'],
             ...baseState,
@@ -63,6 +64,16 @@ export const getOptions = (
         },
     };
 };
+
+export const getOptionsWithHooks = (...args: Parameters<typeof getOptions>) => ({
+    ...getOptions(...args),
+    hooks: {
+        onShowHint: jest.fn(),
+        onStepPass: jest.fn(),
+        onAddPreset: jest.fn(),
+        onFinishPreset: jest.fn(),
+    },
+});
 
 export const waitForNextTick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
