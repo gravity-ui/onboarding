@@ -85,6 +85,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             );
         }
         instanceCounter++;
+
+        if (this.options.baseState?.wizardState === 'visible') {
+            this.ensureRunning();
+        }
     }
 
     passStep = async (stepSlug: Steps) => {

@@ -290,7 +290,7 @@ describe('pass step', function () {
 
     describe('not active preset', function () {
         it('pass step -> nothing happend', async function () {
-            const options = getOptions({activePresets: []});
+            const options = getOptions({wizardState: 'collapsed', activePresets: []});
 
             const controller = new Controller(options);
             await controller.passStep('createSprint');
@@ -763,6 +763,15 @@ describe('wizard', function () {
         const newState = options.onSave.state.mock.calls[0][0];
 
         expect(newState.wizardState).toBe('hidden');
+    });
+
+    it('wizard visible -> load progress', async function () {
+        const options = getOptions({wizardState: 'visible'});
+
+        // eslint-disable-next-line no-new
+        new Controller(options);
+
+        expect(options.getProgressState).toHaveBeenCalled();
     });
 });
 
