@@ -18,6 +18,8 @@ type HintPlacement =
     | 'left-start'
     | 'left-end';
 
+export type PresetStatus = 'unPassed' | 'inProgress' | 'finished';
+
 export type PresetStep<Steps extends string, HintParams> = {
     slug: Steps;
     name: string;

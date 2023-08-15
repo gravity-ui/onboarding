@@ -1,6 +1,7 @@
 import type {BaseState, InitOptions, ProgressState, ReachElementParams} from './types';
 import {HintStore} from './hints/hintStore';
 import {createLogger} from './logger';
+import {PresetStatus} from './types';
 
 type Listener = () => void;
 
@@ -133,6 +134,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     setWizardState = async (state: BaseState['wizardState']) => {
         this.state.base.wizardState = state;
         await this.updateBaseState();
+
+        if (state === 'visible') {
+            this.ensureRunning();
+        }
     };
 
     stepElementReached = async (stepData: Omit<ReachElementParams<Presets, Steps>, 'preset'>) => {
@@ -256,25 +261,62 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         };
     };
 
-    addPreset = async (preset: Presets) => {
-        this.logger.debug('Add new preset', preset);
+    get userPresets() {
+        const visibleConfigPresets = Object.keys(this.options.config.presets).filter(
+            // @ts-ignore
+            (presetSlug) => !this.options.config.presets[presetSlug].hidden,
+        );
 
-        this.options.hooks?.onAddPreset?.({preset});
+        const allUserPresetSlugs = [
+            ...new Set([
+                ...visibleConfigPresets,
+                ...this.state.base.availablePresets,
+                ...this.state.base.activePresets,
+                ...(this.state.progress?.finishedPresets ?? []),
+            ]),
+        ];
 
-        if (!this.options.config.presets[preset]) {
-            this.logger.error('No preset in config', preset);
-            return;
+        const userExistedPresetSlugs = this.filterExistedPresets(allUserPresetSlugs);
+
+        return userExistedPresetSlugs.map((slug) => {
+            let status: PresetStatus = 'unPassed';
+
+            if (this.state.base.activePresets.includes(slug)) {
+                status = 'inProgress';
+            } else if (this.state.progress?.finishedPresets.includes(slug)) {
+                status = 'finished';
+            }
+
+            return {
+                slug,
+                name: this.options.config.presets[slug].name,
+                description: this.options.config.presets[slug].name,
+                status,
+            };
+        });
+    }
+
+    addPreset = async (presetArg: string | string[]) => {
+        const presets = this.filterExistedPresets(
+            Array.isArray(presetArg) ? presetArg : [presetArg],
+        );
+        this.logger.debug('Add new presets', presets);
+
+        for (const preset of presets) {
+            this.options.hooks?.onAddPreset?.({preset});
+
+            if (this.state.base.availablePresets.includes(preset)) {
+                return;
+            }
+            this.state.base.availablePresets.push(preset);
         }
 
-        if (this.state.base.availablePresets.includes(preset)) {
-            return;
+        if (presets.length > 0) {
+            await this.updateBaseState();
         }
-
-        this.state.base.availablePresets.push(preset);
-        await this.updateBaseState();
     };
 
-    suggestPresetOnce = async (preset: Presets) => {
+    suggestPresetOnce = async (preset: string) => {
         this.logger.debug('Suggest preset', preset);
 
         if (this.state.base.suggestedPresets.includes(preset)) {
@@ -286,16 +328,12 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         await this.runPreset(preset);
     };
 
-    runPreset = async (preset: Presets) => {
+    runPreset = async (preset: string) => {
         this.logger.debug('Run preset', preset);
+        this.ensurePresetExists(preset);
 
         this.options.hooks?.onRunPreset?.({preset});
         this.options.config.presets[preset]?.hooks?.onStart?.();
-
-        if (!this.options.config.presets[preset]) {
-            this.logger.error('No preset in config', preset);
-            return;
-        }
 
         if (!this.state.base.availablePresets.includes(preset)) {
             this.state.base.availablePresets.push(preset);
@@ -335,24 +373,33 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
     };
 
-    resetPresetProgress = async (presets: Presets[]) => {
+    resetPresetProgress = async (presetArg: string | string[]) => {
         await this.ensureRunning();
         this.assertProgressLoaded();
+
+        const presets = this.filterExistedPresets(
+            Array.isArray(presetArg) ? presetArg : [presetArg],
+        );
 
         this.state.progress.finishedPresets = this.state.progress.finishedPresets.filter(
             (preset) => !presets.includes(preset as Presets),
         );
 
         for (const preset of presets) {
-            this.state.progress.presetPassedSteps[preset] = [];
+            delete this.state.progress.presetPassedSteps[preset];
         }
 
-        this.state.base.suggestedPresets = this.state.base.suggestedPresets.filter(
+        this.state.base.activePresets = this.state.base.activePresets.filter(
             (preset) => !presets.includes(preset as Presets),
         );
 
         await this.updateBaseState();
         await this.updateProgress();
+    };
+
+    private filterExistedPresets = (presets: string[]) => {
+        // @ts-ignore
+        return presets.filter((slug) => Boolean(this.options.config.presets[slug])) as Presets[];
     };
 
     private findNextStepForPreset(preset: Presets) {
@@ -422,7 +469,6 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.assertProgressLoaded();
         this.logger.debug('Update progress data', this.state.progress);
 
-        this.state = {...this.state};
         this.emitChange();
 
         await this.options.onSave.progress(this.state.progress);
@@ -431,7 +477,6 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     private async updateBaseState() {
         this.logger.debug('Update onboarding state', this.state.base);
 
-        this.state = {...this.state};
         this.emitChange();
 
         await this.options.onSave.state(this.state.base);
@@ -459,6 +504,13 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             this.logger.debug('Onboarding progress data loaded');
         } catch (e) {
             this.logger.error('progress data loading error');
+        }
+    }
+
+    private ensurePresetExists(preset: string): asserts preset is Presets {
+        // @ts-ignore
+        if (!this.options.config.presets[preset]) {
+            throw new Error('No preset in config');
         }
     }
 
@@ -508,6 +560,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     }
 
     private emitChange = () => {
+        this.state = {...this.state};
+
         for (const listener of this.stateListeners) {
             listener();
         }

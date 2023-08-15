@@ -51,3 +51,12 @@ it('wizard visible -> load progress', async function () {
 
     expect(options.getProgressState).toHaveBeenCalled();
 });
+
+it('become visible -> load progress', async function () {
+    const options = getOptions({wizardState: 'collapsed'});
+
+    const controller = new Controller(options);
+    await controller.setWizardState('visible');
+
+    expect(options.getProgressState).toHaveBeenCalled();
+});

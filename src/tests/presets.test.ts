@@ -31,9 +31,8 @@ describe('preset management', function () {
             const options = getOptions();
 
             const controller = new Controller(options);
-            // @ts-ignore
-            await controller.addPreset('createQueue123');
 
+            await controller.addPreset('createQueue123');
             expect(options.onSave.state).not.toHaveBeenCalled();
             expect(options.onSave.progress).not.toHaveBeenCalled();
         });
@@ -80,9 +79,8 @@ describe('preset management', function () {
 
         it('preset not from config -> nothing', async function () {
             const controller = new Controller(options);
-            // @ts-ignore
-            await controller.runPreset('createQueue123');
 
+            expect(controller.runPreset('createQueue123')).rejects.toThrow();
             expect(options.onSave.state).not.toHaveBeenCalled();
             expect(options.onSave.progress).not.toHaveBeenCalled();
         });
@@ -174,23 +172,25 @@ describe('preset management', function () {
         });
     });
 
-    it('reset preset -> remove progress, remove from finished', async function () {
-        const options = getOptions({}, {finishedPresets: ['createQueue']});
+    describe('reset progress', function () {
+        it('remove progress, remove from finished', async function () {
+            const options = getOptions({}, {finishedPresets: ['createQueue']});
 
-        const controller = new Controller(options);
-        await controller.resetPresetProgress(['createProject', 'createQueue']);
+            const controller = new Controller(options);
+            await controller.resetPresetProgress(['createProject', 'createQueue']);
 
-        const newProgressState = options.onSave.progress.mock.calls[0][0];
+            const newProgressState = options.onSave.progress.mock.calls[0][0];
 
-        // remove createQueue from finished
-        expect(newProgressState.finishedPresets).toEqual([]);
+            // remove createQueue from finished
+            expect(newProgressState.finishedPresets).toEqual([]);
 
-        // remove createProject passed steps
-        expect(newProgressState.presetPassedSteps.createProject).toEqual([]);
+            // remove createProject passed steps
+            expect(newProgressState.presetPassedSteps.createProject).toBeUndefined();
 
-        const newBaseState = options.onSave.state.mock.calls[0][0];
-        // remove createProject from suggested presets
-        expect(newBaseState.suggestedPresets).toEqual([]);
+            const newBaseState = options.onSave.state.mock.calls[0][0];
+            // remove createProject from suggested presets
+            expect(newBaseState.activePresets).toEqual([]);
+        });
     });
 });
 
@@ -227,5 +227,102 @@ describe('suggest once', function () {
         await controller.suggestPresetOnce('createQueue');
 
         expect(controller.state.base.wizardState).toBe('hidden');
+    });
+});
+
+describe('user presets', function () {
+    it('no progress -> all config presets ', function () {
+        const options = getOptions(
+            {activePresets: [], availablePresets: []},
+            {finishedPresets: []},
+        );
+
+        const controller = new Controller(options);
+        expect(controller.userPresets).toHaveLength(2);
+    });
+
+    it('dont count hidden presets', function () {
+        const options = getOptions(
+            {activePresets: [], availablePresets: []},
+            {finishedPresets: []},
+        );
+        // @ts-ignore
+        options.config.presets.createProject.hidden = true;
+
+        const controller = new Controller(options);
+        const presetSlugs = controller.userPresets.map(({slug}) => slug);
+
+        expect(presetSlugs).not.toContain('createProject');
+    });
+
+    it('pick hidden + available preset', function () {
+        const options = getOptions(
+            {activePresets: [], availablePresets: ['createProject']},
+            {finishedPresets: []},
+        );
+        // @ts-ignore
+        options.config.presets.createProject.hidden = true;
+
+        const controller = new Controller(options);
+        const presetSlugs = controller.userPresets.map(({slug}) => slug);
+
+        expect(presetSlugs).toContain('createProject');
+    });
+
+    it('pick hidden + active preset', function () {
+        const options = getOptions(
+            {activePresets: ['createProject'], availablePresets: ['createProject']},
+            {finishedPresets: []},
+        );
+        // @ts-ignore
+        options.config.presets.createProject.hidden = true;
+
+        const controller = new Controller(options);
+        const presetSlugs = controller.userPresets.map(({slug}) => slug);
+
+        expect(presetSlugs).toContain('createProject');
+    });
+
+    it('pick hidden + finished preset', function () {
+        const options = getOptions(
+            {activePresets: [], availablePresets: ['createProject']},
+            {finishedPresets: ['createProject']},
+        );
+        // @ts-ignore
+        options.config.presets.createProject.hidden = true;
+
+        const controller = new Controller(options);
+        const presetSlugs = controller.userPresets.map(({slug}) => slug);
+
+        expect(presetSlugs).toContain('createProject');
+    });
+
+    it('pick hidden + finished + UNavailable preset', async function () {
+        const options = getOptions(
+            {activePresets: [], availablePresets: [], wizardState: 'visible'},
+            {finishedPresets: ['createProject']},
+        );
+        // @ts-ignore
+        options.config.presets.createProject.hidden = true;
+
+        const controller = new Controller(options);
+        await waitForNextTick(); // progress loading
+        const presetSlugs = controller.userPresets.map(({slug}) => slug);
+
+        expect(presetSlugs).toContain('createProject');
+    });
+
+    it('deleted presets in active and finished', async function () {
+        const options = getOptions(
+            {activePresets: ['deleted1'], availablePresets: [], wizardState: 'visible'},
+            {finishedPresets: ['deleted2']},
+        );
+        // @ts-ignore
+        options.config.presets.createProject.hidden = true;
+
+        const controller = new Controller(options);
+        await waitForNextTick(); // progress loading
+
+        expect(controller.userPresets).toHaveLength(1);
     });
 });
