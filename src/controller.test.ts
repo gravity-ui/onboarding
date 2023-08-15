@@ -35,7 +35,7 @@ const getOptions = (
             },
         },
         baseState: {
-            wizardActive: true,
+            wizardState: 'visible' as const,
             activePresets: ['createProject'],
             suggestedPresets: ['createProject'],
             ...baseState,
@@ -76,25 +76,25 @@ const getAnchorElement = () => {
 
 describe('base behavior', function () {
     it('show wizard -> save base state', async function () {
-        const options = getOptions({wizardActive: false});
+        const options = getOptions({wizardState: 'hidden'});
 
         const controller = new Controller(options);
-        await controller.showWizard();
+        await controller.setWizardState('visible');
 
         const newState = options.onSave.state.mock.calls[0][0];
 
-        expect(newState.wizardActive).toBe(true);
+        expect(newState.wizardState).toBe('visible');
     });
 
     it('hide wizard -> save base state', async function () {
         const options = getOptions();
 
         const controller = new Controller(options);
-        await controller.hideWizard();
+        await controller.setWizardState('hidden');
 
         const newState = options.onSave.state.mock.calls[0][0];
 
-        expect(newState.wizardActive).toBe(false);
+        expect(newState.wizardState).toBe('hidden');
     });
 });
 
@@ -214,7 +214,7 @@ describe('pass step', function () {
         });
 
         it('pass step on active preset with disabled wizard -> save new data', async function () {
-            const options = getOptions({wizardActive: false});
+            const options = getOptions({wizardState: 'visible'});
 
             const controller = new Controller(options);
             await controller.passStep('createSprint');
@@ -290,7 +290,7 @@ describe('pass step', function () {
 
     describe('not active preset', function () {
         it('pass step -> nothing happend', async function () {
-            const options = getOptions({activePresets: []});
+            const options = getOptions({wizardState: 'collapsed', activePresets: []});
 
             const controller = new Controller(options);
             await controller.passStep('createSprint');
@@ -425,7 +425,7 @@ describe('hints', function () {
     });
 
     it('not active onboarding -> nothing', async function () {
-        const options = getOptions({wizardActive: false});
+        const options = getOptions({wizardState: 'hidden'});
 
         const controller = new Controller(options);
         await controller.stepElementReached({
@@ -744,6 +744,37 @@ describe('find next step', function () {
     });
 });
 
+describe('wizard', function () {
+    it('should have open wizard by default', async function () {
+        const options = getOptions();
+        // @ts-ignore
+        options.baseState = undefined;
+
+        const controller = new Controller(options);
+        expect(controller.state.base.wizardState).toBe('visible');
+    });
+
+    it('change style -> save', async function () {
+        const options = getOptions();
+
+        const controller = new Controller(options);
+        await controller.setWizardState('hidden');
+
+        const newState = options.onSave.state.mock.calls[0][0];
+
+        expect(newState.wizardState).toBe('hidden');
+    });
+
+    it('wizard visible -> load progress', async function () {
+        const options = getOptions({wizardState: 'visible'});
+
+        // eslint-disable-next-line no-new
+        new Controller(options);
+
+        expect(options.getProgressState).toHaveBeenCalled();
+    });
+});
+
 describe('hooks', function () {
     const getOptionsWithHooks = (...args: Parameters<typeof getOptions>) => ({
         ...getOptions(...args),
@@ -880,14 +911,14 @@ describe('hooks', function () {
 
 describe('suggest once', function () {
     it('first preset run -> runs', async function () {
-        const options = getOptions({wizardActive: false});
+        const options = getOptions({wizardState: 'hidden'});
 
         const controller = new Controller(options);
         await controller.suggestPresetOnce('createQueue');
 
         const newState = options.onSave.state.mock.calls[0][0];
 
-        expect(newState.wizardActive).toBe(true);
+        expect(newState.wizardState).toBe('visible');
     });
 
     it('call -> add preset', async function () {
@@ -902,15 +933,15 @@ describe('suggest once', function () {
     });
 
     it('second run -> nothing', async function () {
-        const options = getOptions({wizardActive: false});
+        const options = getOptions({wizardState: 'hidden'});
 
         const controller = new Controller(options);
         await controller.suggestPresetOnce('createQueue');
-        await controller.hideWizard();
+        await controller.setWizardState('hidden');
 
         await controller.suggestPresetOnce('createQueue');
 
-        expect(controller.state.base.wizardActive).toBe(false);
+        expect(controller.state.base.wizardState).toBe('hidden');
     });
 });
 

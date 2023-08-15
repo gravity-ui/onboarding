@@ -61,13 +61,12 @@ export function getHooks<HintParams, Presets extends string, Steps extends strin
         };
     };
 
-    const useOnboarding = () => {
+    const useWizard = () => {
         const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
 
         return {
             state,
-            showWizard: controller.showWizard,
-            hideWizard: controller.hideWizard,
+            setWizardState: controller.setWizardState,
         };
     };
 
@@ -75,6 +74,6 @@ export function getHooks<HintParams, Presets extends string, Steps extends strin
         useOnboardingPreset,
         useOnboardingStep,
         useOnboardingHint,
-        useOnboarding,
+        useWizard,
     };
 }

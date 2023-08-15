@@ -49,9 +49,9 @@ export type InitConfig<HintParams, Presets extends string, Steps extends string>
 };
 
 export type BaseState = {
-    wizardActive: boolean;
     activePresets: string[];
     suggestedPresets: string[];
+    wizardState: 'hidden' | 'collapsed' | 'visible';
 };
 
 export type ProgressState = {

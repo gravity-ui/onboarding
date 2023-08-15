@@ -6,9 +6,9 @@ type Listener = () => void;
 
 let instanceCounter = 0;
 const defaultBaseState = {
-    wizardActive: false,
     activePresets: [],
     suggestedPresets: [],
+    wizardState: 'visible' as const,
 };
 const defaultProgress = {
     presetPassedSteps: {},
@@ -85,6 +85,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             );
         }
         instanceCounter++;
+
+        if (this.options.baseState?.wizardState === 'visible') {
+            this.ensureRunning();
+        }
     }
 
     passStep = async (stepSlug: Steps) => {
@@ -125,13 +129,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         });
     };
 
-    showWizard = async () => {
-        this.state.base.wizardActive = true;
-        await this.updateBaseState();
-    };
-
-    hideWizard = async () => {
-        this.state.base.wizardActive = false;
+    setWizardState = async (state: BaseState['wizardState']) => {
+        this.state.base.wizardState = state;
         await this.updateBaseState();
     };
 
@@ -163,7 +162,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
-        if (!this.state.base.wizardActive) {
+        if (this.state.base.wizardState === 'hidden') {
             this.logger.debug('Wizard is not active', preset, stepSlug);
             return;
         }
@@ -286,7 +285,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
-        await this.showWizard();
+        await this.setWizardState('visible');
         await this.addPreset(preset);
     };
 
