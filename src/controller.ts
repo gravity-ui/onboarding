@@ -6,7 +6,6 @@ type Listener = () => void;
 
 let instanceCounter = 0;
 const defaultBaseState = {
-    wizardActive: false,
     activePresets: [],
     suggestedPresets: [],
     wizardState: 'visible' as const,
