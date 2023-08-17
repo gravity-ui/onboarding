@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/gravity-ui/onboarding/compare/v0.5.0...v0.5.1) (2023-08-17)
+
+
+### Bug Fixes
+
+* hide wizard by default ([7624669](https://github.com/gravity-ui/onboarding/commit/7624669c4f0c5150b2887e679fb58ea723078bb8))
+
 ## [0.5.0](https://github.com/gravity-ui/onboarding/compare/v0.4.1...v0.5.0) (2023-08-17)
 
 
