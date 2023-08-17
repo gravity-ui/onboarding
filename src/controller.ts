@@ -10,7 +10,7 @@ const defaultBaseState: BaseState = {
     availablePresets: [],
     activePresets: [],
     suggestedPresets: [],
-    wizardState: 'visible' as const,
+    wizardState: 'hidden' as const,
 };
 const defaultProgress = {
     presetPassedSteps: {},
