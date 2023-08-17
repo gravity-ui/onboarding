@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.5.0](https://github.com/gravity-ui/onboarding/compare/v0.4.1...v0.5.0) (2023-08-17)
+
+
+### Features
+
+* add available presets ([4eb2809](https://github.com/gravity-ui/onboarding/commit/4eb280909d1f162e40f16486f5ae992d33438788))
+* add wizard state ([916b9c1](https://github.com/gravity-ui/onboarding/commit/916b9c180c833734d793e321e528fe6255a3d6bb))
+* user preset list + preset refactor ([fd82078](https://github.com/gravity-ui/onboarding/commit/fd820781a3ef4da7da86b5a7a87226593637b09f))
+* wizard visible -&gt; load progress ([233349e](https://github.com/gravity-ui/onboarding/commit/233349e6254f49f1a0086a7eee9009cc646d5cee))
+
+
+### Bug Fixes
+
+* element appears before preset add ([262d343](https://github.com/gravity-ui/onboarding/commit/262d34392f5040caabf067a9e3f80abdb13bf101))
+* hook export ([9efe93d](https://github.com/gravity-ui/onboarding/commit/9efe93d63f42b381333a8813d40798d54f9d18c2))
+* remove unused code ([796442b](https://github.com/gravity-ui/onboarding/commit/796442b33f4fd4c2a4651dd8d646cd0c58a761aa))
+* remove unused field from defaultBaseState ([516688c](https://github.com/gravity-ui/onboarding/commit/516688c55e3afaccbbb0a8282c309171bd2a4955))
+
 ## [0.4.1](https://github.com/gravity-ui/onboarding/compare/v0.4.0...v0.4.1) (2023-08-04)
 
 
