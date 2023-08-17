@@ -1,4 +1,4 @@
-import {useCallback, useSyncExternalStore} from 'react';
+import {useCallback, useMemo, useSyncExternalStore} from 'react';
 import type {Controller} from './controller';
 
 export function getHooks<HintParams, Presets extends string, Steps extends string>(
@@ -31,22 +31,12 @@ export function getHooks<HintParams, Presets extends string, Steps extends strin
         return {pass, ref: onRefChange, closeHint};
     };
 
-    const useOnboardingPreset = (preset: Presets) => {
-        const addPreset = async () => {
-            await controller.addPreset(preset);
-        };
-        const finishPreset = async () => {
-            await controller.finishPreset(preset);
-        };
-
-        const resetPresetProgress = async () => {
-            await controller.resetPresetProgress([preset]);
-        };
-
+    const useOnboardingPresets = () => {
         return {
-            addPreset,
-            finishPreset,
-            resetPresetProgress,
+            addPreset: controller.addPreset,
+            finishPreset: controller.finishPreset,
+            runPreset: controller.runPreset,
+            resetPresetProgress: controller.resetPresetProgress,
         };
     };
 
@@ -64,14 +54,17 @@ export function getHooks<HintParams, Presets extends string, Steps extends strin
     const useWizard = () => {
         const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
 
+        const userPresets = useMemo(() => controller.userPresets, [state]);
+
         return {
             state,
+            userPresets,
             setWizardState: controller.setWizardState,
         };
     };
 
     return {
-        useOnboardingPreset,
+        useOnboardingPresets,
         useOnboardingStep,
         useOnboardingHint,
         useWizard,

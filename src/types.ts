@@ -18,6 +18,8 @@ type HintPlacement =
     | 'left-start'
     | 'left-end';
 
+export type PresetStatus = 'unPassed' | 'inProgress' | 'finished';
+
 export type PresetStep<Steps extends string, HintParams> = {
     slug: Steps;
     name: string;
@@ -49,6 +51,7 @@ export type InitConfig<HintParams, Presets extends string, Steps extends string>
 };
 
 export type BaseState = {
+    availablePresets: string[];
     activePresets: string[];
     suggestedPresets: string[];
     wizardState: 'hidden' | 'collapsed' | 'visible';
@@ -86,6 +89,7 @@ export type InitOptions<HintParams, Presets extends string, Steps extends string
         onShowHint?: (data: {preset: Presets; step: Steps}) => void;
         onStepPass?: (data: {preset: Presets; step: Steps}) => void;
         onAddPreset?: (data: {preset: Presets}) => void;
+        onRunPreset?: (data: {preset: Presets}) => void;
         onFinishPreset?: (data: {preset: Presets}) => void;
     };
 };
