@@ -23,13 +23,13 @@ it('hide wizard -> save base state', async function () {
     expect(newState.wizardState).toBe('hidden');
 });
 
-it('should have open wizard by default', async function () {
+it('should have hidden wizard by default', async function () {
     const options = getOptions();
     // @ts-ignore
     options.baseState = undefined;
 
     const controller = new Controller(options);
-    expect(controller.state.base.wizardState).toBe('visible');
+    expect(controller.state.base.wizardState).toBe('hidden');
 });
 
 it('change style -> save', async function () {
