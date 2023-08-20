@@ -67,6 +67,32 @@ it('not active preset, reachElement -> nothing', async function () {
     expect(options.showHint).not.toHaveBeenCalled();
 });
 
+it('step in 2 presets -> select active', async function () {
+    const options = getOptions();
+    const step = {
+        slug: 'someStep',
+        name: '',
+        description: '',
+    };
+    const presets = {
+        // not active preset first
+        createQueue: options.config.presets.createQueue,
+        createProject: options.config.presets.createProject,
+    };
+    options.config.presets.createProject.steps[1] = step;
+    options.config.presets.createQueue.steps.push(step);
+
+    options.config.presets = presets;
+
+    const controller = new Controller(options);
+    await controller.stepElementReached({
+        stepSlug: 'someStep',
+        element: getAnchorElement(),
+    });
+
+    expect(options.showHint).toHaveBeenCalled();
+});
+
 it('reach element passed step -> nothing', async function () {
     const options = getOptions();
 

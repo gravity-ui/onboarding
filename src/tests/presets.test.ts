@@ -111,6 +111,18 @@ describe('preset management', function () {
             await expect(options.showHint).toHaveBeenCalled();
         });
 
+        it('run preset -> close current hint', async function () {
+            const controller = new Controller(getOptions());
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+
+            await controller.runPreset('createQueue');
+
+            await expect(controller.hintStore.state.open).toBe(false);
+        });
+
         it('can run unavailable preset', async function () {
             const controller = new Controller(options);
             await controller.runPreset('createQueue');
@@ -120,6 +132,30 @@ describe('preset management', function () {
             expect(newState.availablePresets).toContain('createQueue');
             expect(newState.activePresets).toContain('createQueue');
         });
+    });
+
+    it('restart preset -> show hint for existing element', async function () {
+        const options = getOptions(
+            {
+                activePresets: [],
+            },
+            {
+                presetPassedSteps: {},
+            },
+        );
+
+        const controller = new Controller(options);
+        await controller.stepElementReached({
+            stepSlug: 'openBoard',
+            element: getAnchorElement(),
+        });
+
+        await controller.runPreset('createProject');
+        await controller.resetPresetProgress('createProject');
+        await controller.runPreset('createProject');
+        await waitForNextTick();
+
+        await expect(options.showHint).toHaveBeenCalledTimes(2);
     });
 
     describe('finish preset', function () {

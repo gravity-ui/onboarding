@@ -46,7 +46,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     status: 'idle' | 'active';
     progressLoadingPromise: Promise<Partial<ProgressState>> | undefined;
     showedHints: Set<Steps>;
-    reachedHints: Map<Steps, ReachElementParams<Presets, Steps>>;
+    reachedElements: Map<Steps, HTMLElement>;
     hintStore: HintStore<HintParams, Presets, Steps>;
     logger: ReturnType<typeof createLogger>;
     stateListeners: Set<Listener>;
@@ -66,7 +66,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         };
         this.status = 'idle';
         this.showedHints = new Set();
-        this.reachedHints = new Map();
+        this.reachedElements = new Map();
 
         this.hintStore = hintStore || new HintStore();
         this.stateListeners = new Set();
@@ -96,13 +96,9 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     passStep = async (stepSlug: Steps) => {
         this.logger.debug('Step passed', stepSlug);
 
-        const preset = this.findPresetWithStep(stepSlug);
+        const preset = this.findActivePresetWithStep(stepSlug);
 
         if (!preset) {
-            return;
-        }
-
-        if (!this.checkIsActivePreset(preset)) {
             return;
         }
 
@@ -143,7 +139,9 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     stepElementReached = async (stepData: Omit<ReachElementParams<Presets, Steps>, 'preset'>) => {
         const {stepSlug, element} = stepData;
 
-        const preset = this.findPresetWithStep(stepSlug);
+        this.reachedElements.set(stepSlug, element);
+
+        const preset = this.findActivePresetWithStep(stepSlug);
 
         if (!preset) {
             return;
@@ -160,13 +158,6 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         const {preset, element, stepSlug} = stepData;
 
         this.logger.debug('Step element reached', preset, stepSlug, element);
-
-        this.reachedHints.set(stepSlug, stepData);
-
-        if (!this.checkIsActivePreset(preset)) {
-            this.logger.debug('Preset is not active', preset, stepSlug);
-            return;
-        }
 
         if (this.state.base.wizardState === 'hidden') {
             this.logger.debug('Wizard is not active', preset, stepSlug);
@@ -210,8 +201,6 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
 
         this.logger.debug(`Display hint for step ${stepSlug}`);
-
-        this.reachedHints.delete(stepSlug);
 
         this.options.hooks?.onShowHint?.({preset, step: stepSlug});
 
@@ -333,7 +322,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.ensurePresetExists(preset);
 
         this.options.hooks?.onRunPreset?.({preset});
-        this.options.config.presets[preset]?.hooks?.onStart?.();
+        this.options.config.presets[preset].hooks?.onStart?.();
 
         if (!this.state.base.availablePresets.includes(preset)) {
             this.state.base.availablePresets.push(preset);
@@ -346,6 +335,11 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.state.base.activePresets.push(preset);
         this.state.base.suggestedPresets.push(preset);
         await this.updateBaseState();
+
+        this.hintStore.closeHint();
+        this.options.config.presets[preset].steps.forEach(({slug}) => {
+            this.showedHints.delete(slug);
+        });
 
         this.checkReachedHints();
     };
@@ -415,10 +409,12 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         return Controller.findNextUnpassedStep(presetSteps, passedSteps);
     }
 
-    private findPresetWithStep(stepSlug: Steps) {
-        const presets = Object.keys(this.options.config.presets).filter((presetName) => {
-            return this.options.config.presets[presetName as Presets].steps.some(
-                (step) => step.slug === stepSlug,
+    private findActivePresetWithStep(stepSlug: Steps) {
+        const presets = this.state.base.activePresets.filter((presetName) => {
+            return (
+                this.options.config.presets[presetName as Presets]?.steps.some(
+                    (step) => step.slug === stepSlug,
+                ) ?? false
             );
         }) as Array<Presets>;
 
@@ -515,21 +511,17 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     }
 
     private checkReachedHints() {
-        this.reachedHints.forEach((stepData, stepSlug) => {
-            if (!stepData.element.isConnected) {
-                this.reachedHints.delete(stepSlug);
+        this.reachedElements.forEach((element, stepSlug) => {
+            if (!element.isConnected) {
+                this.reachedElements.delete(stepSlug);
             }
         });
 
-        this.logger.debug(`Check reached hints. Found ${this.reachedHints.size}`);
+        this.logger.debug(`Check reached hints. Found ${this.reachedElements.size}`);
 
-        this.reachedHints.forEach((stepData) => {
-            this.stepElementReached(stepData);
+        this.reachedElements.forEach((element, stepSlug) => {
+            this.stepElementReached({stepSlug, element});
         });
-    }
-
-    private checkIsActivePreset(preset: string) {
-        return this.state.base.activePresets.includes(preset);
     }
 
     private assertProgressLoaded(): asserts this is this & {
