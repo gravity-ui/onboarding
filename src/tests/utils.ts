@@ -29,7 +29,7 @@ export const getOptions = (
                 },
                 createQueue: {
                     name: 'Creating queue',
-                    steps: [],
+                    steps: [] as Array<PresetStep<string, {}>>,
                 },
             },
         },
