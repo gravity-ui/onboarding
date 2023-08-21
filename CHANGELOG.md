@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/gravity-ui/onboarding/compare/v0.5.1...v0.5.2) (2023-08-21)
+
+
+### Bug Fixes
+
+* preset search by step + preset restart ([cd91af7](https://github.com/gravity-ui/onboarding/commit/cd91af70ac6703fbdf3aa63040d7063c889fcd40))
+
 ## [0.5.1](https://github.com/gravity-ui/onboarding/compare/v0.5.0...v0.5.1) (2023-08-17)
 
 
