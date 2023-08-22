@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/gravity-ui/onboarding/compare/v0.5.3...v0.6.0) (2023-08-22)
+
+
+### Features
+
+* add finish preset helper ([b26af97](https://github.com/gravity-ui/onboarding/commit/b26af97555ca0fe81ea09a1ba1761d1d579957a1))
+
 ## [0.5.3](https://github.com/gravity-ui/onboarding/compare/v0.5.2...v0.5.3) (2023-08-22)
 
 
