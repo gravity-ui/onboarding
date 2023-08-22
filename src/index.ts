@@ -11,18 +11,23 @@ import type {
     InferPresetsFromOptions,
 } from './types';
 
-let closeHintRef: () => void | undefined;
-let passStepRef: (step: string) => Promise<void>;
+let controllerRef: Controller<object, string, string>;
 
 export function closeHint() {
-    if (closeHintRef !== null) {
-        closeHintRef();
+    if (controllerRef !== null) {
+        controllerRef.closeHint();
     }
 }
 
 export function passStep(step: string) {
-    if (passStepRef !== null) {
-        passStepRef(step);
+    if (controllerRef !== null) {
+        controllerRef.passStep(step);
+    }
+}
+
+export async function finishPreset(preset: string) {
+    if (controllerRef !== null) {
+        await controllerRef.finishPreset(preset);
     }
 }
 
@@ -44,9 +49,8 @@ export function createOnboarding<T extends InitOptions<any, any, any>>(options: 
         InferStepsFromOptions<T>
     >(options);
 
-    closeHintRef = controller.closeHint;
     // @ts-ignore
-    passStepRef = controller.passStep;
+    controllerRef = controller;
 
     const {useWizard, useOnboardingPresets, useOnboardingStep, useOnboardingHint} =
         getHooks(controller);
