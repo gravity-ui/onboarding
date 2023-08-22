@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.3](https://github.com/gravity-ui/onboarding/compare/v0.5.2...v0.5.3) (2023-08-22)
+
+
+### Bug Fixes
+
+* return preset description ([dbe9b08](https://github.com/gravity-ui/onboarding/commit/dbe9b08db3914fcda0df9f68cc02fbb78805b378))
+
 ## [0.5.2](https://github.com/gravity-ui/onboarding/compare/v0.5.1...v0.5.2) (2023-08-21)
 
 
