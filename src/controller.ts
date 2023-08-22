@@ -279,7 +279,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return {
                 slug,
                 name: this.options.config.presets[slug].name,
-                description: this.options.config.presets[slug].name,
+                description: this.options.config.presets[slug].description,
                 status,
             };
         });
