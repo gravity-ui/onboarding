@@ -38,7 +38,7 @@ export function createStep<
     return step;
 }
 
-export function createPreset<T>(preset: T) {
+export function createPreset<T extends Preset<any, any>>(preset: T) {
     return preset as unknown as Preset<InferHintParamsFromPreset<T>, InferStepsFromPreset<T>>;
 }
 

@@ -34,16 +34,38 @@ export type PresetStep<Steps extends string, HintParams> = {
     };
 };
 
-export type Preset<HintParams, Steps extends string> = {
+export type Preset<HintParams, Steps extends string> =
+    | CommonPreset<HintParams, Steps>
+    | CombinedPreset<string>;
+
+export type PresetHooks = {
+    onStart?: () => void;
+    onEnd?: () => void;
+};
+
+export type CommonPreset<HintParams, Steps extends string> = {
     name: string;
-    description?: ReactNode[];
-    type?: 'default' | 'hidden';
+    description?: ReactNode;
+    type?: 'default' | 'internal';
+    visibility?: 'visible' | 'hidden';
     steps: PresetStep<Steps, HintParams | undefined>[];
-    hidden?: boolean;
-    hooks?: {
-        onStart?: () => void;
-        onEnd?: () => void;
-    };
+    hooks?: PresetHooks;
+};
+
+export type InternalPreset<HintParams, Steps extends string> = {
+    type: 'internal';
+    steps: PresetStep<Steps, HintParams | undefined>[];
+    hooks?: PresetHooks;
+};
+
+export type CombinedPreset<InternalPresets extends string> = {
+    name: string;
+    description?: ReactNode;
+    type: 'combined';
+    visibility?: 'visible' | 'hidden';
+    hooks?: PresetHooks;
+    internalPresets: InternalPresets[];
+    pickPreset: () => InternalPresets | Promise<InternalPresets>;
 };
 
 export type InitConfig<HintParams, Presets extends string, Steps extends string> = {

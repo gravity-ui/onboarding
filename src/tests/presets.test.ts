@@ -56,7 +56,7 @@ describe('preset management', function () {
             options = getOptions({availablePresets: ['createProject', 'createBoard']});
         });
 
-        it('run preset -> adds in active presets', async function () {
+        it('run preset -> adds in active and suggested presets', async function () {
             const controller = new Controller(options);
             await controller.runPreset('createQueue');
 
@@ -294,7 +294,7 @@ describe('user presets', function () {
             {finishedPresets: []},
         );
         // @ts-ignore
-        options.config.presets.createProject.hidden = true;
+        options.config.presets.createProject.visibility = 'hidden';
 
         const controller = new Controller(options);
         const presetSlugs = controller.userPresets.map(({slug}) => slug);
@@ -308,7 +308,7 @@ describe('user presets', function () {
             {finishedPresets: []},
         );
         // @ts-ignore
-        options.config.presets.createProject.hidden = true;
+        options.config.presets.createProject.visibility = 'hidden';
 
         const controller = new Controller(options);
         const presetSlugs = controller.userPresets.map(({slug}) => slug);
@@ -322,7 +322,7 @@ describe('user presets', function () {
             {finishedPresets: []},
         );
         // @ts-ignore
-        options.config.presets.createProject.hidden = true;
+        options.config.presets.createProject.visibility = 'hidden';
 
         const controller = new Controller(options);
         const presetSlugs = controller.userPresets.map(({slug}) => slug);
@@ -336,7 +336,7 @@ describe('user presets', function () {
             {finishedPresets: ['createProject']},
         );
         // @ts-ignore
-        options.config.presets.createProject.hidden = true;
+        options.config.presets.createProject.visibility = 'hidden';
 
         const controller = new Controller(options);
         const presetSlugs = controller.userPresets.map(({slug}) => slug);
@@ -350,7 +350,7 @@ describe('user presets', function () {
             {finishedPresets: ['createProject']},
         );
         // @ts-ignore
-        options.config.presets.createProject.hidden = true;
+        options.config.presets.createProject.visibility = 'hidden';
 
         const controller = new Controller(options);
         await waitForNextTick(); // progress loading
@@ -365,7 +365,7 @@ describe('user presets', function () {
             {finishedPresets: ['deleted2']},
         );
         // @ts-ignore
-        options.config.presets.createProject.hidden = true;
+        options.config.presets.createProject.visibility = 'hidden';
 
         const controller = new Controller(options);
         await waitForNextTick(); // progress loading
