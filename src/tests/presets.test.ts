@@ -264,6 +264,17 @@ describe('suggest once', function () {
 
         expect(controller.state.base.wizardState).toBe('hidden');
     });
+
+    it('call -> use different wizard state', async function () {
+        const options = getOptions({wizardState: 'hidden'});
+
+        const controller = new Controller(options);
+        await controller.suggestPresetOnce('createQueue', 'invisible');
+
+        const newState = options.onSave.state.mock.calls[0][0];
+
+        expect(newState.wizardState).toBe('invisible');
+    });
 });
 
 describe('user presets', function () {

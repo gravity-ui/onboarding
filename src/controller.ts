@@ -305,7 +305,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
     };
 
-    suggestPresetOnce = async (preset: string) => {
+    suggestPresetOnce = async (
+        preset: string,
+        wizardState: BaseState['wizardState'] = 'visible',
+    ) => {
         this.logger.debug('Suggest preset', preset);
 
         if (this.state.base.suggestedPresets.includes(preset)) {
@@ -313,7 +316,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
-        await this.setWizardState('visible');
+        await this.setWizardState(wizardState);
         await this.runPreset(preset);
     };
 
