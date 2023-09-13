@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/gravity-ui/onboarding/compare/v0.6.0...v0.7.0) (2023-09-13)
+
+
+### Features
+
+* add invisible wizard state ([c80ee06](https://github.com/gravity-ui/onboarding/commit/c80ee0668c760b51b50a797dd12a96a41948c603))
+
 ## [0.6.0](https://github.com/gravity-ui/onboarding/compare/v0.5.3...v0.6.0) (2023-08-22)
 
 
