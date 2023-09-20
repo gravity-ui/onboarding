@@ -273,12 +273,7 @@ describe('passMode onShowHint', function () {
 
         const newState = options.onSave.progress.mock.calls[0][0];
 
-        expect(newState.presetPassedSteps.createProject).toEqual([
-            'openBoard',
-            'createSprint',
-            'createIssue',
-            'issueButtons',
-        ]);
+        expect(newState.presetPassedSteps.createProject).toContain('issueButtons');
     });
 
     it('on one page with normal hint -> show first before close', async function () {

@@ -69,32 +69,50 @@ describe('pass step', function () {
             expect(snapshot.open).toBe(false);
         });
 
-        it('passMode: "onShowHint": pass step -> dont hint', async function () {
-            const options = getOptions(
-                {},
-                {
-                    presetPassedSteps: {
-                        createProject: ['openBoard', 'createSprint', 'createIssue'],
+        describe('passMode: "onShowHint"', function () {
+            it('show hint step -> step passed hint', async function () {
+                const options = getOptions();
+
+                options.config.presets.createProject.steps[1].passMode = 'onShowHint';
+
+                const controller = new Controller(options);
+                await controller.stepElementReached({
+                    stepSlug: 'createSprint',
+                    element: getAnchorElement(),
+                });
+
+                const newProgressState = options.onSave.progress.mock.calls[0][0];
+
+                expect(newProgressState.presetPassedSteps.createProject).toContain('createSprint');
+            });
+
+            it('show hint for last step -> finish preset', async function () {
+                const options = getOptions(
+                    {},
+                    {
+                        presetPassedSteps: {
+                            createProject: ['openBoard', 'createSprint', 'createIssue'],
+                        },
                     },
-                },
-            );
+                );
 
-            options.config.presets.createProject.steps.push({
-                slug: 'issueButtons',
-                name: '',
-                description: '',
-                passMode: 'onShowHint',
+                options.config.presets.createProject.steps.push({
+                    slug: 'issueButtons',
+                    name: '',
+                    description: '',
+                    passMode: 'onShowHint',
+                });
+
+                const controller = new Controller(options);
+                await controller.stepElementReached({
+                    stepSlug: 'issueButtons',
+                    element: getAnchorElement(),
+                });
+
+                const newProgressState = options.onSave.progress.mock.calls[0][0];
+
+                expect(newProgressState.finishedPresets).toContain('createProject');
             });
-
-            const controller = new Controller(options);
-            await controller.stepElementReached({
-                stepSlug: 'issueButtons',
-                element: getAnchorElement(),
-            });
-
-            const snapshot = controller.hintStore.getSnapshot();
-
-            expect(snapshot.open).toBe(true);
         });
     });
 
