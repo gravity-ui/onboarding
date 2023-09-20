@@ -275,8 +275,11 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
             return {
                 slug: presetSlug,
-                name: this.options.config.presets[presetSlug].name,
-                description: this.options.config.presets[presetSlug].description,
+                name: (this.options.config.presets[presetSlug] as CommonPreset<HintParams, Steps>)
+                    .name,
+                description: (
+                    this.options.config.presets[presetSlug] as CommonPreset<HintParams, Steps>
+                ).description,
                 status,
             };
         });

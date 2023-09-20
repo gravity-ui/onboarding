@@ -2,7 +2,6 @@ import {getHooks} from './hooks';
 import {Controller} from './controller';
 import type {
     InitOptions,
-    Preset,
     PresetStep,
     InferStepsFromPreset,
     InferHintParamsFromPreset,
@@ -10,6 +9,7 @@ import type {
     InferStepsFromOptions,
     InferPresetsFromOptions,
 } from './types';
+import {CombinedPreset, CommonPreset, InternalPreset} from './types';
 
 let controllerRef: Controller<object, string, string>;
 
@@ -38,8 +38,19 @@ export function createStep<
     return step;
 }
 
-export function createPreset<T extends Preset<any, any>>(preset: T) {
-    return preset as unknown as Preset<InferHintParamsFromPreset<T>, InferStepsFromPreset<T>>;
+export function createPreset<T>(preset: T) {
+    return preset as CommonPreset<InferHintParamsFromPreset<T>, InferStepsFromPreset<T>>;
+}
+
+export function createCombinedPreset<T>(preset: T) {
+    return preset as CombinedPreset<string>;
+}
+
+export function createInternalPreset<T>(preset: T) {
+    return preset as unknown as InternalPreset<
+        InferHintParamsFromPreset<T>,
+        InferStepsFromPreset<T>
+    >;
 }
 
 export function createOnboarding<T extends InitOptions<any, any, any>>(options: T) {
