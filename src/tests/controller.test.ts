@@ -53,8 +53,20 @@ describe('hooks', function () {
         });
     });
 
-    it('pass step on NOT active preset -> NOT calls onPassStep', async function () {
+    it('pass step on NOT active, but available preset -> calls onPassStep', async function () {
         const options = getOptionsWithHooks({activePresets: []});
+
+        const controller = new Controller(options);
+        await controller.passStep('createSprint');
+
+        expect(options.hooks.onStepPass).toHaveBeenCalledWith({
+            preset: 'createProject',
+            step: 'createSprint',
+        });
+    });
+
+    it('pass step on NOT active and NOT available preset -> NOT calls onPassStep', async function () {
+        const options = getOptionsWithHooks({activePresets: [], availablePresets: []});
 
         const controller = new Controller(options);
         await controller.passStep('createSprint');

@@ -117,8 +117,26 @@ describe('pass step', function () {
     });
 
     describe('not active preset', function () {
-        it('pass step -> nothing happened', async function () {
-            const options = getOptions({wizardState: 'collapsed', activePresets: []});
+        it('not active but available preset -> can pass step', async function () {
+            const options = getOptions({
+                wizardState: 'collapsed',
+                activePresets: [],
+                availablePresets: ['createProject'],
+            });
+
+            const controller = new Controller(options);
+            await controller.passStep('createSprint');
+
+            expect(options.getProgressState).toHaveBeenCalled();
+            expect(options.onSave.progress).toHaveBeenCalled();
+        });
+
+        it('not active, not available -> nothing happened', async function () {
+            const options = getOptions({
+                wizardState: 'collapsed',
+                activePresets: [],
+                availablePresets: [],
+            });
 
             const controller = new Controller(options);
             await controller.passStep('createSprint');

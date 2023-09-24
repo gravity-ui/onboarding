@@ -96,7 +96,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     passStep = async (stepSlug: Steps) => {
         this.logger.debug('Step passed', stepSlug);
 
-        const preset = this.findActivePresetWithStep(stepSlug);
+        const preset = this.findAvailablePresetWithStep(stepSlug);
 
         if (!preset) {
             return;
@@ -482,7 +482,31 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     }
 
     private findActivePresetWithStep(stepSlug: Steps) {
-        const presets = this.state.base.activePresets.filter((presetName) => {
+        const presets = this.findPresetsWithStep(stepSlug).filter((presetName) =>
+            this.state.base.activePresets.includes(presetName),
+        );
+
+        if (presets.length > 1) {
+            this.logger.error('More than 1 active preset for step', stepSlug);
+        }
+
+        return presets[0];
+    }
+
+    private findAvailablePresetWithStep(stepSlug: Steps) {
+        const presets = this.findPresetsWithStep(stepSlug).filter((presetName) =>
+            this.state.base.availablePresets.includes(presetName),
+        );
+
+        if (presets.length > 1) {
+            this.logger.error('More than 1 available preset for step', stepSlug);
+        }
+
+        return presets[0];
+    }
+
+    private findPresetsWithStep(stepSlug: Steps) {
+        return Object.keys(this.options.config.presets).filter((presetName) => {
             const preset = this.options.config.presets[presetName as Presets];
 
             if (!preset || preset.type === 'combined') {
@@ -491,12 +515,6 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
             return preset?.steps.some((step) => step.slug === stepSlug) ?? false;
         }) as Array<Presets>;
-
-        if (presets.length > 1) {
-            this.logger.error('More than 1 active preset for step', stepSlug);
-        }
-
-        return presets[0];
     }
 
     private async savePassedStepData(preset: Presets, step: Steps, callback?: () => void) {
