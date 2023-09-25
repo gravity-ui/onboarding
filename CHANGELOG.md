@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/gravity-ui/onboarding/compare/v0.7.0...v0.8.0) (2023-09-25)
+
+
+### Features
+
+* combined preset prototype ([06445eb](https://github.com/gravity-ui/onboarding/commit/06445ebaab1bae25eed4bbb2d31a56f069116280))
+
 ## [0.7.0](https://github.com/gravity-ui/onboarding/compare/v0.6.0...v0.7.0) (2023-09-13)
 
 
