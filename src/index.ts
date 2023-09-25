@@ -9,7 +9,7 @@ import type {
     InferStepsFromOptions,
     InferPresetsFromOptions,
 } from './types';
-import {CombinedPreset, CommonPreset, InternalPreset} from './types';
+import {BaseState, CombinedPreset, CommonPreset, InternalPreset} from './types';
 
 let controllerRef: Controller<object, string, string>;
 
@@ -28,6 +28,12 @@ export function passStep(step: string) {
 export async function finishPreset(preset: string) {
     if (controllerRef !== null) {
         await controllerRef.finishPreset(preset);
+    }
+}
+
+export async function setWizardState(state: BaseState['wizardState']) {
+    if (controllerRef !== null) {
+        await controllerRef.setWizardState(state);
     }
 }
 
