@@ -2,6 +2,7 @@ import type {BaseState, InitOptions, ProgressState, ReachElementParams} from './
 import {HintStore} from './hints/hintStore';
 import {createLogger} from './logger';
 import {CommonPreset, PresetStatus} from './types';
+import {createDebounceHandler} from './debounce';
 
 type Listener = () => void;
 
@@ -52,6 +53,9 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     stateListeners: Set<Listener>;
     passStepListeners: Set<Listener>;
 
+    saveBaseState: () => void;
+    saveProgressState: () => void;
+
     constructor(
         options: InitOptions<HintParams, Presets, Steps>,
         hintStore?: HintStore<HintParams, Presets, Steps>,
@@ -91,6 +95,16 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         if (this.options.baseState?.wizardState === 'visible') {
             this.ensureRunning();
         }
+
+        this.saveBaseState = createDebounceHandler(() => {
+            this.options.onSave.state(this.state.base);
+        }, 100);
+
+        this.saveProgressState = createDebounceHandler(() => {
+            this.assertProgressLoaded();
+
+            this.options.onSave.progress(this.state.progress);
+        }, 100);
     }
 
     passStep = async (stepSlug: Steps) => {
@@ -347,7 +361,6 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         this.state.base.activePresets.push(presetSlug);
         this.state.base.suggestedPresets.push(presetSlug);
-        await this.updateBaseState();
 
         this.hintStore.closeHint();
 
@@ -360,6 +373,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         });
 
         this.checkReachedHints();
+
+        await this.updateBaseState();
     };
 
     finishPreset = async (presetToFinish: Presets, shouldSave = true) => {
@@ -566,7 +581,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         this.emitChange();
 
-        await this.options.onSave.progress(this.state.progress);
+        await this.saveProgressState();
     }
 
     private async updateBaseState() {
@@ -574,7 +589,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         this.emitChange();
 
-        await this.options.onSave.state(this.state.base);
+        await this.saveBaseState();
     }
 
     private async ensureRunning() {

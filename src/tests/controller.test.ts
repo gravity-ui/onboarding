@@ -203,4 +203,40 @@ describe('store api', function () {
 
         expect(cb).not.toHaveBeenCalled();
     });
+
+    describe('batching update', () => {
+        it('base state manipulation -> 1 onSave.state call', async function () {
+            const options = getOptions({availablePresets: []});
+
+            const controller = new Controller(options);
+            const promise1 = controller.addPreset('createQueue');
+            const promise2 = controller.addPreset('createProject');
+            const promise3 = controller.setWizardState('invisible');
+
+            await Promise.all([promise1, promise2, promise3]);
+
+            expect(options.onSave.state).toHaveBeenCalledTimes(1);
+        });
+
+        it('progress manipulation -> 1 onSave.progress call', async function () {
+            const options = getOptions(
+                {
+                    availablePresets: ['createProject'],
+                    activePresets: ['createProject'],
+                    wizardState: 'hidden',
+                },
+                {finishedPresets: []},
+            );
+
+            const controller = new Controller(options);
+
+            const promise1 = controller.finishPreset('createProject');
+            const promise2 = controller.resetPresetProgress('createProject');
+            const promise3 = controller.runPreset('createProject');
+
+            await Promise.all([promise1, promise2, promise3]);
+
+            expect(options.onSave.progress).toHaveBeenCalledTimes(1);
+        });
+    });
 });
