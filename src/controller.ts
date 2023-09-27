@@ -513,11 +513,19 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             this.state.base.availablePresets.includes(presetName),
         );
 
+        let targetPreset = presets[0];
         if (presets.length > 1) {
-            this.logger.error('More than 1 available preset for step', stepSlug);
+            this.logger.error('More than 1 available preset for step', stepSlug, presets);
+            const activePreset = presets.find((presetName) =>
+                this.state.base.activePresets.includes(presetName),
+            );
+
+            if (activePreset) {
+                targetPreset = activePreset;
+            }
         }
 
-        return presets[0];
+        return targetPreset;
     }
 
     private findPresetsWithStep(stepSlug: Steps) {

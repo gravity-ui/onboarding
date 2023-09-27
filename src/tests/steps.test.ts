@@ -159,6 +159,30 @@ describe('pass step', function () {
         });
     });
 
+    describe('shared steps', function () {
+        const sharedStep = {
+            slug: 'sharedStep',
+            name: '',
+            description: '',
+        };
+
+        it('pass shared step -> pick active preset', async function () {
+            const options = getOptions({
+                availablePresets: ['createProject', 'createQueue'],
+                activePresets: ['createQueue'],
+            });
+            options.config.presets.createProject.steps = [sharedStep];
+            options.config.presets.createQueue.steps = [sharedStep];
+
+            const controller = new Controller(options);
+            await controller.passStep('sharedStep');
+
+            const newState = options.onSave.progress.mock.calls[0][0];
+
+            expect(newState.presetPassedSteps.createQueue).toEqual(['sharedStep']);
+        });
+    });
+
     it('finish preset -> remove from active add to finished', async function () {
         const options = getOptions(
             {},
