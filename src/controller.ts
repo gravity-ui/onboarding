@@ -342,7 +342,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             presetToRun.type === 'combined' ? await presetToRun.pickPreset() : presetToRunSlug
         ) as Presets;
 
-        this.logger.debug('Run preset', presetSlug);
+        this.logger.debug('Running preset', presetSlug);
 
         this.options.hooks?.onRunPreset?.({preset: presetSlug});
         this.options.config.presets[presetToRunSlug].hooks?.onStart?.();
@@ -375,6 +375,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.checkReachedHints();
 
         await this.updateBaseState();
+        this.logger.debug('Preset ran', presetSlug);
     };
 
     finishPreset = async (presetToFinish: Presets, shouldSave = true) => {
@@ -407,6 +408,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     };
 
     resetPresetProgress = async (presetArg: string | string[]) => {
+        this.logger.debug('Reset progress for', presetArg);
         await this.ensureRunning();
         this.assertProgressLoaded();
 
@@ -428,6 +430,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         await this.updateBaseState();
         await this.updateProgress();
+        this.logger.debug('Progress reset finished', presetArg);
     };
 
     private resolvePresetSlug = (presetSlug: Presets) => {
