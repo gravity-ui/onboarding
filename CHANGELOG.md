@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.9.0](https://github.com/gravity-ui/onboarding/compare/v0.8.0...v0.9.0) (2023-10-03)
+
+
+### Features
+
+* add helper for wizard state ([4c20ac8](https://github.com/gravity-ui/onboarding/commit/4c20ac8863496b19fe794f9011fc3a40bb8793b5))
+* add some logs ([3c0bbbb](https://github.com/gravity-ui/onboarding/commit/3c0bbbb99d49a326178ee8ab916a355df3e5d7bb))
+* allow pass step on not active preset ([ac3a83a](https://github.com/gravity-ui/onboarding/commit/ac3a83a6108f1fe42afe814f9a2af6326f41b270))
+* batch state updates ([2e0370c](https://github.com/gravity-ui/onboarding/commit/2e0370c635a6957f7614cf564c172316a0be4d29))
+* pick active preset for shared step ([b485f75](https://github.com/gravity-ui/onboarding/commit/b485f75f111cd8d3582343d39d82f78073b73ba6))
+
 ## [0.8.0](https://github.com/gravity-ui/onboarding/compare/v0.7.0...v0.8.0) (2023-09-25)
 
 
