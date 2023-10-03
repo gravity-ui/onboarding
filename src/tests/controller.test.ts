@@ -53,8 +53,20 @@ describe('hooks', function () {
         });
     });
 
-    it('pass step on NOT active preset -> NOT calls onPassStep', async function () {
+    it('pass step on NOT active, but available preset -> calls onPassStep', async function () {
         const options = getOptionsWithHooks({activePresets: []});
+
+        const controller = new Controller(options);
+        await controller.passStep('createSprint');
+
+        expect(options.hooks.onStepPass).toHaveBeenCalledWith({
+            preset: 'createProject',
+            step: 'createSprint',
+        });
+    });
+
+    it('pass step on NOT active and NOT available preset -> NOT calls onPassStep', async function () {
+        const options = getOptionsWithHooks({activePresets: [], availablePresets: []});
 
         const controller = new Controller(options);
         await controller.passStep('createSprint');
@@ -190,5 +202,41 @@ describe('store api', function () {
         await controller.addPreset('createQueue');
 
         expect(cb).not.toHaveBeenCalled();
+    });
+
+    describe('batching update', () => {
+        it('base state manipulation -> 1 onSave.state call', async function () {
+            const options = getOptions({availablePresets: []});
+
+            const controller = new Controller(options);
+            const promise1 = controller.addPreset('createQueue');
+            const promise2 = controller.addPreset('createProject');
+            const promise3 = controller.setWizardState('invisible');
+
+            await Promise.all([promise1, promise2, promise3]);
+
+            expect(options.onSave.state).toHaveBeenCalledTimes(1);
+        });
+
+        it('progress manipulation -> 1 onSave.progress call', async function () {
+            const options = getOptions(
+                {
+                    availablePresets: ['createProject'],
+                    activePresets: ['createProject'],
+                    wizardState: 'hidden',
+                },
+                {finishedPresets: []},
+            );
+
+            const controller = new Controller(options);
+
+            const promise1 = controller.finishPreset('createProject');
+            const promise2 = controller.resetPresetProgress('createProject');
+            const promise3 = controller.runPreset('createProject');
+
+            await Promise.all([promise1, promise2, promise3]);
+
+            expect(options.onSave.progress).toHaveBeenCalledTimes(1);
+        });
     });
 });

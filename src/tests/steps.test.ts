@@ -117,8 +117,26 @@ describe('pass step', function () {
     });
 
     describe('not active preset', function () {
-        it('pass step -> nothing happened', async function () {
-            const options = getOptions({wizardState: 'collapsed', activePresets: []});
+        it('not active but available preset -> can pass step', async function () {
+            const options = getOptions({
+                wizardState: 'collapsed',
+                activePresets: [],
+                availablePresets: ['createProject'],
+            });
+
+            const controller = new Controller(options);
+            await controller.passStep('createSprint');
+
+            expect(options.getProgressState).toHaveBeenCalled();
+            expect(options.onSave.progress).toHaveBeenCalled();
+        });
+
+        it('not active, not available -> nothing happened', async function () {
+            const options = getOptions({
+                wizardState: 'collapsed',
+                activePresets: [],
+                availablePresets: [],
+            });
 
             const controller = new Controller(options);
             await controller.passStep('createSprint');
@@ -138,6 +156,30 @@ describe('pass step', function () {
             await controller.passStep('createIssue');
 
             expect(options.onSave.progress).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('shared steps', function () {
+        const sharedStep = {
+            slug: 'sharedStep',
+            name: '',
+            description: '',
+        };
+
+        it('pass shared step -> pick active preset', async function () {
+            const options = getOptions({
+                availablePresets: ['createProject', 'createQueue'],
+                activePresets: ['createQueue'],
+            });
+            options.config.presets.createProject.steps = [sharedStep];
+            options.config.presets.createQueue.steps = [sharedStep];
+
+            const controller = new Controller(options);
+            await controller.passStep('sharedStep');
+
+            const newState = options.onSave.progress.mock.calls[0][0];
+
+            expect(newState.presetPassedSteps.createQueue).toEqual(['sharedStep']);
         });
     });
 

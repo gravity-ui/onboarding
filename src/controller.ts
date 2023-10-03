@@ -2,6 +2,7 @@ import type {BaseState, InitOptions, ProgressState, ReachElementParams} from './
 import {HintStore} from './hints/hintStore';
 import {createLogger} from './logger';
 import {CommonPreset, PresetStatus} from './types';
+import {createDebounceHandler} from './debounce';
 
 type Listener = () => void;
 
@@ -52,6 +53,9 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     stateListeners: Set<Listener>;
     passStepListeners: Set<Listener>;
 
+    saveBaseState: () => void;
+    saveProgressState: () => void;
+
     constructor(
         options: InitOptions<HintParams, Presets, Steps>,
         hintStore?: HintStore<HintParams, Presets, Steps>,
@@ -91,12 +95,22 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         if (this.options.baseState?.wizardState === 'visible') {
             this.ensureRunning();
         }
+
+        this.saveBaseState = createDebounceHandler(() => {
+            this.options.onSave.state(this.state.base);
+        }, 100);
+
+        this.saveProgressState = createDebounceHandler(() => {
+            this.assertProgressLoaded();
+
+            this.options.onSave.progress(this.state.progress);
+        }, 100);
     }
 
     passStep = async (stepSlug: Steps) => {
         this.logger.debug('Step passed', stepSlug);
 
-        const preset = this.findActivePresetWithStep(stepSlug);
+        const preset = this.findAvailablePresetWithStep(stepSlug);
 
         if (!preset) {
             return;
@@ -328,7 +342,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             presetToRun.type === 'combined' ? await presetToRun.pickPreset() : presetToRunSlug
         ) as Presets;
 
-        this.logger.debug('Run preset', presetSlug);
+        this.logger.debug('Running preset', presetSlug);
 
         this.options.hooks?.onRunPreset?.({preset: presetSlug});
         this.options.config.presets[presetToRunSlug].hooks?.onStart?.();
@@ -347,7 +361,6 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         this.state.base.activePresets.push(presetSlug);
         this.state.base.suggestedPresets.push(presetSlug);
-        await this.updateBaseState();
 
         this.hintStore.closeHint();
 
@@ -360,6 +373,9 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         });
 
         this.checkReachedHints();
+
+        await this.updateBaseState();
+        this.logger.debug('Preset ran', presetSlug);
     };
 
     finishPreset = async (presetToFinish: Presets, shouldSave = true) => {
@@ -392,6 +408,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     };
 
     resetPresetProgress = async (presetArg: string | string[]) => {
+        this.logger.debug('Reset progress for', presetArg);
         await this.ensureRunning();
         this.assertProgressLoaded();
 
@@ -413,6 +430,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         await this.updateBaseState();
         await this.updateProgress();
+        this.logger.debug('Progress reset finished', presetArg);
     };
 
     private resolvePresetSlug = (presetSlug: Presets) => {
@@ -482,7 +500,39 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     }
 
     private findActivePresetWithStep(stepSlug: Steps) {
-        const presets = this.state.base.activePresets.filter((presetName) => {
+        const presets = this.findPresetsWithStep(stepSlug).filter((presetName) =>
+            this.state.base.activePresets.includes(presetName),
+        );
+
+        if (presets.length > 1) {
+            this.logger.error('More than 1 active preset for step', stepSlug);
+        }
+
+        return presets[0];
+    }
+
+    private findAvailablePresetWithStep(stepSlug: Steps) {
+        const presets = this.findPresetsWithStep(stepSlug).filter((presetName) =>
+            this.state.base.availablePresets.includes(presetName),
+        );
+
+        let targetPreset = presets[0];
+        if (presets.length > 1) {
+            this.logger.error('More than 1 available preset for step', stepSlug, presets);
+            const activePreset = presets.find((presetName) =>
+                this.state.base.activePresets.includes(presetName),
+            );
+
+            if (activePreset) {
+                targetPreset = activePreset;
+            }
+        }
+
+        return targetPreset;
+    }
+
+    private findPresetsWithStep(stepSlug: Steps) {
+        return Object.keys(this.options.config.presets).filter((presetName) => {
             const preset = this.options.config.presets[presetName as Presets];
 
             if (!preset || preset.type === 'combined') {
@@ -491,12 +541,6 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
             return preset?.steps.some((step) => step.slug === stepSlug) ?? false;
         }) as Array<Presets>;
-
-        if (presets.length > 1) {
-            this.logger.error('More than 1 active preset for step', stepSlug);
-        }
-
-        return presets[0];
     }
 
     private async savePassedStepData(preset: Presets, step: Steps, callback?: () => void) {
@@ -548,7 +592,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         this.emitChange();
 
-        await this.options.onSave.progress(this.state.progress);
+        await this.saveProgressState();
     }
 
     private async updateBaseState() {
@@ -556,7 +600,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         this.emitChange();
 
-        await this.options.onSave.state(this.state.base);
+        await this.saveBaseState();
     }
 
     private async ensureRunning() {

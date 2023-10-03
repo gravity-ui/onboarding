@@ -206,6 +206,18 @@ describe('preset management', function () {
 
             expect(newBaseState.suggestedPresets).toEqual(['createProject']);
         });
+
+        it('finish unavailable preset -> add to finished', async function () {
+            const options = getOptions({activePresets: [], availablePresets: []});
+            const controller = new Controller(options);
+            await controller.finishPreset('createQueue');
+
+            const newBaseState = options.onSave.state.mock.calls[0][0];
+            const newProgressState = options.onSave.progress.mock.calls[0][0];
+
+            expect(newBaseState.activePresets).toEqual([]);
+            expect(newProgressState.finishedPresets).toEqual(['createQueue']);
+        });
     });
 
     describe('reset progress', function () {
