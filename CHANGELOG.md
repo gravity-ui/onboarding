@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/gravity-ui/onboarding/compare/v0.9.0...v0.9.1) (2023-10-04)
+
+
+### Bug Fixes
+
+* not duplicate suggested presets ([cb33543](https://github.com/gravity-ui/onboarding/commit/cb3354373cf4d7984ec640bb97bbe1490b7ef5a9))
+
 ## [0.9.0](https://github.com/gravity-ui/onboarding/compare/v0.8.0...v0.9.0) (2023-10-03)
 
 
