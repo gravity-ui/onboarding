@@ -360,7 +360,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
 
         this.state.base.activePresets.push(presetSlug);
-        this.state.base.suggestedPresets.push(presetSlug);
+
+        if (!this.state.base.suggestedPresets.includes(presetSlug)) {
+            this.state.base.suggestedPresets.push(presetSlug);
+        }
 
         this.hintStore.closeHint();
 
