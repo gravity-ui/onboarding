@@ -69,12 +69,14 @@ describe('preset management', function () {
         it('run same preset -> not duplicate', async function () {
             const controller = new Controller(options);
             await controller.runPreset('createQueue');
+            await controller.finishPreset('createQueue');
             await controller.runPreset('createQueue');
 
             const newState =
                 options.onSave.state.mock.calls[options.onSave.state.mock.calls.length - 1][0];
 
             expect(newState.activePresets).toEqual(['createProject', 'createQueue']);
+            expect(newState.suggestedPresets).toEqual(['createProject', 'createQueue']);
         });
 
         it('preset not from config -> nothing', async function () {
