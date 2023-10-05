@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.2](https://github.com/gravity-ui/onboarding/compare/v0.9.1...v0.9.2) (2023-10-05)
+
+
+### Bug Fixes
+
+* complete new state on each update ([7725cdd](https://github.com/gravity-ui/onboarding/commit/7725cdd3d497dd86a4a3faab7b642864c68ffadc))
+* public ensureRunning method ([d08025a](https://github.com/gravity-ui/onboarding/commit/d08025aa1d1c5784c63ba0fedb98e08e44180a53))
+
 ## [0.9.1](https://github.com/gravity-ui/onboarding/compare/v0.9.0...v0.9.1) (2023-10-04)
 
 
