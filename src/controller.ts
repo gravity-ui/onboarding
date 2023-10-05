@@ -680,7 +680,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     }
 
     private emitChange = () => {
-        this.state = {...this.state};
+        this.state = JSON.parse(JSON.stringify(this.state));
 
         for (const listener of this.stateListeners) {
             listener();
