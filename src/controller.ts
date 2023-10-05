@@ -436,6 +436,31 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.logger.debug('Progress reset finished', presetArg);
     };
 
+    async ensureRunning() {
+        if (this.status === 'active') {
+            return;
+        }
+
+        if (!this.progressLoadingPromise) {
+            this.progressLoadingPromise = this.options.getProgressState();
+        }
+
+        this.logger.debug('Loading onboarding progress data');
+        try {
+            const newProgressState = await this.progressLoadingPromise;
+            this.state.progress = {
+                ...defaultProgress,
+                ...newProgressState,
+            };
+            this.status = 'active';
+            this.emitChange();
+
+            this.logger.debug('Onboarding progress data loaded');
+        } catch (e) {
+            this.logger.error('progress data loading error');
+        }
+    }
+
     private resolvePresetSlug = (presetSlug: Presets) => {
         const preset = this.options.config.presets[presetSlug];
 
@@ -606,31 +631,6 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         await this.saveBaseState();
     }
 
-    private async ensureRunning() {
-        if (this.status === 'active') {
-            return;
-        }
-
-        if (!this.progressLoadingPromise) {
-            this.progressLoadingPromise = this.options.getProgressState();
-        }
-
-        this.logger.debug('Loading onboarding progress data');
-        try {
-            const newProgressState = await this.progressLoadingPromise;
-            this.state.progress = {
-                ...defaultProgress,
-                ...newProgressState,
-            };
-            this.status = 'active';
-            this.emitChange();
-
-            this.logger.debug('Onboarding progress data loaded');
-        } catch (e) {
-            this.logger.error('progress data loading error');
-        }
-    }
-
     private ensurePresetExists(preset: string): asserts preset is Presets {
         // @ts-ignore
         if (!this.options.config.presets[preset]) {
@@ -683,7 +683,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     }
 
     private emitChange = () => {
-        this.state = {...this.state};
+        this.state = JSON.parse(JSON.stringify(this.state));
 
         for (const listener of this.stateListeners) {
             listener();

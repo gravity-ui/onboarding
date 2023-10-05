@@ -165,6 +165,24 @@ describe('store api', function () {
         expect(Object.is(snapshot1, snapshot2)).toBe(false);
     });
 
+    it('change state -> deep field updates', async function () {
+        const options = getOptions();
+
+        const controller = new Controller(options);
+
+        const snapshot1 = controller.getSnapshot();
+        await controller.addPreset('createQueue');
+        const snapshot2 = controller.getSnapshot();
+
+        expect(Object.is(snapshot1.base.activePresets, snapshot2.base.activePresets)).toBe(false);
+        expect(Object.is(snapshot1.base.availablePresets, snapshot2.base.availablePresets)).toBe(
+            false,
+        );
+        expect(Object.is(snapshot1.base.suggestedPresets, snapshot2.base.suggestedPresets)).toBe(
+            false,
+        );
+    });
+
     it('change progress -> trigger callback', async function () {
         const options = getOptions();
 
@@ -188,6 +206,23 @@ describe('store api', function () {
         const snapshot2 = controller.getSnapshot();
 
         expect(Object.is(snapshot1, snapshot2)).toBe(false);
+    });
+
+    it('change progress -> deep field updates', async function () {
+        const options = getOptions();
+
+        const controller = new Controller(options);
+
+        const snapshot1 = controller.getSnapshot();
+        await controller.passStep('createSprint');
+        const snapshot2 = controller.getSnapshot();
+
+        expect(
+            Object.is(snapshot1.progress?.presetPassedSteps, snapshot2.progress?.presetPassedSteps),
+        ).toBe(false);
+        expect(
+            Object.is(snapshot1.progress?.finishedPresets, snapshot2.progress?.finishedPresets),
+        ).toBe(false);
     });
 
     it('unsubscribe -> no cb', async function () {
