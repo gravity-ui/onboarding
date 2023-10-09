@@ -40,6 +40,7 @@ export type Preset<HintParams, Steps extends string> =
     | InternalPreset<HintParams, Steps>;
 
 export type PresetHooks = {
+    onBeforeStart?: () => Promise<void> | void;
     onStart?: () => void;
     onEnd?: () => void;
 };

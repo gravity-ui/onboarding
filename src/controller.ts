@@ -344,11 +344,9 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         this.logger.debug('Running preset', presetSlug);
 
-        this.options.hooks?.onRunPreset?.({preset: presetSlug});
-        this.options.config.presets[presetToRunSlug].hooks?.onStart?.();
-
+        await this.options.config.presets[presetToRunSlug].hooks?.onBeforeStart?.();
         if (presetSlug !== presetToRunSlug) {
-            this.options.config.presets[presetSlug].hooks?.onStart?.();
+            await this.options.config.presets[presetSlug].hooks?.onBeforeStart?.();
         }
 
         if (!this.state.base.availablePresets.includes(presetSlug)) {
@@ -374,6 +372,12 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         actualPreset.steps?.forEach(({slug}) => {
             this.showedHints.delete(slug);
         });
+
+        this.options.hooks?.onRunPreset?.({preset: presetSlug});
+        this.options.config.presets[presetToRunSlug].hooks?.onStart?.();
+        if (presetSlug !== presetToRunSlug) {
+            this.options.config.presets[presetSlug].hooks?.onStart?.();
+        }
 
         this.checkReachedHints();
 

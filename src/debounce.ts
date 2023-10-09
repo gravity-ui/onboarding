@@ -1,4 +1,4 @@
-const createControlledPromise = () => {
+export const createControlledPromise = () => {
     let resolveFn = () => {};
     const promise = new Promise<void>((resolve) => {
         resolveFn = resolve;
