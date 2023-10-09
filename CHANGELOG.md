@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/gravity-ui/onboarding/compare/v0.9.2...v0.10.0) (2023-10-09)
+
+
+### Features
+
+* onBeforeStart hook + fix onStart hook ([f684121](https://github.com/gravity-ui/onboarding/commit/f6841211c996c4f94f8f6eb25133b259f6cd2194))
+
 ## [0.9.2](https://github.com/gravity-ui/onboarding/compare/v0.9.1...v0.9.2) (2023-10-05)
 
 
