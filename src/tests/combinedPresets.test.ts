@@ -123,6 +123,21 @@ describe('combined presets', function () {
             expect(newState.activePresets).toEqual(['internal1']);
         });
 
+        it('start preset -> calls onBeforeStart on combined and internal preset', async function () {
+            const mock1 = jest.fn();
+            const mock2 = jest.fn();
+            // @ts-ignore
+            options.config.presets.combinedPreset.hooks = {onBeforeStart: mock1};
+            // @ts-ignore
+            options.config.presets.internal1.hooks = {onBeforeStart: mock2};
+
+            const controller = new Controller(options);
+            await controller.runPreset('combinedPreset');
+
+            expect(mock1).toHaveBeenCalled();
+            expect(mock2).toHaveBeenCalled();
+        });
+
         it('start preset -> calls onStart on combined and internal preset', async function () {
             const mock1 = jest.fn();
             const mock2 = jest.fn();

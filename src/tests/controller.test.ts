@@ -74,32 +74,19 @@ describe('hooks', function () {
         expect(options.hooks.onStepPass).not.toHaveBeenCalled();
     });
 
-    it('finish preset by pass step -> calls onFinishPreset', async function () {
-        const options = getOptionsWithHooks(
-            {},
-            {presetPassedSteps: {createProject: ['openBoard', 'createSprint']}},
-        );
+    describe('preset hooks', function () {
+        it('run preset -> call onRunPreset', async function () {
+            expect.assertions(1);
+            const options = getOptionsWithHooks();
 
-        const controller = new Controller(options);
-        await controller.passStep('createIssue');
+            const controller = new Controller(options);
+            options.hooks.onRunPreset = jest.fn(() => {
+                expect(controller.state.base.activePresets).toContain('createQueue');
+            });
 
-        expect(options.hooks.onFinishPreset).toHaveBeenCalledWith({
-            preset: 'createProject',
+            await controller.runPreset('createQueue');
         });
     });
-
-    it('force finish preset -> calls onFinishPreset', async function () {
-        const options = getOptionsWithHooks();
-
-        const controller = new Controller(options);
-        await controller.finishPreset('createProject');
-
-        expect(options.hooks.onFinishPreset).toHaveBeenCalledWith({
-            preset: 'createProject',
-        });
-    });
-
-    describe('preset hooks', function () {});
 });
 
 describe('store api', function () {

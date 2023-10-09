@@ -1,5 +1,6 @@
 import {Controller} from '../controller';
 import {getAnchorElement, getOptions, getOptionsWithHooks, waitForNextTick} from './utils';
+import {createControlledPromise} from '../debounce';
 
 describe('preset management', function () {
     describe('add preset', function () {
@@ -87,17 +88,6 @@ describe('preset management', function () {
             expect(options.onSave.progress).not.toHaveBeenCalled();
         });
 
-        it('start preset -> calls onStart', async function () {
-            const mock = jest.fn();
-            // @ts-ignore
-            options.config.presets.createQueue.hooks = {onStart: mock};
-
-            const controller = new Controller(options);
-            await controller.runPreset('createQueue');
-
-            expect(mock).toHaveBeenCalled();
-        });
-
         it('run preset -> show hint for existing element', async function () {
             options.baseState.activePresets = [];
 
@@ -133,6 +123,89 @@ describe('preset management', function () {
 
             expect(newState.availablePresets).toContain('createQueue');
             expect(newState.activePresets).toContain('createQueue');
+        });
+    });
+
+    describe('hooks', function () {
+        it('calls onBeforeStart -> before run preset', async function () {
+            expect.assertions(1);
+            const options = getOptionsWithHooks();
+
+            const controller = new Controller(options);
+            const mock = () => {
+                expect(controller.state.base.activePresets).not.toContain('createQueue');
+            };
+            // @ts-ignore
+            options.config.presets.createQueue.hooks = {onBeforeStart: mock};
+            await controller.runPreset('createQueue');
+        });
+
+        it('can await onBeforeStart hook', async function () {
+            const {promise, resolve} = createControlledPromise();
+            const options = getOptionsWithHooks();
+
+            const controller = new Controller(options);
+            // @ts-ignore
+            options.config.presets.createQueue.hooks = {onBeforeStart: () => promise};
+            const runPresetPromise = controller.runPreset('createQueue');
+
+            expect(controller.state.base.activePresets).not.toContain('createQueue');
+            resolve();
+
+            await runPresetPromise;
+            expect(controller.state.base.activePresets).toContain('createQueue');
+        });
+
+        it('start preset -> calls onStart', async function () {
+            const options = getOptionsWithHooks();
+            const mock = jest.fn();
+            // @ts-ignore
+            options.config.presets.createQueue.hooks = {onStart: mock};
+
+            const controller = new Controller(options);
+            await controller.runPreset('createQueue');
+
+            expect(mock).toHaveBeenCalled();
+        });
+
+        it('onStart hook called -> has preset in active', async function () {
+            const options = getOptionsWithHooks();
+
+            const controller = new Controller(options);
+            const mock = jest.fn(() => {
+                expect(controller.state.base.activePresets).toContain('createQueue');
+            });
+            // @ts-ignore
+            options.config.presets.createQueue.hooks = {onStart: mock};
+
+            await controller.runPreset('createQueue');
+
+            expect(mock).toHaveBeenCalled();
+        });
+
+        it('finish preset by pass step -> calls onFinishPreset', async function () {
+            const options = getOptionsWithHooks(
+                {},
+                {presetPassedSteps: {createProject: ['openBoard', 'createSprint']}},
+            );
+
+            const controller = new Controller(options);
+            await controller.passStep('createIssue');
+
+            expect(options.hooks.onFinishPreset).toHaveBeenCalledWith({
+                preset: 'createProject',
+            });
+        });
+
+        it('force finish preset -> calls onFinishPreset', async function () {
+            const options = getOptionsWithHooks();
+
+            const controller = new Controller(options);
+            await controller.finishPreset('createProject');
+
+            expect(options.hooks.onFinishPreset).toHaveBeenCalledWith({
+                preset: 'createProject',
+            });
         });
     });
 
