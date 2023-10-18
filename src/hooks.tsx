@@ -25,7 +25,7 @@ export function getHooks<HintParams, Presets extends string, Steps extends strin
         }, [step]);
 
         const closeHint = useCallback(() => {
-            controller.closeHintForStep(step);
+            controller.closeHintByUser(step);
         }, [step]);
 
         return {pass, ref: onRefChange, closeHint};
@@ -47,7 +47,7 @@ export function getHooks<HintParams, Presets extends string, Steps extends strin
         );
         return {
             ...popupData,
-            onClose: controller.closeHint,
+            onClose: controller.closeHintByUser,
         };
     };
 

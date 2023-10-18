@@ -7,20 +7,19 @@ import {createDebounceHandler} from './debounce';
 type Listener = () => void;
 
 let instanceCounter = 0;
-const defaultBaseState: BaseState = {
-    availablePresets: [],
-    activePresets: [],
-    suggestedPresets: [],
-    wizardState: 'hidden' as const,
-};
-const defaultProgress = {
-    presetPassedSteps: {},
-    finishedPresets: [],
-};
 
 export class Controller<HintParams, Presets extends string, Steps extends string> {
     static findNextUnpassedStep(presetSteps: string[], passedSteps: string[]): string | undefined {
         if (!presetSteps) {
+            return undefined;
+        }
+
+        if (passedSteps.length === 0) {
+            return presetSteps[0];
+        }
+
+        if (passedSteps.includes(presetSteps[presetSteps.length - 1])) {
+            // all steps passed
             return undefined;
         }
 
@@ -36,7 +35,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             }
         }
 
-        return presetSteps[0];
+        return undefined;
     }
 
     options: InitOptions<HintParams, Presets, Steps>;
@@ -46,7 +45,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     };
     status: 'idle' | 'active';
     progressLoadingPromise: Promise<Partial<ProgressState>> | undefined;
-    showedHints: Set<Steps>;
+    closedHints: Set<Steps>;
     reachedElements: Map<Steps, HTMLElement>;
     hintStore: HintStore<HintParams, Presets, Steps>;
     logger: ReturnType<typeof createLogger>;
@@ -62,6 +61,12 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     ) {
         this.options = options;
 
+        const defaultBaseState: BaseState = {
+            availablePresets: [],
+            activePresets: [],
+            suggestedPresets: [],
+            wizardState: 'hidden' as const,
+        };
         this.state = {
             base: {
                 ...defaultBaseState,
@@ -69,7 +74,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             },
         };
         this.status = 'idle';
-        this.showedHints = new Set();
+        this.closedHints = new Set();
         this.reachedElements = new Map();
 
         this.hintStore = hintStore || new HintStore();
@@ -137,6 +142,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             if (step?.passMode !== 'onShowHint') {
                 this.logger.debug('Close hint on step', stepSlug);
                 this.closeHint();
+                this.checkReachedHints();
             }
         });
     };
@@ -186,8 +192,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             this.hintStore.updateHintAnchor({element, step: stepSlug});
         }
 
-        if (this.showedHints.has(stepSlug)) {
-            this.logger.debug('Hint for step was shown', preset, stepSlug);
+        if (this.closedHints.has(stepSlug)) {
+            this.logger.debug('Hint for step was shown and closed', preset, stepSlug);
             return;
         }
 
@@ -218,7 +224,6 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         this.options.hooks?.onShowHint?.({preset, step: stepSlug});
 
-        this.showedHints.add(stepSlug);
         this.options.showHint?.({preset, element, step});
         this.hintStore.showHint({preset, element, step});
 
@@ -233,24 +238,24 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         const step = this.getStepBySlug(stepSlug);
 
         if (step?.closeOnElementUnmount !== false) {
-            this.closeHintForStep(stepSlug);
+            this.closeHint(stepSlug);
         }
     };
 
-    closeHint = () => {
-        this.logger.debug('Close hint', this.hintStore.state.hint);
-        this.hintStore.closeHint();
-
-        this.checkReachedHints();
-    };
-
-    closeHintForStep = (stepSlug: Steps) => {
-        if (stepSlug !== this.hintStore.state.hint?.step.slug) {
+    closeHintByUser = (stepSlug?: Steps) => {
+        const currentHintStep = this.hintStore.state.hint?.step.slug;
+        this.logger.debug('Close hint(internal)', currentHintStep);
+        if (stepSlug && stepSlug !== currentHintStep) {
             this.logger.debug('Hint for step', stepSlug, 'is not current hint');
             return;
         }
 
-        this.closeHint();
+        if (currentHintStep) {
+            this.closedHints.add(currentHintStep);
+        }
+
+        this.hintStore.closeHint();
+        this.checkReachedHints();
     };
 
     getSnapshot = () => {
@@ -363,14 +368,14 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             this.state.base.suggestedPresets.push(presetSlug);
         }
 
-        this.hintStore.closeHint();
+        await this.closeHintByUser();
 
         const actualPreset = this.options.config.presets[presetSlug] as CommonPreset<
             HintParams,
             Steps
         >;
         actualPreset.steps?.forEach(({slug}) => {
-            this.showedHints.delete(slug);
+            this.closedHints.delete(slug);
         });
 
         this.options.hooks?.onRunPreset?.({preset: presetSlug});
@@ -451,7 +456,12 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         this.logger.debug('Loading onboarding progress data');
         try {
+            const defaultProgress = {
+                presetPassedSteps: {},
+                finishedPresets: [],
+            };
             const newProgressState = await this.progressLoadingPromise;
+
             this.state.progress = {
                 ...defaultProgress,
                 ...newProgressState,
@@ -464,6 +474,17 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             this.logger.error('progress data loading error');
         }
     }
+
+    private closeHint = (stepSlug?: Steps) => {
+        const currentHintStep = this.hintStore.state.hint?.step.slug;
+        this.logger.debug('Close hint(internal)', currentHintStep);
+        if (stepSlug && stepSlug !== currentHintStep) {
+            this.logger.debug('Hint for step', stepSlug, 'is not current hint');
+            return;
+        }
+
+        this.hintStore.closeHint();
+    };
 
     private resolvePresetSlug = (presetSlug: Presets) => {
         const preset = this.options.config.presets[presetSlug];
@@ -602,15 +623,13 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         const preset = this.options.config.presets[presetSlug];
 
         if (!preset || preset.type === 'combined') {
-            // сюда не должны попадать combined пресеты
+            // no combined presets here
             return;
         }
 
-        const steps = preset.steps.map((step) => step.slug) ?? [];
-
-        const isFinishPreset = steps.every((stepName) =>
-            this.state.progress?.presetPassedSteps[presetSlug]?.includes(stepName),
-        );
+        const lastStepSlug = preset.steps[preset.steps.length - 1].slug;
+        const isFinishPreset =
+            this.state.progress?.presetPassedSteps[presetSlug]?.includes(lastStepSlug);
 
         if (isFinishPreset) {
             await this.finishPreset(presetSlug, false);
@@ -651,9 +670,9 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         this.logger.debug(`Check reached hints. Found ${this.reachedElements.size}`);
 
-        this.reachedElements.forEach((element, stepSlug) => {
+        for (const [stepSlug, element] of this.reachedElements) {
             this.stepElementReached({stepSlug, element});
-        });
+        }
     }
 
     private assertProgressLoaded(): asserts this is this & {

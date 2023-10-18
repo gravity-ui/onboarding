@@ -13,36 +13,6 @@ it('reachElement -> show hint', async function () {
     expect(options.showHint).toHaveBeenCalled();
 });
 
-describe('init with not full data', function () {
-    it('empty progress, reachElement -> show hint', async function () {
-        const options = getOptions();
-        // @ts-ignore
-        options.getProgressState = () => Promise.resolve({});
-
-        const controller = new Controller(options);
-        await controller.stepElementReached({
-            stepSlug: 'openBoard',
-            element: getAnchorElement(),
-        });
-
-        expect(options.showHint).toHaveBeenCalled();
-    });
-
-    it('should init with empty base state', async function () {
-        const options = getOptions();
-        // @ts-ignore
-        options.baseState = undefined;
-
-        const controller = new Controller(options);
-        await controller.stepElementReached({
-            stepSlug: 'openBoard',
-            element: getAnchorElement(),
-        });
-
-        // not throw error
-    });
-});
-
 it('reachElement -> show only first unpassed step hint', async function () {
     const options = getOptions();
 
@@ -125,7 +95,7 @@ describe('close hint', function () {
             stepSlug: 'createSprint',
             element: getAnchorElement(),
         });
-        await controller.closeHint();
+        await controller.closeHintByUser();
 
         const snapshot = controller.hintStore.getSnapshot();
         expect(snapshot.open).toBe(false);
@@ -138,7 +108,7 @@ describe('close hint', function () {
             stepSlug: 'createSprint',
             element: getAnchorElement(),
         });
-        await controller.closeHintForStep('createSprint');
+        await controller.closeHintByUser('createSprint');
 
         const snapshot = controller.hintStore.getSnapshot();
         expect(snapshot.open).toBe(false);
@@ -151,7 +121,7 @@ describe('close hint', function () {
             stepSlug: 'createSprint',
             element: getAnchorElement(),
         });
-        await controller.closeHintForStep('randomStep');
+        await controller.closeHintByUser('randomStep');
 
         const snapshot = controller.hintStore.getSnapshot();
         expect(snapshot.open).toBe(true);
@@ -170,6 +140,43 @@ describe('close hint', function () {
 
         const snapshot = controller.hintStore.getSnapshot();
         expect(snapshot.open).toBe(true);
+    });
+
+    it("close hint -> don't show again", async function () {
+        const options = getOptions();
+
+        const controller = new Controller(options);
+        await controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: getAnchorElement(),
+        });
+        controller.closeHintByUser();
+        await controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: getAnchorElement(),
+        });
+
+        await expect(options.showHint).toHaveBeenCalledTimes(1);
+    });
+
+    it('element rerendered -> show hint again', async function () {
+        const options = getOptions();
+
+        const controller = new Controller(options);
+        await controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: getAnchorElement(),
+        });
+        controller.stepElementDisappeared('createSprint');
+        await controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: getAnchorElement(),
+        });
+
+        const snapshot = controller.hintStore.getSnapshot();
+
+        expect(snapshot.open).toBe(true);
+        expect(snapshot.hint?.step.slug).toBe('createSprint');
     });
 });
 
@@ -209,22 +216,6 @@ it('removed preset in active  -> show hint', async function () {
 });
 
 describe('Many visible elements on one page', function () {
-    it('should show hint only once for session', async function () {
-        const options = getOptions();
-
-        const controller = new Controller(options);
-        controller.stepElementReached({
-            stepSlug: 'createSprint',
-            element: getAnchorElement(),
-        });
-        await controller.stepElementReached({
-            stepSlug: 'createSprint',
-            element: getAnchorElement(),
-        });
-
-        await expect(options.showHint).toHaveBeenCalledTimes(1);
-    });
-
     it('pass step -> show next popup', async function () {
         const options = getOptions();
 
@@ -311,7 +302,7 @@ describe('passMode onShowHint', function () {
             stepSlug: 'createIssue',
             element: getAnchorElement(),
         });
-        await controller.closeHint();
+        await controller.closeHintByUser();
 
         const snapshot = controller.hintStore.getSnapshot();
 

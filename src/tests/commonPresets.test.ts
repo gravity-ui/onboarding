@@ -112,7 +112,7 @@ describe('preset management', function () {
 
             await controller.runPreset('createQueue');
 
-            await expect(controller.hintStore.state.open).toBe(false);
+            expect(controller.hintStore.state.open).toBe(false);
         });
 
         it('can run unavailable preset', async function () {
@@ -234,19 +234,6 @@ describe('preset management', function () {
     });
 
     describe('finish preset', function () {
-        it('finish preset -> add to finished', async function () {
-            const options = getOptions();
-
-            const controller = new Controller(options);
-            await controller.finishPreset('createProject');
-
-            const newBaseState = options.onSave.state.mock.calls[0][0];
-            const newProgressState = options.onSave.progress.mock.calls[0][0];
-
-            expect(newBaseState.activePresets).toEqual([]);
-            expect(newProgressState.finishedPresets).toEqual(['createProject']);
-        });
-
         it('finish same preset -> not duplicate', async function () {
             const options = getOptions();
 
@@ -292,6 +279,58 @@ describe('preset management', function () {
 
             expect(newBaseState.activePresets).toEqual([]);
             expect(newProgressState.finishedPresets).toEqual(['createQueue']);
+        });
+    });
+
+    describe('finish preset by pass steps', function () {
+        it('finish preset -> remove from active add to finished', async function () {
+            const options = getOptions(
+                {},
+                {presetPassedSteps: {createProject: ['openBoard', 'createSprint']}},
+            );
+
+            const controller = new Controller(options);
+            await controller.passStep('createIssue');
+
+            const newBaseState = options.onSave.state.mock.calls[0][0];
+            const newProgressState = options.onSave.progress.mock.calls[0][0];
+
+            expect(newBaseState.activePresets).toEqual([]);
+            expect(newProgressState.finishedPresets).toEqual(['createProject']);
+            expect(options.onSave.progress).toHaveBeenCalledTimes(1);
+        });
+
+        it('pass only last steps -> finish preset', async function () {
+            const options = getOptionsWithHooks({}, {presetPassedSteps: {createProject: []}});
+
+            const controller = new Controller(options);
+            await controller.passStep('createSprint');
+            await controller.passStep('createIssue');
+
+            const newProgressState = options.onSave.progress.mock.lastCall[0];
+
+            expect(newProgressState.finishedPresets).toContain('createProject');
+        });
+
+        it('finish preset by pass step -> hide hint', async function () {
+            const options = getOptionsWithHooks(
+                {},
+                {presetPassedSteps: {createProject: ['createSprint']}},
+            );
+
+            const controller = new Controller(options);
+            await controller.stepElementReached({
+                stepSlug: 'openBoard',
+                element: getAnchorElement(),
+            });
+            await controller.stepElementReached({
+                stepSlug: 'createIssue',
+                element: getAnchorElement(),
+            });
+            await controller.passStep('createIssue');
+            await waitForNextTick();
+
+            expect(controller.hintStore.state.open).toBe(false);
         });
     });
 
