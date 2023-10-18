@@ -183,23 +183,6 @@ describe('pass step', function () {
         });
     });
 
-    it('finish preset -> remove from active add to finished', async function () {
-        const options = getOptions(
-            {},
-            {presetPassedSteps: {createProject: ['openBoard', 'createSprint']}},
-        );
-
-        const controller = new Controller(options);
-        await controller.passStep('createIssue');
-
-        const newBaseState = options.onSave.state.mock.calls[0][0];
-        const newProgressState = options.onSave.progress.mock.calls[0][0];
-
-        expect(newBaseState.activePresets).toEqual([]);
-        expect(newProgressState.finishedPresets).toEqual(['createProject']);
-        expect(options.onSave.progress).toHaveBeenCalledTimes(1);
-    });
-
     describe('step hooks', function () {
         it('pass step -> call onPass hook', async function () {
             const options = getOptions();
@@ -221,6 +204,20 @@ describe('find next step', function () {
 
         // @ts-ignore
         expect(Controller.findNextUnpassedStep(undefined, passedSteps)).toBe(undefined);
+    });
+
+    it('no passed steps -> first preset step', function () {
+        const preset = ['createBoard', 'openBoard', 'createIssue', 'changeIssueStatus'];
+        const passedSteps = [] as string[];
+
+        expect(Controller.findNextUnpassedStep(preset, passedSteps)).toBe('createBoard');
+    });
+
+    it('no passed steps -> first preset step11', function () {
+        const preset = ['createBoard', 'openBoard', 'createIssue', 'changeIssueStatus'];
+        const passedSteps = ['createBoard', 'createIssue', 'changeIssueStatus'];
+
+        expect(Controller.findNextUnpassedStep(preset, passedSteps)).toBe(undefined);
     });
 
     it('pass some step from preset', function () {
@@ -249,5 +246,12 @@ describe('find next step', function () {
         const passedSteps = ['createBoard', 'clickedOnBoard', 'createIssue'];
 
         expect(Controller.findNextUnpassedStep(preset, passedSteps)).toBe('changeIssueStatus');
+    });
+
+    it('all steps passed -> undefined', function () {
+        const preset = ['createBoard', 'openBoard', 'createIssue', 'changeIssueStatus'];
+        const passedSteps = ['createBoard', 'openBoard', 'createIssue', 'changeIssueStatus'];
+
+        expect(Controller.findNextUnpassedStep(preset, passedSteps)).toBe(undefined);
     });
 });

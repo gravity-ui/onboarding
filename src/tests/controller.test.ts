@@ -1,6 +1,36 @@
 import {Controller} from '../controller';
 import {getAnchorElement, getOptions, getOptionsWithHooks} from './utils';
 
+describe('init with not full data', function () {
+    it('empty progress, reachElement -> show hint', async function () {
+        const options = getOptions();
+        // @ts-ignore
+        options.getProgressState = () => Promise.resolve({});
+
+        const controller = new Controller(options);
+        await controller.stepElementReached({
+            stepSlug: 'openBoard',
+            element: getAnchorElement(),
+        });
+
+        expect(options.showHint).toHaveBeenCalled();
+    });
+
+    it('should init with empty base state', async function () {
+        const options = getOptions();
+        // @ts-ignore
+        options.baseState = undefined;
+
+        const controller = new Controller(options);
+        await controller.stepElementReached({
+            stepSlug: 'openBoard',
+            element: getAnchorElement(),
+        });
+
+        // not throw error
+    });
+});
+
 describe('hooks', function () {
     it('reachElement -> onShowHint called', async function () {
         const options = getOptionsWithHooks();

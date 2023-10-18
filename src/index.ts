@@ -15,7 +15,7 @@ let controllerRef: Controller<object, string, string>;
 
 export function closeHint() {
     if (controllerRef !== null) {
-        controllerRef.closeHint();
+        controllerRef.closeHintByUser();
     }
 }
 
