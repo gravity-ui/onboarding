@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/gravity-ui/onboarding/compare/v0.10.0...v0.10.1) (2023-10-18)
+
+
+### Bug Fixes
+
+* close hint in rerender + step logic ([e84b0ec](https://github.com/gravity-ui/onboarding/commit/e84b0ec28809eb49ad26228a059a916822910dc1))
+
 ## [0.10.0](https://github.com/gravity-ui/onboarding/compare/v0.9.2...v0.10.0) (2023-10-09)
 
 
