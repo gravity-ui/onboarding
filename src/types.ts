@@ -34,6 +34,8 @@ export type PresetStep<Steps extends string, HintParams> = {
     };
 };
 
+export type PresetVisibility = 'visible' | 'initialHidden' | 'alwaysHidden';
+
 export type Preset<HintParams, Steps extends string> =
     | CommonPreset<HintParams, Steps>
     | CombinedPreset<string>
@@ -49,7 +51,7 @@ export type CommonPreset<HintParams, Steps extends string> = {
     name: string;
     description?: ReactNode;
     type?: 'default';
-    visibility?: 'visible' | 'hidden';
+    visibility?: PresetVisibility;
     steps: PresetStep<Steps, HintParams | undefined>[];
     hooks?: PresetHooks;
 };
@@ -68,7 +70,7 @@ export type CombinedPreset<InternalPresets extends string> = {
     name: string;
     description?: ReactNode;
     type: 'combined';
-    visibility?: 'visible' | 'hidden';
+    visibility?: PresetVisibility;
     hooks?: PresetHooks;
     internalPresets: InternalPresets[];
     pickPreset: () => InternalPresets | Promise<InternalPresets>;
