@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/gravity-ui/onboarding/compare/v0.10.1...v0.11.0) (2023-10-19)
+
+
+### Features
+
+* initialHidden and alwaysHidden presets ([8780e64](https://github.com/gravity-ui/onboarding/commit/8780e64fd515494b8e270e2f4d9d652206305f4b))
+
 ## [0.10.1](https://github.com/gravity-ui/onboarding/compare/v0.10.0...v0.10.1) (2023-10-18)
 
 
