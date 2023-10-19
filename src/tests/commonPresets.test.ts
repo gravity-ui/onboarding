@@ -414,88 +414,134 @@ describe('user presets', function () {
         expect(controller.userPresets).toHaveLength(2);
     });
 
-    it('dont count hidden presets', function () {
-        const options = getOptions(
-            {activePresets: [], availablePresets: []},
-            {finishedPresets: []},
-        );
-        // @ts-ignore
-        options.config.presets.createProject.visibility = 'hidden';
-
-        const controller = new Controller(options);
-        const presetSlugs = controller.userPresets.map(({slug}) => slug);
-
-        expect(presetSlugs).not.toContain('createProject');
-    });
-
-    it('pick hidden + available preset', function () {
-        const options = getOptions(
-            {activePresets: [], availablePresets: ['createProject']},
-            {finishedPresets: []},
-        );
-        // @ts-ignore
-        options.config.presets.createProject.visibility = 'hidden';
-
-        const controller = new Controller(options);
-        const presetSlugs = controller.userPresets.map(({slug}) => slug);
-
-        expect(presetSlugs).toContain('createProject');
-    });
-
-    it('pick hidden + active preset', function () {
-        const options = getOptions(
-            {activePresets: ['createProject'], availablePresets: ['createProject']},
-            {finishedPresets: []},
-        );
-        // @ts-ignore
-        options.config.presets.createProject.visibility = 'hidden';
-
-        const controller = new Controller(options);
-        const presetSlugs = controller.userPresets.map(({slug}) => slug);
-
-        expect(presetSlugs).toContain('createProject');
-    });
-
-    it('pick hidden + finished preset', function () {
-        const options = getOptions(
-            {activePresets: [], availablePresets: ['createProject']},
-            {finishedPresets: ['createProject']},
-        );
-        // @ts-ignore
-        options.config.presets.createProject.visibility = 'hidden';
-
-        const controller = new Controller(options);
-        const presetSlugs = controller.userPresets.map(({slug}) => slug);
-
-        expect(presetSlugs).toContain('createProject');
-    });
-
-    it('pick hidden + finished + UNavailable preset', async function () {
-        const options = getOptions(
-            {activePresets: [], availablePresets: [], wizardState: 'visible'},
-            {finishedPresets: ['createProject']},
-        );
-        // @ts-ignore
-        options.config.presets.createProject.visibility = 'hidden';
-
-        const controller = new Controller(options);
-        await waitForNextTick(); // progress loading
-        const presetSlugs = controller.userPresets.map(({slug}) => slug);
-
-        expect(presetSlugs).toContain('createProject');
-    });
-
     it('deleted presets in active and finished', async function () {
         const options = getOptions(
             {activePresets: ['deleted1'], availablePresets: [], wizardState: 'visible'},
             {finishedPresets: ['deleted2']},
         );
         // @ts-ignore
-        options.config.presets.createProject.visibility = 'hidden';
+        options.config.presets.createProject.visibility = 'initialHidden';
 
         const controller = new Controller(options);
         await waitForNextTick(); // progress loading
 
         expect(controller.userPresets).toHaveLength(1);
+    });
+
+    describe('initial hidden preset', function () {
+        it('dont count hidden presets', function () {
+            const options = getOptions(
+                {activePresets: [], availablePresets: []},
+                {finishedPresets: []},
+            );
+            // @ts-ignore
+            options.config.presets.createProject.visibility = 'initialHidden';
+
+            const controller = new Controller(options);
+            const presetSlugs = controller.userPresets.map(({slug}) => slug);
+
+            expect(presetSlugs).not.toContain('createProject');
+        });
+
+        it('pick hidden + available preset', function () {
+            const options = getOptions(
+                {activePresets: [], availablePresets: ['createProject']},
+                {finishedPresets: []},
+            );
+            // @ts-ignore
+            options.config.presets.createProject.visibility = 'initialHidden';
+
+            const controller = new Controller(options);
+            const presetSlugs = controller.userPresets.map(({slug}) => slug);
+
+            expect(presetSlugs).toContain('createProject');
+        });
+
+        it('pick hidden + active preset', function () {
+            const options = getOptions(
+                {activePresets: ['createProject'], availablePresets: ['createProject']},
+                {finishedPresets: []},
+            );
+            // @ts-ignore
+            options.config.presets.createProject.visibility = 'initialHidden';
+
+            const controller = new Controller(options);
+            const presetSlugs = controller.userPresets.map(({slug}) => slug);
+
+            expect(presetSlugs).toContain('createProject');
+        });
+
+        it('pick hidden + finished preset', function () {
+            const options = getOptions(
+                {activePresets: [], availablePresets: ['createProject']},
+                {finishedPresets: ['createProject']},
+            );
+            // @ts-ignore
+            options.config.presets.createProject.visibility = 'initialHidden';
+
+            const controller = new Controller(options);
+            const presetSlugs = controller.userPresets.map(({slug}) => slug);
+
+            expect(presetSlugs).toContain('createProject');
+        });
+
+        it('pick hidden + finished + UNavailable preset', async function () {
+            const options = getOptions(
+                {activePresets: [], availablePresets: [], wizardState: 'visible'},
+                {finishedPresets: ['createProject']},
+            );
+            // @ts-ignore
+            options.config.presets.createProject.visibility = 'initialHidden';
+
+            const controller = new Controller(options);
+            await waitForNextTick(); // progress loading
+            const presetSlugs = controller.userPresets.map(({slug}) => slug);
+
+            expect(presetSlugs).toContain('createProject');
+        });
+    });
+
+    describe('always hidden preset', function () {
+        it('dont count hidden presets', function () {
+            const options = getOptions(
+                {activePresets: [], availablePresets: []},
+                {finishedPresets: []},
+            );
+            // @ts-ignore
+            options.config.presets.createProject.visibility = 'alwaysHidden';
+
+            const controller = new Controller(options);
+            const presetSlugs = controller.userPresets.map(({slug}) => slug);
+
+            expect(presetSlugs).not.toContain('createProject');
+        });
+
+        it('dont count hidden + available + active preset', function () {
+            const options = getOptions(
+                {activePresets: ['createProject'], availablePresets: ['createProject']},
+                {finishedPresets: []},
+            );
+            // @ts-ignore
+            options.config.presets.createProject.visibility = 'alwaysHidden';
+
+            const controller = new Controller(options);
+            const presetSlugs = controller.userPresets.map(({slug}) => slug);
+
+            expect(presetSlugs).not.toContain('createProject');
+        });
+
+        it('dont count hidden + available + finished preset', function () {
+            const options = getOptions(
+                {activePresets: [], availablePresets: ['createProject']},
+                {finishedPresets: ['createProject']},
+            );
+            // @ts-ignore
+            options.config.presets.createProject.visibility = 'alwaysHidden';
+
+            const controller = new Controller(options);
+            const presetSlugs = controller.userPresets.map(({slug}) => slug);
+
+            expect(presetSlugs).not.toContain('createProject');
+        });
     });
 });

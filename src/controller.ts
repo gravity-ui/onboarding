@@ -516,20 +516,25 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     };
 
     private isVisiblePreset = (presetSlug: string) => {
-        // @ts-ignore
-        const preset = this.options.config.presets[presetSlug];
+        const preset = this.options.config.presets[presetSlug as Presets];
 
         if (!preset) {
             return false;
         }
 
         const isInternal = preset.type === 'internal';
+        if (isInternal) {
+            return false;
+        }
+
         const userHasPreset =
             this.state.base.availablePresets.includes(presetSlug) ||
             this.state.progress?.finishedPresets.includes(presetSlug);
-        const isPresetMarkAsVisible = !preset.visibility || preset.visibility === 'visible';
 
-        return !isInternal && (isPresetMarkAsVisible || userHasPreset);
+        const presetVisibility = 'visibility' in preset ? preset.visibility : undefined;
+        const isPresetMarkAsVisible = presetVisibility !== 'initialHidden';
+
+        return presetVisibility !== 'alwaysHidden' && (isPresetMarkAsVisible || userHasPreset);
     };
 
     private findNextStepForPreset(presetSlug: Presets) {
