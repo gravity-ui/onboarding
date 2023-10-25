@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/gravity-ui/onboarding/compare/v0.11.0...v0.12.0) (2023-10-25)
+
+
+### Features
+
+* add close hint hooks ([4c6d71a](https://github.com/gravity-ui/onboarding/commit/4c6d71a5a36e7cd5ec9bd04afac9c80c8d3c3393))
+
 ## [0.11.0](https://github.com/gravity-ui/onboarding/compare/v0.10.1...v0.11.0) (2023-10-19)
 
 
