@@ -252,6 +252,9 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         if (currentHintStep) {
             this.closedHints.add(currentHintStep);
+            const step = this.getStepBySlug(currentHintStep);
+            step?.hooks?.onCloseHintByUser?.();
+            step?.hooks?.onCloseHint?.();
         }
 
         this.hintStore.closeHint();
@@ -481,6 +484,11 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         if (stepSlug && stepSlug !== currentHintStep) {
             this.logger.debug('Hint for step', stepSlug, 'is not current hint');
             return;
+        }
+
+        if (currentHintStep) {
+            const step = this.getStepBySlug(currentHintStep);
+            step?.hooks?.onCloseHint?.();
         }
 
         this.hintStore.closeHint();
