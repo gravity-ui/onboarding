@@ -31,6 +31,8 @@ export type PresetStep<Steps extends string, HintParams> = {
     passRestriction?: 'afterPrevious';
     hooks?: {
         onStepPass?: () => void;
+        onCloseHint?: () => void;
+        onCloseHintByUser?: () => void;
     };
 };
 
