@@ -292,3 +292,25 @@ describe('store api', function () {
         });
     });
 });
+
+it('resetToDefaultState -> hidden and empty ', async function () {
+    const options = getOptions();
+
+    const controller = new Controller(options);
+    await controller.ensureRunning();
+
+    await controller.resetToDefaultState();
+
+    expect(controller.state).toEqual({
+        base: {
+            activePresets: [],
+            availablePresets: [],
+            suggestedPresets: [],
+            wizardState: 'hidden',
+        },
+        progress: {
+            finishedPresets: [],
+            presetPassedSteps: {},
+        },
+    });
+});

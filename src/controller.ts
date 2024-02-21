@@ -8,6 +8,18 @@ type Listener = () => void;
 
 let instanceCounter = 0;
 
+const getDefaultBaseState = (): BaseState => ({
+    availablePresets: [],
+    activePresets: [],
+    suggestedPresets: [],
+    wizardState: 'hidden' as const,
+});
+
+const getDefaultProgressState = () => ({
+    presetPassedSteps: {},
+    finishedPresets: [],
+});
+
 export class Controller<HintParams, Presets extends string, Steps extends string> {
     static findNextUnpassedStep(presetSteps: string[], passedSteps: string[]): string | undefined {
         if (!presetSteps) {
@@ -61,15 +73,9 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     ) {
         this.options = options;
 
-        const defaultBaseState: BaseState = {
-            availablePresets: [],
-            activePresets: [],
-            suggestedPresets: [],
-            wizardState: 'hidden' as const,
-        };
         this.state = {
             base: {
-                ...defaultBaseState,
+                ...getDefaultBaseState(),
                 ...options.baseState,
             },
         };
@@ -459,14 +465,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         this.logger.debug('Loading onboarding progress data');
         try {
-            const defaultProgress = {
-                presetPassedSteps: {},
-                finishedPresets: [],
-            };
             const newProgressState = await this.progressLoadingPromise;
 
             this.state.progress = {
-                ...defaultProgress,
+                ...getDefaultProgressState(),
                 ...newProgressState,
             };
             this.status = 'active';
@@ -476,6 +478,16 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         } catch (e) {
             this.logger.error('progress data loading error');
         }
+    }
+
+    async resetToDefaultState() {
+        this.state = {
+            base: getDefaultBaseState(),
+            progress: getDefaultProgressState(),
+        };
+
+        await this.updateBaseState();
+        await this.updateProgress();
     }
 
     private closeHint = (stepSlug?: Steps) => {
