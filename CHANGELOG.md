@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.1](https://github.com/gravity-ui/onboarding/compare/v0.13.0...v0.13.1) (2024-02-22)
+
+
+### Bug Fixes
+
+* pass step -&gt; close hint as user ([f1ca776](https://github.com/gravity-ui/onboarding/commit/f1ca7765c09baaa6d0d39f018e4d0f479d6f181a))
+
 ## [0.13.0](https://github.com/gravity-ui/onboarding/compare/v0.12.0...v0.13.0) (2024-02-21)
 
 
