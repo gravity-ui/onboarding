@@ -147,7 +147,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         await this.savePassedStepData(preset, stepSlug, () => {
             if (step?.passMode !== 'onShowHint') {
                 this.logger.debug('Close hint on step', stepSlug);
-                this.closeHint();
+                this.closeHintByUser();
                 this.checkReachedHints();
             }
         });

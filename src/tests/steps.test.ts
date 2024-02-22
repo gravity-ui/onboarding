@@ -198,12 +198,12 @@ describe('pass step', function () {
 
         it('user close hint -> call onCloseHintByUser and onCloseHint', async function () {
             const options = getOptions();
-            const mock1 = jest.fn();
-            const mock2 = jest.fn();
+            const onCloseHintByUserMock = jest.fn();
+            const onCloseHintMock = jest.fn();
 
             options.config.presets.createProject.steps[1].hooks = {
-                onCloseHintByUser: mock1,
-                onCloseHint: mock2,
+                onCloseHintByUser: onCloseHintByUserMock,
+                onCloseHint: onCloseHintMock,
             };
 
             const controller = new Controller(options);
@@ -213,18 +213,39 @@ describe('pass step', function () {
             });
             await controller.closeHintByUser();
 
-            expect(mock1).toHaveBeenCalled();
-            expect(mock2).toHaveBeenCalled();
+            expect(onCloseHintByUserMock).toHaveBeenCalled();
+            expect(onCloseHintMock).toHaveBeenCalled();
         });
 
-        it('hint closed by onboarding -> call only onCloseHint', async function () {
+        it('element disappear -> call only onCloseHint', async function () {
             const options = getOptions();
-            const mock1 = jest.fn();
-            const mock2 = jest.fn();
+            const onCloseHintByUserMock = jest.fn();
+            const onCloseHintMock = jest.fn();
 
             options.config.presets.createProject.steps[1].hooks = {
-                onCloseHintByUser: mock1,
-                onCloseHint: mock2,
+                onCloseHintByUser: onCloseHintByUserMock,
+                onCloseHint: onCloseHintMock,
+            };
+
+            const controller = new Controller(options);
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+            await controller.stepElementDisappeared('createSprint');
+
+            expect(onCloseHintByUserMock).not.toHaveBeenCalled();
+            expect(onCloseHintMock).toHaveBeenCalled();
+        });
+
+        it('pass step -> call onCloseHint + onCloseByUser', async function () {
+            const options = getOptions();
+            const onCloseHintByUserMock = jest.fn();
+            const onCloseHintMock = jest.fn();
+
+            options.config.presets.createProject.steps[1].hooks = {
+                onCloseHintByUser: onCloseHintByUserMock,
+                onCloseHint: onCloseHintMock,
             };
 
             const controller = new Controller(options);
@@ -234,8 +255,8 @@ describe('pass step', function () {
             });
             await controller.passStep('createSprint');
 
-            expect(mock1).not.toHaveBeenCalled();
-            expect(mock2).toHaveBeenCalled();
+            expect(onCloseHintByUserMock).toHaveBeenCalled();
+            expect(onCloseHintMock).toHaveBeenCalled();
         });
     });
 });
