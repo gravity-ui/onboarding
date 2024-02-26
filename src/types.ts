@@ -1,5 +1,6 @@
 import type {ReactNode} from 'react';
 import type {LoggerOptions} from './logger';
+import {Controller} from './controller';
 
 type HintPlacement =
     | 'top'
@@ -118,11 +119,38 @@ export type InitOptions<HintParams, Presets extends string, Steps extends string
     logger?: LoggerOptions;
     debugMode?: boolean;
     hooks?: {
-        onShowHint?: (data: {preset: Presets; step: Steps}) => void;
-        onStepPass?: (data: {preset: Presets; step: Steps}) => void;
-        onAddPreset?: (data: {preset: Presets}) => void;
-        onRunPreset?: (data: {preset: Presets}) => void;
-        onFinishPreset?: (data: {preset: Presets}) => void;
+        onShowHint?: (
+            data: {preset: Presets; step: Steps},
+            instance: Controller<HintParams, Presets, Steps>,
+        ) => void;
+        onStepPass?: (
+            data: {preset: Presets; step: Steps},
+            instance: Controller<HintParams, Presets, Steps>,
+        ) => void;
+        onAddPreset?: (
+            data: {preset: Presets},
+            instance: Controller<HintParams, Presets, Steps>,
+        ) => void;
+        onBeforeRunPreset?: (
+            data: {preset: Presets},
+            instance: Controller<HintParams, Presets, Steps>,
+        ) => Promise<void>;
+        onRunPreset?: (
+            data: {preset: Presets},
+            instance: Controller<HintParams, Presets, Steps>,
+        ) => void;
+        onFinishPreset?: (
+            data: {preset: Presets},
+            instance: Controller<HintParams, Presets, Steps>,
+        ) => void;
+        onBeforeSuggestPreset?: (
+            data: {preset: string},
+            instance: Controller<HintParams, Presets, Steps>,
+        ) => Promise<boolean | undefined>;
+        onBeforeShowHint?: (
+            data: {stepData: ReachElementParams<Presets, Steps>},
+            instance: Controller<HintParams, Presets, Steps>,
+        ) => Promise<boolean | undefined>;
     };
 };
 
