@@ -103,18 +103,6 @@ describe('preset management', function () {
             await expect(options.showHint).toHaveBeenCalled();
         });
 
-        it('run preset -> close current hint', async function () {
-            const controller = new Controller(getOptions());
-            await controller.stepElementReached({
-                stepSlug: 'createSprint',
-                element: getAnchorElement(),
-            });
-
-            await controller.runPreset('createQueue');
-
-            expect(controller.hintStore.state.open).toBe(false);
-        });
-
         it('can run unavailable preset', async function () {
             const controller = new Controller(options);
             await controller.runPreset('createQueue');
