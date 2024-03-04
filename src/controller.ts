@@ -506,7 +506,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         await this.updateProgress();
     }
 
-    private closeHint = (stepSlug?: Steps) => {
+    closeHint = (stepSlug?: Steps) => {
         const currentHintStep = this.hintStore.state.hint?.step.slug;
         this.logger.debug('Close hint(internal)', currentHintStep);
         if (stepSlug && stepSlug !== currentHintStep) {
