@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/gravity-ui/onboarding/compare/v0.14.0...v0.14.1) (2024-03-04)
+
+
+### Bug Fixes
+
+* make closeHint method public ([4db22c5](https://github.com/gravity-ui/onboarding/commit/4db22c54969179bc77d73797066cd3022ba1709a))
+
 ## [0.14.0](https://github.com/gravity-ui/onboarding/compare/v0.13.1...v0.14.0) (2024-03-04)
 
 
