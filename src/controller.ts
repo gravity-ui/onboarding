@@ -377,7 +377,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             this.state.base.suggestedPresets.push(presetSlug);
         }
 
-        await this.closeHintByUser();
+        await this.closeHint();
 
         const actualPreset = this.options.config.presets[presetSlug] as CommonPreset<
             HintParams,
