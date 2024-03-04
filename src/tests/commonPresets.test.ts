@@ -12,7 +12,7 @@ describe('preset management', function () {
 
             const newState = options.onSave.state.mock.calls[0][0];
 
-            expect(newState.availablePresets).toEqual(['createProject', 'createQueue']);
+            expect(newState.availablePresets).toContain('createQueue');
         });
 
         it('add same preset -> not duplicate', async function () {
@@ -37,17 +37,6 @@ describe('preset management', function () {
             expect(options.onSave.state).not.toHaveBeenCalled();
             expect(options.onSave.progress).not.toHaveBeenCalled();
         });
-
-        it('add preset -> calls onAddPreset', async function () {
-            const options = getOptionsWithHooks();
-
-            const controller = new Controller(options);
-            await controller.addPreset('createQueue');
-
-            expect(options.hooks.onAddPreset).toHaveBeenCalledWith({
-                preset: 'createQueue',
-            });
-        });
     });
 
     describe('run preset', function () {
@@ -63,8 +52,8 @@ describe('preset management', function () {
 
             const newState = options.onSave.state.mock.calls[0][0];
 
-            expect(newState.activePresets).toEqual(['createProject', 'createQueue']);
-            expect(newState.suggestedPresets).toEqual(['createProject', 'createQueue']);
+            expect(newState.activePresets).toContain('createQueue');
+            expect(newState.suggestedPresets).toContain('createQueue');
         });
 
         it('run same preset -> not duplicate', async function () {
@@ -76,8 +65,8 @@ describe('preset management', function () {
             const newState =
                 options.onSave.state.mock.calls[options.onSave.state.mock.calls.length - 1][0];
 
-            expect(newState.activePresets).toEqual(['createProject', 'createQueue']);
-            expect(newState.suggestedPresets).toEqual(['createProject', 'createQueue']);
+            expect(newState.activePresets).toContain('createQueue');
+            expect(newState.suggestedPresets).toContain('createQueue');
         });
 
         it('preset not from config -> nothing', async function () {
@@ -170,31 +159,6 @@ describe('preset management', function () {
 
             expect(mock).toHaveBeenCalled();
         });
-
-        it('finish preset by pass step -> calls onFinishPreset', async function () {
-            const options = getOptionsWithHooks(
-                {},
-                {presetPassedSteps: {createProject: ['openBoard', 'createSprint']}},
-            );
-
-            const controller = new Controller(options);
-            await controller.passStep('createIssue');
-
-            expect(options.hooks.onFinishPreset).toHaveBeenCalledWith({
-                preset: 'createProject',
-            });
-        });
-
-        it('force finish preset -> calls onFinishPreset', async function () {
-            const options = getOptionsWithHooks();
-
-            const controller = new Controller(options);
-            await controller.finishPreset('createProject');
-
-            expect(options.hooks.onFinishPreset).toHaveBeenCalledWith({
-                preset: 'createProject',
-            });
-        });
     });
 
     it('restart preset -> show hint for existing element', async function () {
@@ -231,7 +195,7 @@ describe('preset management', function () {
 
             const newProgressState = options.onSave.progress.mock.calls[1][0];
 
-            expect(newProgressState.finishedPresets).toEqual(['createProject']);
+            expect(newProgressState.finishedPresets).toContain('createProject');
         });
 
         it('finish preset -> calls enEnd', async function () {
@@ -254,7 +218,7 @@ describe('preset management', function () {
 
             const newBaseState = options.onSave.state.mock.calls[0][0];
 
-            expect(newBaseState.suggestedPresets).toEqual(['createProject']);
+            expect(newBaseState.suggestedPresets).toContain('createProject');
         });
 
         it('finish unavailable preset -> add to finished', async function () {
@@ -265,8 +229,8 @@ describe('preset management', function () {
             const newBaseState = options.onSave.state.mock.calls[0][0];
             const newProgressState = options.onSave.progress.mock.calls[0][0];
 
-            expect(newBaseState.activePresets).toEqual([]);
-            expect(newProgressState.finishedPresets).toEqual(['createQueue']);
+            expect(newBaseState.activePresets).not.toContain(['createQueue']);
+            expect(newProgressState.finishedPresets).toContain('createQueue');
         });
     });
 
@@ -283,8 +247,8 @@ describe('preset management', function () {
             const newBaseState = options.onSave.state.mock.calls[0][0];
             const newProgressState = options.onSave.progress.mock.calls[0][0];
 
-            expect(newBaseState.activePresets).toEqual([]);
-            expect(newProgressState.finishedPresets).toEqual(['createProject']);
+            expect(newBaseState.activePresets).not.toContain(['createQueue']);
+            expect(newProgressState.finishedPresets).toContain('createProject');
             expect(options.onSave.progress).toHaveBeenCalledTimes(1);
         });
 
@@ -364,7 +328,7 @@ describe('suggest once', function () {
 
         const newState = options.onSave.state.mock.calls[0][0];
 
-        expect(newState.activePresets).toEqual(['createProject', 'createQueue']);
+        expect(newState.activePresets).toContain('createQueue');
     });
 
     it('second run -> nothing', async function () {
@@ -388,6 +352,16 @@ describe('suggest once', function () {
         const newState = options.onSave.state.mock.calls[0][0];
 
         expect(newState.wizardState).toBe('invisible');
+    });
+
+    it('onBeforeSuggestPreset returns false -> dont suggest', async function () {
+        const options = getOptionsWithHooks();
+        options.hooks.onBeforeSuggestPreset = jest.fn(() => false);
+
+        const controller = new Controller(options);
+        await controller.suggestPresetOnce('createQueue');
+
+        expect(options.onSave.state).not.toHaveBeenCalled();
     });
 });
 

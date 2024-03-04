@@ -1,4 +1,4 @@
-import {getAnchorElement, getOptions} from './utils';
+import {getAnchorElement, getOptions, getOptionsWithHooks, waitForNextTick} from './utils';
 import {Controller} from '../controller';
 
 it('reachElement -> show hint', async function () {
@@ -11,6 +11,19 @@ it('reachElement -> show hint', async function () {
     });
 
     expect(options.showHint).toHaveBeenCalled();
+});
+
+it('onBeforeShowHint returns false -> dont show hint', async function () {
+    const options = getOptionsWithHooks();
+    options.hooks.onBeforeShowHint = jest.fn(async () => false);
+
+    const controller = new Controller(options);
+    await controller.stepElementReached({
+        stepSlug: 'createSprint',
+        element: getAnchorElement(),
+    });
+
+    expect(options.showHint).not.toHaveBeenCalled();
 });
 
 it('reachElement -> show only first unpassed step hint', async function () {
@@ -303,6 +316,7 @@ describe('passMode onShowHint', function () {
             element: getAnchorElement(),
         });
         await controller.closeHintByUser();
+        await waitForNextTick();
 
         const snapshot = controller.hintStore.getSnapshot();
 

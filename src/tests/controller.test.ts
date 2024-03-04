@@ -41,10 +41,13 @@ describe('hooks', function () {
             element: getAnchorElement(),
         });
 
-        expect(options.hooks.onShowHint).toHaveBeenCalledWith({
-            preset: 'createProject',
-            step: 'createSprint',
-        });
+        expect(options.hooks.onShowHint).toHaveBeenCalledWith(
+            {
+                preset: 'createProject',
+                step: 'createSprint',
+            },
+            controller,
+        );
     });
 
     it('reachElement on NOT active preset -> NOT calls onShowHint', async function () {
@@ -77,10 +80,13 @@ describe('hooks', function () {
         const controller = new Controller(options);
         await controller.passStep('createSprint');
 
-        expect(options.hooks.onStepPass).toHaveBeenCalledWith({
-            preset: 'createProject',
-            step: 'createSprint',
-        });
+        expect(options.hooks.onStepPass).toHaveBeenCalledWith(
+            {
+                preset: 'createProject',
+                step: 'createSprint',
+            },
+            controller,
+        );
     });
 
     it('pass step on NOT active, but available preset -> calls onPassStep', async function () {
@@ -89,10 +95,13 @@ describe('hooks', function () {
         const controller = new Controller(options);
         await controller.passStep('createSprint');
 
-        expect(options.hooks.onStepPass).toHaveBeenCalledWith({
-            preset: 'createProject',
-            step: 'createSprint',
-        });
+        expect(options.hooks.onStepPass).toHaveBeenCalledWith(
+            {
+                preset: 'createProject',
+                step: 'createSprint',
+            },
+            controller,
+        );
     });
 
     it('pass step on NOT active and NOT available preset -> NOT calls onPassStep', async function () {
@@ -105,8 +114,41 @@ describe('hooks', function () {
     });
 
     describe('preset hooks', function () {
+        it('add preset -> calls onAddPreset', async function () {
+            const options = getOptionsWithHooks();
+
+            const controller = new Controller(options);
+            await controller.addPreset('createQueue');
+
+            expect(options.hooks.onAddPreset).toHaveBeenCalledWith(
+                {
+                    preset: 'createQueue',
+                },
+                controller,
+            );
+        });
+
+        it('run preset -> call onBeforeRunPreset before activating', async function () {
+            expect.assertions(2);
+            const options = getOptionsWithHooks();
+            const controller = new Controller(options);
+
+            options.hooks.onBeforeRunPreset = jest.fn(() => {
+                expect(controller.state.base.activePresets).not.toContain('createQueue');
+            });
+
+            await controller.runPreset('createQueue');
+
+            expect(options.hooks.onBeforeRunPreset).toHaveBeenCalledWith(
+                {
+                    preset: 'createQueue',
+                },
+                controller,
+            );
+        });
+
         it('run preset -> call onRunPreset', async function () {
-            expect.assertions(1);
+            expect.assertions(2);
             const options = getOptionsWithHooks();
 
             const controller = new Controller(options);
@@ -115,6 +157,72 @@ describe('hooks', function () {
             });
 
             await controller.runPreset('createQueue');
+
+            expect(options.hooks.onRunPreset).toHaveBeenCalledWith(
+                {
+                    preset: 'createQueue',
+                },
+                controller,
+            );
+        });
+
+        it('finish preset by pass step -> calls onFinishPreset', async function () {
+            const options = getOptionsWithHooks(
+                {},
+                {presetPassedSteps: {createProject: ['openBoard', 'createSprint']}},
+            );
+
+            const controller = new Controller(options);
+            await controller.passStep('createIssue');
+
+            expect(options.hooks.onFinishPreset).toHaveBeenCalledWith(
+                {
+                    preset: 'createProject',
+                },
+                controller,
+            );
+        });
+
+        it('force finish preset -> calls onFinishPreset', async function () {
+            const options = getOptionsWithHooks();
+
+            const controller = new Controller(options);
+            await controller.finishPreset('createProject');
+
+            expect(options.hooks.onFinishPreset).toHaveBeenCalledWith(
+                {
+                    preset: 'createProject',
+                },
+                controller,
+            );
+        });
+
+        it('suggest preset -> call onBeforeSuggestPreset before', async function () {
+            expect.assertions(1);
+            const options = getOptionsWithHooks();
+            const controller = new Controller(options);
+
+            await controller.suggestPresetOnce('createQueue');
+
+            expect(options.hooks.onBeforeSuggestPreset).toHaveBeenCalledWith(
+                {
+                    preset: 'createQueue',
+                },
+                controller,
+            );
+        });
+
+        it('suggest preset 2 times -> call onBeforeSuggestPreset ONCE', async function () {
+            expect.assertions(1);
+            const options = getOptionsWithHooks();
+
+            const controller = new Controller(options);
+            options.hooks.onBeforeSuggestPreset = jest.fn();
+
+            await controller.suggestPresetOnce('createQueue');
+            await controller.suggestPresetOnce('createQueue');
+
+            expect(options.hooks.onBeforeSuggestPreset).toHaveBeenCalledTimes(1);
         });
     });
 });

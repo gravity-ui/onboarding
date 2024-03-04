@@ -72,7 +72,10 @@ export const getOptionsWithHooks = (...args: Parameters<typeof getOptions>) => (
         onStepPass: jest.fn(),
         onAddPreset: jest.fn(),
         onRunPreset: jest.fn(),
+        onBeforeRunPreset: jest.fn(),
         onFinishPreset: jest.fn(),
+        onBeforeSuggestPreset: jest.fn(),
+        onBeforeShowHint: jest.fn(),
     },
 });
 
