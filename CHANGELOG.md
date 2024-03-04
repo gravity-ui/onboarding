@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.14.0](https://github.com/gravity-ui/onboarding/compare/v0.13.1...v0.14.0) (2024-03-04)
+
+
+### Features
+
+* improve event hooks ([44042f0](https://github.com/gravity-ui/onboarding/commit/44042f01c521cc179d460272915322e2edc737f2))
+
+
+### Bug Fixes
+
+* dont close hint as user when run preset ([ddebb48](https://github.com/gravity-ui/onboarding/commit/ddebb48efd9a1f88a407e85cb9bfdcbfce5a1763))
+
 ## [0.13.1](https://github.com/gravity-ui/onboarding/compare/v0.13.0...v0.13.1) (2024-02-22)
 
 
