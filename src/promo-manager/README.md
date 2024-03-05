@@ -67,7 +67,7 @@ export const pollPreset: TypePreset = {
 
 import { usePromoManager } from './promo-example';
 
-const { requestStart, cancelStart } = usePromoManager(promo);
+const { requestStart, cancelStart } = usePromoManager('issuePoll');
 
 useMount(() => {
     requestStart();
@@ -88,7 +88,34 @@ import { useActivePromo } from './promo-example';
 const { promo, preset, metaInfo, cancel, finish } = useActivePromo();
 ```
 
-## Setup
+## Progress info
+
+```typescript jsx
+{
+    "base": {
+        "activePromo": "pollIssue",
+        "activeQueue": []
+    },
+    // get in getProgressState()
+    // save in onSave.progress(...)
+    "progress": {
+        "finishedPromos": ["openBoardPoll"],
+        "progressInfoByType": {
+            "poll": {
+                "lastCallTime": 1706110831370
+            }
+        },
+        "progressInfoByPromo": {
+            "openBoardPoll": {
+                "lastCallTime": 1706110831370
+            }
+        }
+    }
+}
+
+```
+
+## Setups
 
 [Survey setup](./setups/survey-manager.ts)
 
