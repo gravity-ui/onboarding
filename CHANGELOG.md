@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/gravity-ui/onboarding/compare/v0.14.1...v0.15.0) (2024-03-07)
+
+
+### Features
+
+* add promo manager ([811558c](https://github.com/gravity-ui/onboarding/commit/811558cc414128597ba8532c8f755aa106b80ef0))
+
 ## [0.14.1](https://github.com/gravity-ui/onboarding/compare/v0.14.0...v0.14.1) (2024-03-04)
 
 
