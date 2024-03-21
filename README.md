@@ -20,7 +20,7 @@ export const {
 } = createOnboarding({
   config: {
     presets: {
-      toDoListFirstUage: {
+      todoListFirstUsage: {
         name: '',
         steps: [
           createStep({
