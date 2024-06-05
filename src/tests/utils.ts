@@ -68,14 +68,14 @@ export const getOptions = (
 export const getOptionsWithHooks = (...args: Parameters<typeof getOptions>) => ({
     ...getOptions(...args),
     hooks: {
-        onShowHint: jest.fn(),
-        onStepPass: jest.fn(),
-        onAddPreset: jest.fn(),
-        onRunPreset: jest.fn(),
-        onBeforeRunPreset: jest.fn(),
-        onFinishPreset: jest.fn(),
-        onBeforeSuggestPreset: jest.fn(),
-        onBeforeShowHint: jest.fn(),
+        showHint: jest.fn(),
+        stepPass: jest.fn(),
+        addPreset: jest.fn(),
+        runPreset: jest.fn(),
+        beforeRunPreset: jest.fn(),
+        finishPreset: jest.fn(),
+        beforeSuggestPreset: jest.fn(),
+        beforeShowHint: jest.fn(),
     },
 });
 

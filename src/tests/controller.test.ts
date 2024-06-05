@@ -1,5 +1,5 @@
 import {Controller} from '../controller';
-import {getAnchorElement, getOptions, getOptionsWithHooks} from './utils';
+import {getAnchorElement, getOptions, getOptionsWithHooks, waitForNextTick} from './utils';
 
 describe('init with not full data', function () {
     it('empty progress, reachElement -> show hint', async function () {
@@ -41,7 +41,7 @@ describe('hooks', function () {
             element: getAnchorElement(),
         });
 
-        expect(options.hooks.onShowHint).toHaveBeenCalledWith(
+        expect(options.hooks.showHint).toHaveBeenCalledWith(
             {
                 preset: 'createProject',
                 step: 'createSprint',
@@ -59,7 +59,7 @@ describe('hooks', function () {
             element: getAnchorElement(),
         });
 
-        expect(options.hooks.onShowHint).not.toHaveBeenCalled();
+        expect(options.hooks.showHint).not.toHaveBeenCalled();
     });
 
     it('reachElement on passed step -> NOT calls onShowHint', async function () {
@@ -71,7 +71,7 @@ describe('hooks', function () {
             element: getAnchorElement(),
         });
 
-        expect(options.hooks.onShowHint).not.toHaveBeenCalled();
+        expect(options.hooks.showHint).not.toHaveBeenCalled();
     });
 
     it('pass step on active preset -> calls onPassStep', async function () {
@@ -80,7 +80,7 @@ describe('hooks', function () {
         const controller = new Controller(options);
         await controller.passStep('createSprint');
 
-        expect(options.hooks.onStepPass).toHaveBeenCalledWith(
+        expect(options.hooks.stepPass).toHaveBeenCalledWith(
             {
                 preset: 'createProject',
                 step: 'createSprint',
@@ -95,7 +95,7 @@ describe('hooks', function () {
         const controller = new Controller(options);
         await controller.passStep('createSprint');
 
-        expect(options.hooks.onStepPass).toHaveBeenCalledWith(
+        expect(options.hooks.stepPass).toHaveBeenCalledWith(
             {
                 preset: 'createProject',
                 step: 'createSprint',
@@ -110,17 +110,21 @@ describe('hooks', function () {
         const controller = new Controller(options);
         await controller.passStep('createSprint');
 
-        expect(options.hooks.onStepPass).not.toHaveBeenCalled();
+        expect(options.hooks.stepPass).not.toHaveBeenCalled();
     });
 
     describe('preset hooks', function () {
         it('add preset -> calls onAddPreset', async function () {
+            expect.assertions(1);
+
             const options = getOptionsWithHooks();
 
             const controller = new Controller(options);
             await controller.addPreset('createQueue');
 
-            expect(options.hooks.onAddPreset).toHaveBeenCalledWith(
+            await waitForNextTick();
+
+            await expect(options.hooks.addPreset).toHaveBeenCalledWith(
                 {
                     preset: 'createQueue',
                 },
@@ -133,13 +137,13 @@ describe('hooks', function () {
             const options = getOptionsWithHooks();
             const controller = new Controller(options);
 
-            options.hooks.onBeforeRunPreset = jest.fn(() => {
+            controller.events.subscribe('beforeRunPreset', () => {
                 expect(controller.state.base.activePresets).not.toContain('createQueue');
             });
 
             await controller.runPreset('createQueue');
 
-            expect(options.hooks.onBeforeRunPreset).toHaveBeenCalledWith(
+            await expect(options.hooks.beforeRunPreset).toHaveBeenCalledWith(
                 {
                     preset: 'createQueue',
                 },
@@ -150,15 +154,15 @@ describe('hooks', function () {
         it('run preset -> call onRunPreset', async function () {
             expect.assertions(2);
             const options = getOptionsWithHooks();
-
             const controller = new Controller(options);
-            options.hooks.onRunPreset = jest.fn(() => {
+
+            controller.events.subscribe('runPreset', () => {
                 expect(controller.state.base.activePresets).toContain('createQueue');
             });
 
             await controller.runPreset('createQueue');
 
-            expect(options.hooks.onRunPreset).toHaveBeenCalledWith(
+            expect(options.hooks.runPreset).toHaveBeenCalledWith(
                 {
                     preset: 'createQueue',
                 },
@@ -175,7 +179,7 @@ describe('hooks', function () {
             const controller = new Controller(options);
             await controller.passStep('createIssue');
 
-            expect(options.hooks.onFinishPreset).toHaveBeenCalledWith(
+            expect(options.hooks.finishPreset).toHaveBeenCalledWith(
                 {
                     preset: 'createProject',
                 },
@@ -189,7 +193,7 @@ describe('hooks', function () {
             const controller = new Controller(options);
             await controller.finishPreset('createProject');
 
-            expect(options.hooks.onFinishPreset).toHaveBeenCalledWith(
+            expect(options.hooks.finishPreset).toHaveBeenCalledWith(
                 {
                     preset: 'createProject',
                 },
@@ -204,7 +208,7 @@ describe('hooks', function () {
 
             await controller.suggestPresetOnce('createQueue');
 
-            expect(options.hooks.onBeforeSuggestPreset).toHaveBeenCalledWith(
+            expect(options.hooks.beforeSuggestPreset).toHaveBeenCalledWith(
                 {
                     preset: 'createQueue',
                 },
@@ -213,16 +217,16 @@ describe('hooks', function () {
         });
 
         it('suggest preset 2 times -> call onBeforeSuggestPreset ONCE', async function () {
-            expect.assertions(1);
             const options = getOptionsWithHooks();
 
             const controller = new Controller(options);
-            options.hooks.onBeforeSuggestPreset = jest.fn();
 
             await controller.suggestPresetOnce('createQueue');
             await controller.suggestPresetOnce('createQueue');
 
-            expect(options.hooks.onBeforeSuggestPreset).toHaveBeenCalledTimes(1);
+            await waitForNextTick();
+
+            expect(options.hooks.beforeSuggestPreset).toHaveBeenCalledTimes(1);
         });
     });
 });

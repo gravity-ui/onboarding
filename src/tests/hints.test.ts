@@ -15,7 +15,7 @@ it('reachElement -> show hint', async function () {
 
 it('onBeforeShowHint returns false -> dont show hint', async function () {
     const options = getOptionsWithHooks();
-    options.hooks.onBeforeShowHint = jest.fn(async () => false);
+    options.hooks.beforeShowHint = jest.fn(async () => false);
 
     const controller = new Controller(options);
     await controller.stepElementReached({

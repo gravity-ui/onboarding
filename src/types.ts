@@ -119,40 +119,27 @@ export type InitOptions<HintParams, Presets extends string, Steps extends string
     logger?: LoggerOptions;
     debugMode?: boolean;
     hooks?: {
-        onShowHint?: (
-            data: {preset: Presets; step: Steps},
+        [K in keyof EventsMap<Presets, Steps>]: (
+            data: EventsMap<Presets, Steps>[K],
             instance: Controller<HintParams, Presets, Steps>,
-        ) => void;
-        onStepPass?: (
-            data: {preset: Presets; step: Steps},
-            instance: Controller<HintParams, Presets, Steps>,
-        ) => void;
-        onAddPreset?: (
-            data: {preset: Presets},
-            instance: Controller<HintParams, Presets, Steps>,
-        ) => void;
-        onBeforeRunPreset?: (
-            data: {preset: Presets},
-            instance: Controller<HintParams, Presets, Steps>,
-        ) => Promise<void>;
-        onRunPreset?: (
-            data: {preset: Presets},
-            instance: Controller<HintParams, Presets, Steps>,
-        ) => void;
-        onFinishPreset?: (
-            data: {preset: Presets},
-            instance: Controller<HintParams, Presets, Steps>,
-        ) => void;
-        onBeforeSuggestPreset?: (
-            data: {preset: string},
-            instance: Controller<HintParams, Presets, Steps>,
-        ) => Promise<boolean | undefined>;
-        onBeforeShowHint?: (
-            data: {stepData: ReachElementParams<Presets, Steps>},
-            instance: Controller<HintParams, Presets, Steps>,
-        ) => Promise<boolean | undefined>;
+        ) => HookCallbackReturnType;
     };
 };
+
+type HookCallbackReturnType = void | boolean | Promise<void | undefined>;
+
+export type EventsMap<Presets extends string, Steps extends string> = {
+    showHint: {preset: Presets; step: Steps};
+    stepPass: {preset: Presets; step: Steps};
+    addPreset: {preset: Presets};
+    beforeRunPreset: {preset: Presets};
+    runPreset: {preset: Presets};
+    finishPreset: {preset: Presets};
+    beforeSuggestPreset: {preset: string};
+    beforeShowHint: {stepData: ReachElementParams<Presets, Steps>};
+};
+
+export type EventTypes = keyof EventsMap<any, any>;
 
 // type inference utils
 type CommonKeys<T extends object> = keyof T;

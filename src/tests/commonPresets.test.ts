@@ -356,7 +356,7 @@ describe('suggest once', function () {
 
     it('onBeforeSuggestPreset returns false -> dont suggest', async function () {
         const options = getOptionsWithHooks();
-        options.hooks.onBeforeSuggestPreset = jest.fn(() => false);
+        options.hooks.beforeSuggestPreset = jest.fn(() => false);
 
         const controller = new Controller(options);
         await controller.suggestPresetOnce('createQueue');

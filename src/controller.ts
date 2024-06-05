@@ -3,6 +3,7 @@ import {HintStore} from './hints/hintStore';
 import {createLogger} from './logger';
 import {CommonPreset, PresetStatus} from './types';
 import {createDebounceHandler} from './debounce';
+import {EventEmitter} from './event-emitter';
 
 type Listener = () => void;
 
@@ -63,6 +64,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     logger: ReturnType<typeof createLogger>;
     stateListeners: Set<Listener>;
     passStepListeners: Set<Listener>;
+    events: EventEmitter<HintParams, Presets, Steps>;
 
     saveBaseState: () => void;
     saveProgressState: () => void;
@@ -103,6 +105,14 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
         instanceCounter++;
 
+        this.events = new EventEmitter(this);
+        if (this.options.hooks) {
+            Object.keys(this.options.hooks).forEach((hook) =>
+                // @ts-ignore
+                this.events.subscribe(hook, this.options.hooks[hook]),
+            );
+        }
+
         if (this.options.baseState?.wizardState === 'visible') {
             this.ensureRunning();
         }
@@ -141,7 +151,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             }
         }
 
-        this.options.hooks?.onStepPass?.({preset, step: stepSlug}, this);
+        this.events.emit('stepPass', {preset, step: stepSlug});
         step?.hooks?.onStepPass?.();
 
         await this.savePassedStepData(preset, stepSlug, () => {
@@ -190,9 +200,9 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
-        const allowRun = await this.options.hooks?.onBeforeShowHint?.({stepData}, this);
+        const allowRun = await this.events.emit('beforeShowHint', {stepData});
 
-        if (allowRun === false) {
+        if (!allowRun) {
             this.logger.debug('Show hint has been canceled', stepData);
             return;
         }
@@ -234,8 +244,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
 
         this.logger.debug(`Display hint for step ${stepSlug}`);
-
-        this.options.hooks?.onShowHint?.({preset, step: stepSlug}, this);
+        this.events.emit('showHint', {preset, step: stepSlug});
 
         this.options.showHint?.({preset, element, step});
         this.hintStore.showHint({preset, element, step});
@@ -327,7 +336,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.logger.debug('Add new presets', presets);
 
         for (const preset of presets) {
-            this.options.hooks?.onAddPreset?.({preset}, this);
+            this.events.emit('addPreset', {preset});
 
             if (this.state.base.availablePresets.includes(preset)) {
                 return;
@@ -351,9 +360,9 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
-        const allowRun = await this.options.hooks?.onBeforeSuggestPreset?.({preset: preset}, this);
+        const allowRun = await this.events.emit('beforeSuggestPreset', {preset});
 
-        if (allowRun === false) {
+        if (!allowRun) {
             this.logger.debug('Preset suggestion cancelled', preset);
             return;
         }
@@ -385,7 +394,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
-        await this.options.hooks?.onBeforeRunPreset?.({preset: presetSlug}, this);
+        await this.events.emit('beforeRunPreset', {preset: presetSlug});
 
         this.state.base.activePresets.push(presetSlug);
 
@@ -403,7 +412,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             this.closedHints.delete(slug);
         });
 
-        this.options.hooks?.onRunPreset?.({preset: presetSlug}, this);
+        this.events.emit('runPreset', {preset: presetSlug});
         this.options.config.presets[presetToRunSlug].hooks?.onStart?.();
         if (presetSlug !== presetToRunSlug) {
             this.options.config.presets[presetSlug].hooks?.onStart?.();
@@ -420,7 +429,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         const presetSlug = this.resolvePresetSlug(presetToFinish);
         this.logger.debug('Preset finished', presetToFinish);
 
-        this.options.hooks?.onFinishPreset?.({preset: presetSlug}, this);
+        this.events.emit('finishPreset', {preset: presetSlug});
+
         this.options.config.presets[presetToFinish]?.hooks?.onEnd?.();
 
         if (presetSlug !== presetToFinish) {
