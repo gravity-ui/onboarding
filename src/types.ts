@@ -118,12 +118,18 @@ export type InitOptions<HintParams, Presets extends string, Steps extends string
     showHint?: (params: ShowHintParams<HintParams, Presets, Steps>) => void;
     logger?: LoggerOptions;
     debugMode?: boolean;
+    plugins?: OnboardingPlugin[];
     hooks?: {
-        [K in keyof EventsMap<Presets, Steps>]: (
+        [K in keyof EventsMap<Presets, Steps>]?: (
             data: EventsMap<Presets, Steps>[K],
             instance: Controller<HintParams, Presets, Steps>,
         ) => HookCallbackReturnType;
     };
+};
+
+export type OnboardingPlugin = {
+    name: string;
+    apply: (pluginInterface: {onboarding: Controller<any, any, any>}) => void;
 };
 
 type HookCallbackReturnType = void | boolean | Promise<void | undefined>;
@@ -137,6 +143,7 @@ export type EventsMap<Presets extends string, Steps extends string> = {
     finishPreset: {preset: Presets};
     beforeSuggestPreset: {preset: string};
     beforeShowHint: {stepData: ReachElementParams<Presets, Steps>};
+    stateChange: {state: Controller<any, any, any>['state']};
 };
 
 export type EventTypes = keyof EventsMap<any, any>;

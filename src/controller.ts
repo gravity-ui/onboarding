@@ -1,7 +1,7 @@
 import type {BaseState, InitOptions, ProgressState, ReachElementParams} from './types';
 import {HintStore} from './hints/hintStore';
 import {createLogger} from './logger';
-import {CommonPreset, PresetStatus} from './types';
+import {CommonPreset, EventTypes, PresetStatus} from './types';
 import {createDebounceHandler} from './debounce';
 import {EventEmitter} from './event-emitter';
 
@@ -62,7 +62,6 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     reachedElements: Map<Steps, HTMLElement>;
     hintStore: HintStore<HintParams, Presets, Steps>;
     logger: ReturnType<typeof createLogger>;
-    stateListeners: Set<Listener>;
     passStepListeners: Set<Listener>;
     events: EventEmitter<HintParams, Presets, Steps>;
 
@@ -86,7 +85,6 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.reachedElements = new Map();
 
         this.hintStore = hintStore || new HintStore();
-        this.stateListeners = new Set();
         this.passStepListeners = new Set();
         this.logger = createLogger(options.logger ?? {}); // переименовать в logger options
 
@@ -105,12 +103,19 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
         instanceCounter++;
 
+        if (this.options.plugins) {
+            for (const plugin of this.options.plugins) {
+                plugin.apply({onboarding: this});
+                this.logger.debug('Init onboarding plugin', plugin.name);
+            }
+        }
+
         this.events = new EventEmitter(this);
         if (this.options.hooks) {
-            Object.keys(this.options.hooks).forEach((hook) =>
-                // @ts-ignore
-                this.events.subscribe(hook, this.options.hooks[hook]),
-            );
+            const hooks = Object.keys(this.options.hooks) as EventTypes[];
+            for (const hook of hooks) {
+                this.events.subscribe(hook, this.options.hooks[hook]);
+            }
         }
 
         if (this.options.baseState?.wizardState === 'visible') {
@@ -288,9 +293,15 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     };
 
     subscribe = (listener: Listener) => {
-        this.stateListeners.add(listener);
+        // this.stateListeners.add(listener);
+        // return () => {
+        //     this.stateListeners.delete(listener);
+        // };
+
+        this.events.subscribe('stateChange', listener);
+
         return () => {
-            this.stateListeners.delete(listener);
+            this.events.unsubscribe('stateChange', listener);
         };
     };
 
@@ -498,7 +509,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
                 ...newProgressState,
             };
             this.status = 'active';
-            this.emitChange();
+            this.emitStateChange();
 
             this.logger.debug('Onboarding progress data loaded');
         } catch (e) {
@@ -530,6 +541,12 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
 
         this.hintStore.closeHint();
+    };
+
+    emitStateChange = () => {
+        this.state = JSON.parse(JSON.stringify(this.state));
+
+        this.events.emit('stateChange', {state: this.state});
     };
 
     private resolvePresetSlug = (presetSlug: Presets) => {
@@ -692,7 +709,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.assertProgressLoaded();
         this.logger.debug('Update progress data', this.state.progress);
 
-        this.emitChange();
+        this.emitStateChange();
 
         await this.saveProgressState();
     }
@@ -700,7 +717,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     private async updateBaseState() {
         this.logger.debug('Update onboarding state', this.state.base);
 
-        this.emitChange();
+        this.emitStateChange();
 
         await this.saveBaseState();
     }
@@ -755,12 +772,4 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         return undefined;
     }
-
-    private emitChange = () => {
-        this.state = JSON.parse(JSON.stringify(this.state));
-
-        for (const listener of this.stateListeners) {
-            listener();
-        }
-    };
 }
