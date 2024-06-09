@@ -129,15 +129,7 @@ export class Controller {
     finishPromo = (slug: PromoSlug, updateProgressInfo = false, closeActiveTimeout = 0) => {
         this.assertProgressLoaded();
 
-        if (this.isActive(slug)) {
-            if (closeActiveTimeout) {
-                setTimeout(() => {
-                    this.clearActive();
-                }, closeActiveTimeout);
-            } else {
-                this.clearActive();
-            }
-        }
+        this.closeActivePromo(slug, closeActiveTimeout);
 
         if (this.state.progress.finishedPromos.includes(slug)) {
             return;
@@ -154,10 +146,8 @@ export class Controller {
         this.triggerNextPromo();
     };
 
-    cancelPromo = (slug: PromoSlug, updateProgressInfo = false) => {
-        if (this.isActive(slug)) {
-            this.clearActive();
-        }
+    cancelPromo = (slug: PromoSlug, updateProgressInfo = false, closeActiveTimeout = 0) => {
+        this.closeActivePromo(slug, closeActiveTimeout);
 
         if (updateProgressInfo) {
             this.updateProgressInfo(slug);
@@ -433,6 +423,18 @@ export class Controller {
 
         for (const listener of this.stateListeners) {
             listener();
+        }
+    };
+
+    private closeActivePromo = (slug: PromoSlug, timeout = 0) => {
+        if (this.isActive(slug)) {
+            if (timeout) {
+                setTimeout(() => {
+                    this.clearActive();
+                }, timeout);
+            } else {
+                this.clearActive();
+            }
         }
     };
 }
