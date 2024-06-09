@@ -2,6 +2,7 @@ import {useMemo, useSyncExternalStore} from 'react';
 
 import type {Controller} from './controller';
 import type {PresetSlug, PromoSlug} from './types';
+import {assertSlug} from './utils/assertSlug';
 
 export function getHooks(controller: Controller) {
     const usePromoManager = (promo: PromoSlug) => {
@@ -30,30 +31,29 @@ export function getHooks(controller: Controller) {
         return callbacks;
     };
 
-    const useActivePromo = () => {
+    const useActivePromo = (presetSlug?: PresetSlug) => {
         const promo = useSyncExternalStore(
             controller.subscribe,
             () => controller.state.base.activePromo,
         );
-
-        const preset = promo ? controller.getTypeBySlug(promo) : null;
-        const metaInfo = promo ? controller.getPromoConfig(promo) : null;
+        const preset = promo ? assertSlug(controller.getTypeBySlug(promo), presetSlug) : null;
+        const isValid = promo && preset;
 
         const callbacks = useMemo(
             () => ({
-                promo,
+                promo: isValid ? promo : null,
                 preset,
-                metaInfo,
+                metaInfo: isValid ? controller.getPromoConfig(promo) : null,
                 finish: (updateProgressInfo = false, closeActiveTimeout = 0) =>
-                    promo
+                    isValid
                         ? controller.finishPromo(promo, updateProgressInfo, closeActiveTimeout)
                         : {},
                 cancel: (updateProgressInfo = false) =>
-                    promo ? controller.cancelPromo(promo, updateProgressInfo) : {},
-                cancelStart: () => (promo ? controller.cancelStart(promo) : {}),
-                updateProgressInfo: () => (promo ? controller.updateProgressInfo(promo) : {}),
+                    isValid ? controller.cancelPromo(promo, updateProgressInfo) : {},
+                cancelStart: () => (isValid ? controller.cancelStart(promo) : {}),
+                updateProgressInfo: () => (isValid ? controller.updateProgressInfo(promo) : {}),
             }),
-            [preset, promo, metaInfo],
+            [preset, promo],
         );
 
         return callbacks;
