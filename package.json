@@ -5,7 +5,8 @@
   "license": "MIT",
   "main": "dist/index.js",
   "files": [
-    "dist"
+    "dist",
+    "dist/plugins"
   ],
   "repository": {
     "type": "git",

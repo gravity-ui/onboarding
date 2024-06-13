@@ -1,4 +1,4 @@
-import {RefObject, useCallback, useEffect, useMemo, useSyncExternalStore} from 'react';
+import {useCallback, useMemo, useSyncExternalStore} from 'react';
 import type {Controller} from './controller';
 
 export function getHooks<HintParams, Presets extends string, Steps extends string>(
@@ -30,44 +30,6 @@ export function getHooks<HintParams, Presets extends string, Steps extends strin
 
         return {pass, ref: onRefChange, closeHint};
     };
-
-    const useOnboardingStepByRef = (
-        step: Steps,
-        ref: RefObject<any>,
-        selector: string,
-        readyForHint = true,
-    ) => {
-        const pass = useCallback(async () => {
-            await controller.passStep(step);
-        }, [step]);
-
-        const closeHint = useCallback(() => {
-            controller.closeHintByUser(step);
-        }, [step]);
-
-        useEffect(() => {
-            if (!readyForHint) {
-                return;
-            }
-
-            if (ref.current) {
-                const targetElement = ref.current.closest(selector);
-
-                if (targetElement) {
-                    controller.stepElementReached({stepSlug: step, element: targetElement});
-                } else {
-                    controller.stepElementDisappeared(step);
-                }
-
-                return;
-            }
-
-            controller.stepElementDisappeared(step);
-        }, []);
-
-        return {pass, closeHint};
-    };
-
     const useOnboardingPresets = () => {
         return {
             addPreset: controller.addPreset,
@@ -103,7 +65,6 @@ export function getHooks<HintParams, Presets extends string, Steps extends strin
     return {
         useOnboardingPresets,
         useOnboardingStep,
-        useOnboardingStepByRef,
         useOnboardingHint,
         useWizard,
     };

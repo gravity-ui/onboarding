@@ -63,7 +63,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     hintStore: HintStore<HintParams, Presets, Steps>;
     logger: ReturnType<typeof createLogger>;
     passStepListeners: Set<Listener>;
-    events: EventEmitter<HintParams, Presets, Steps>;
+    events: EventEmitter<typeof this>;
 
     saveBaseState: () => void;
     saveProgressState: () => void;
@@ -84,7 +84,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.closedHints = new Set();
         this.reachedElements = new Map();
 
-        this.hintStore = hintStore || new HintStore();
+        this.events = new EventEmitter(this);
+        this.hintStore = hintStore || new HintStore(this.events);
         this.passStepListeners = new Set();
         this.logger = createLogger(options.logger ?? {}); // переименовать в logger options
 
@@ -110,7 +111,6 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             }
         }
 
-        this.events = new EventEmitter(this);
         if (this.options.hooks) {
             const hooks = Object.keys(this.options.hooks) as EventTypes[];
             for (const hook of hooks) {
@@ -271,7 +271,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
     closeHintByUser = (stepSlug?: Steps) => {
         const currentHintStep = this.hintStore.state.hint?.step.slug;
-        this.logger.debug('Close hint(internal)', currentHintStep);
+        this.logger.debug('uClose hint(internal)', currentHintStep);
         if (stepSlug && stepSlug !== currentHintStep) {
             this.logger.debug('Hint for step', stepSlug, 'is not current hint');
             return;
@@ -293,11 +293,6 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     };
 
     subscribe = (listener: Listener) => {
-        // this.stateListeners.add(listener);
-        // return () => {
-        //     this.stateListeners.delete(listener);
-        // };
-
         this.events.subscribe('stateChange', listener);
 
         return () => {

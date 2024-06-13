@@ -1,6 +1,7 @@
 import type {ReactNode} from 'react';
 import type {LoggerOptions} from './logger';
 import {Controller} from './controller';
+import {HintState} from './hints/hintStore';
 
 type HintPlacement =
     | 'top'
@@ -120,8 +121,8 @@ export type InitOptions<HintParams, Presets extends string, Steps extends string
     debugMode?: boolean;
     plugins?: OnboardingPlugin[];
     hooks?: {
-        [K in keyof EventsMap<Presets, Steps>]?: (
-            data: EventsMap<Presets, Steps>[K],
+        [K in keyof EventsMap<HintParams, Presets, Steps>]?: (
+            data: EventsMap<HintParams, Presets, Steps>[K],
             instance: Controller<HintParams, Presets, Steps>,
         ) => HookCallbackReturnType;
     };
@@ -134,7 +135,11 @@ export type OnboardingPlugin = {
 
 type HookCallbackReturnType = void | boolean | Promise<void | undefined>;
 
-export type EventsMap<Presets extends string, Steps extends string> = {
+export type EventsMap<
+    HintParams = any,
+    Presets extends string = string,
+    Steps extends string = string,
+> = {
     showHint: {preset: Presets; step: Steps};
     stepPass: {preset: Presets; step: Steps};
     addPreset: {preset: Presets};
@@ -144,9 +149,11 @@ export type EventsMap<Presets extends string, Steps extends string> = {
     beforeSuggestPreset: {preset: string};
     beforeShowHint: {stepData: ReachElementParams<Presets, Steps>};
     stateChange: {state: Controller<any, any, any>['state']};
+    hintDataChanged: {state: HintState<HintParams, Presets, Steps>};
+    closeHint: {step: Steps};
 };
 
-export type EventTypes = keyof EventsMap<any, any>;
+export type EventTypes = keyof EventsMap<any, any, any>;
 
 // type inference utils
 type CommonKeys<T extends object> = keyof T;

@@ -1,4 +1,4 @@
-import {BaseState, PresetStep, ProgressState} from '../types';
+import {BaseState, OnboardingPlugin, PresetStep, ProgressState} from '../types';
 
 export const getOptions = (
     baseState: Partial<BaseState> = {},
@@ -62,6 +62,7 @@ export const getOptions = (
                 error: () => {},
             },
         },
+        plugins: [] as OnboardingPlugin[],
     };
 };
 

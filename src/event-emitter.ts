@@ -1,17 +1,16 @@
 import {EventsMap, EventTypes} from './types';
-import type {Controller} from './controller';
 
 type Callback = any;
-export class EventEmitter<HintParams, Presets extends string, Steps extends string> {
+export class EventEmitter<Arg> {
     map: Record<string, Set<any>> = {};
 
-    controllerInstance: Controller<HintParams, Presets, Steps>;
+    extraArg?: Arg;
 
-    constructor(controllerInstance: Controller<HintParams, Presets, Steps>) {
-        this.controllerInstance = controllerInstance;
+    constructor(extraArg?: Arg) {
+        this.extraArg = extraArg;
     }
 
-    emit = async <T extends EventTypes>(type: T, data: EventsMap<Presets, Steps>[T]) => {
+    emit = async <T extends EventTypes>(type: T, data: EventsMap[T]) => {
         const listeners = this.map[type];
 
         if (!listeners || listeners.size === 0) {
@@ -20,7 +19,7 @@ export class EventEmitter<HintParams, Presets extends string, Steps extends stri
 
         let canContinue = true;
         for (const listener of listeners) {
-            const result = await listener(data, this.controllerInstance);
+            const result = await listener(data, this.extraArg);
             if (result === false) {
                 canContinue = false;
             }

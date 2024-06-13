@@ -1,7 +1,8 @@
 import type {MutableRefObject} from 'react';
 import type {ShowHintParams} from '../types';
+import {EventEmitter} from '../event-emitter';
 
-type HintState<HintParams, Preset extends string, Steps extends string> = {
+export type HintState<HintParams, Preset extends string, Steps extends string> = {
     anchorRef: MutableRefObject<HTMLElement | null>;
     open: boolean;
     hint?: Pick<ShowHintParams<HintParams, Preset, Steps>, 'preset' | 'step'>;
@@ -15,10 +16,11 @@ export class HintStore<HintParams, Preset extends string, Steps extends string> 
         anchorRef: {current: null},
         hint: undefined,
     };
-    listeners: Set<Listener>;
 
-    constructor() {
-        this.listeners = new Set();
+    emitter: EventEmitter<any>;
+
+    constructor(emitter: EventEmitter<any>) {
+        this.emitter = emitter;
     }
 
     showHint = ({element, preset, step}: ShowHintParams<HintParams, Preset, Steps>) => {
@@ -28,7 +30,7 @@ export class HintStore<HintParams, Preset extends string, Steps extends string> 
             hint: {preset, step},
         };
 
-        this.emitChange();
+        this.emitter.emit('hintDataChanged', {state: this.state});
     };
 
     updateHintAnchor = ({element, step}: {element: HTMLElement | null; step: Steps}) => {
@@ -41,17 +43,21 @@ export class HintStore<HintParams, Preset extends string, Steps extends string> 
             anchorRef: {current: element},
         };
 
-        this.emitChange();
+        this.emitter.emit('hintDataChanged', {state: this.state});
     };
 
     closeHint = () => {
+        if (this.state.hint) {
+            this.emitter.emit('closeHint', {step: this.state.hint.step.slug});
+        }
+
         this.state = {
             open: false,
             hint: undefined,
             anchorRef: {current: null},
         };
 
-        this.emitChange();
+        this.emitter.emit('hintDataChanged', {state: this.state});
     };
 
     getSnapshot = () => {
@@ -59,15 +65,9 @@ export class HintStore<HintParams, Preset extends string, Steps extends string> 
     };
 
     subscribe = (listener: Listener) => {
-        this.listeners.add(listener);
+        this.emitter.subscribe('hintDataChanged', listener);
         return () => {
-            this.listeners.delete(listener);
+            this.emitter.unsubscribe('hintDataChanged', listener);
         };
-    };
-
-    emitChange = () => {
-        for (const listener of this.listeners) {
-            listener();
-        }
     };
 }

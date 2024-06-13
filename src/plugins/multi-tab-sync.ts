@@ -1,26 +1,42 @@
 import {OnboardingPlugin} from '../types';
 import type {Controller} from '../controller';
 
-const DEFAULT_LS_KEY = 'onboarding.plugin-sync';
-
 type PluginOptions = {
-    LSKey?: string;
+    changeStateLSKey: string;
+    closeHintLSKey: string;
+    enableCloseHintSync: boolean;
+    enableStateSync: boolean;
 };
 
-export class MultiTabSync implements OnboardingPlugin {
+const DEFAULT_PLUGIN_OPTIONS = {
+    changeStateLSKey: 'onboarding.plugin-sync.changeState',
+    closeHintLSKey: 'onboarding.plugin-sync.closeHint',
+    enableCloseHintSync: true,
+    enableStateSync: true,
+};
+export class MultiTabSyncPlugin implements OnboardingPlugin {
     name = 'multiTabSyncPlugin';
     onboardingInstance?: Controller<any, any, any>;
-    LSKey: string;
+    options: PluginOptions;
 
-    constructor({LSKey}: PluginOptions) {
-        this.LSKey = LSKey ?? DEFAULT_LS_KEY;
+    constructor(userOptions: Partial<PluginOptions> = {}) {
+        this.options = {
+            ...DEFAULT_PLUGIN_OPTIONS,
+            ...userOptions,
+        };
     }
     apply: OnboardingPlugin['apply'] = ({onboarding}) => {
         this.onboardingInstance = onboarding;
 
         window.addEventListener('storage', this.handleLSEvent);
 
-        onboarding.subscribe(() => this.updateLSValue(onboarding.state));
+        if (this.options.enableStateSync) {
+            onboarding.events.subscribe('stateChange', () => this.changeState(onboarding.state));
+        }
+
+        if (this.options.enableCloseHintSync) {
+            onboarding.events.subscribe('closeHint', this.closeHint);
+        }
     };
 
     handleLSEvent = (event: StorageEvent) => {
@@ -28,13 +44,23 @@ export class MultiTabSync implements OnboardingPlugin {
             return;
         }
 
-        if (event.key === this.LSKey && event.newValue) {
+        const isChangeStateEvent = event.key === this.options.changeStateLSKey && event.newValue;
+        if (this.options.enableStateSync && isChangeStateEvent) {
             this.onboardingInstance.state = JSON.parse(event.newValue);
             this.onboardingInstance.emitStateChange();
         }
+
+        const isCloseHintEvent = event.key === this.options.closeHintLSKey && event.newValue;
+        if (this.options.enableCloseHintSync && isCloseHintEvent) {
+            this.onboardingInstance.closeHintByUser(event.newValue);
+        }
     };
 
-    updateLSValue = (newValue: any) => {
-        localStorage.setItem(this.LSKey, JSON.stringify(newValue));
+    closeHint = ({step}: {step: string}) => {
+        window.localStorage.setItem(this.options.closeHintLSKey, step);
+    };
+
+    changeState = (newValue: any) => {
+        localStorage.setItem(this.options.changeStateLSKey, JSON.stringify(newValue));
     };
 }
