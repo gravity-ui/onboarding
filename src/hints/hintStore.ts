@@ -1,14 +1,13 @@
 import type {MutableRefObject} from 'react';
 import type {ShowHintParams} from '../types';
 import {EventEmitter} from '../event-emitter';
+import {EventListener} from '../types';
 
 export type HintState<HintParams, Preset extends string, Steps extends string> = {
     anchorRef: MutableRefObject<HTMLElement | null>;
     open: boolean;
     hint?: Pick<ShowHintParams<HintParams, Preset, Steps>, 'preset' | 'step'>;
 };
-
-type Listener = () => void;
 
 export class HintStore<HintParams, Preset extends string, Steps extends string> {
     state: HintState<HintParams, Preset, Steps> = {
@@ -64,7 +63,7 @@ export class HintStore<HintParams, Preset extends string, Steps extends string> 
         return this.state;
     };
 
-    subscribe = (listener: Listener) => {
+    subscribe = (listener: EventListener) => {
         this.emitter.subscribe('hintDataChanged', listener);
         return () => {
             this.emitter.unsubscribe('hintDataChanged', listener);

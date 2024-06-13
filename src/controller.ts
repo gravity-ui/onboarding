@@ -113,8 +113,11 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         if (this.options.hooks) {
             const hooks = Object.keys(this.options.hooks) as EventTypes[];
-            for (const hook of hooks) {
-                this.events.subscribe(hook, this.options.hooks[hook]);
+            for (const hookEvent of hooks) {
+                const hookListener = this.options.hooks[hookEvent];
+                if (hookListener) {
+                    this.events.subscribe(hookEvent, hookListener);
+                }
             }
         }
 
@@ -271,7 +274,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
     closeHintByUser = (stepSlug?: Steps) => {
         const currentHintStep = this.hintStore.state.hint?.step.slug;
-        this.logger.debug('uClose hint(internal)', currentHintStep);
+        this.logger.debug('Close hint(internal)', currentHintStep);
         if (stepSlug && stepSlug !== currentHintStep) {
             this.logger.debug('Hint for step', stepSlug, 'is not current hint');
             return;

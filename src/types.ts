@@ -134,6 +134,7 @@ export type OnboardingPlugin = {
 };
 
 type HookCallbackReturnType = void | boolean | Promise<void | undefined>;
+export type EventListener = (...args: any[]) => HookCallbackReturnType;
 
 export type EventsMap<
     HintParams = any,

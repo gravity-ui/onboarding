@@ -1,6 +1,5 @@
-import {EventsMap, EventTypes} from './types';
+import {EventListener, EventsMap, EventTypes} from './types';
 
-type Callback = any;
 export class EventEmitter<Arg> {
     map: Record<string, Set<any>> = {};
 
@@ -28,7 +27,7 @@ export class EventEmitter<Arg> {
         return canContinue;
     };
 
-    subscribe = <T extends EventTypes>(type: T, callback: Callback) => {
+    subscribe = <T extends EventTypes>(type: T, callback: EventListener) => {
         if (!this.map[type]) {
             this.map[type] = new Set();
         }
@@ -36,7 +35,7 @@ export class EventEmitter<Arg> {
         this.map[type].add(callback);
     };
 
-    unsubscribe = <T extends EventTypes>(type: T, callback: Callback) => {
+    unsubscribe = <T extends EventTypes>(type: T, callback: EventListener) => {
         if (!this.map[type]) {
             return;
         }
