@@ -2,7 +2,6 @@ import {useMemo, useSyncExternalStore} from 'react';
 
 import type {Controller} from './controller';
 import type {PresetSlug, PromoSlug} from './types';
-import {assertSlug} from './utils/assertSlug';
 
 export function getHooks(controller: Controller) {
     const usePromoManager = (promo: PromoSlug) => {
@@ -20,8 +19,8 @@ export function getHooks(controller: Controller) {
                 },
                 finish: (updateProgressInfo = false, closeActiveTimeout = 0) =>
                     controller.finishPromo(promo, updateProgressInfo, closeActiveTimeout),
-                cancel: (updateProgressInfo = false) =>
-                    controller.cancelPromo(promo, updateProgressInfo),
+                cancel: (updateProgressInfo = false, closeActiveTimeout = 0) =>
+                    controller.cancelPromo(promo, updateProgressInfo, closeActiveTimeout),
                 cancelStart: () => controller.cancelStart(promo),
                 updateProgressInfo: () => controller.updateProgressInfo(promo),
             }),
@@ -32,28 +31,23 @@ export function getHooks(controller: Controller) {
     };
 
     const useActivePromo = (presetSlug?: PresetSlug) => {
-        const promo = useSyncExternalStore(
-            controller.subscribe,
-            () => controller.state.base.activePromo,
+        const promo = useSyncExternalStore(controller.subscribe, () =>
+            controller.getActivePromo(presetSlug),
         );
-        const preset = promo ? assertSlug(controller.getTypeBySlug(promo), presetSlug) : null;
-        const isValid = promo && preset;
 
         const callbacks = useMemo(
             () => ({
-                promo: isValid ? promo : null,
-                preset,
-                metaInfo: isValid ? controller.getPromoConfig(promo) : null,
+                promo,
+                preset: controller.getTypeBySlug(promo),
+                metaInfo: () => controller.getPromoConfig(promo),
                 finish: (updateProgressInfo = false, closeActiveTimeout = 0) =>
-                    isValid
-                        ? controller.finishPromo(promo, updateProgressInfo, closeActiveTimeout)
-                        : {},
-                cancel: (updateProgressInfo = false) =>
-                    isValid ? controller.cancelPromo(promo, updateProgressInfo) : {},
-                cancelStart: () => (isValid ? controller.cancelStart(promo) : {}),
-                updateProgressInfo: () => (isValid ? controller.updateProgressInfo(promo) : {}),
+                    controller.finishPromo(promo, updateProgressInfo, closeActiveTimeout),
+                cancel: (updateProgressInfo = false, closeActiveTimeout = 0) =>
+                    controller.cancelPromo(promo, updateProgressInfo, closeActiveTimeout),
+                cancelStart: () => controller.cancelStart(promo),
+                updateProgressInfo: () => controller.updateProgressInfo(promo),
             }),
-            [preset, promo],
+            [promo],
         );
 
         return callbacks;
@@ -67,13 +61,11 @@ export function getHooks(controller: Controller) {
         const callbacks = useMemo(
             () => ({
                 promo,
-                requestStart: () => (promo ? controller.requestStart(promo) : {}),
+                requestStart: () => controller.requestStart(promo),
                 finish: (updateProgressInfo = false, closeActiveTimeout = 0) =>
-                    promo
-                        ? controller.finishPromo(promo, updateProgressInfo, closeActiveTimeout)
-                        : {},
-                cancel: (updateProgressInfo = false) =>
-                    promo ? controller.cancelPromo(promo, updateProgressInfo) : {},
+                    controller.finishPromo(promo, updateProgressInfo, closeActiveTimeout),
+                cancel: (updateProgressInfo = false, closeActiveTimeout = 0) =>
+                    controller.cancelPromo(promo, updateProgressInfo, closeActiveTimeout),
             }),
             [promo],
         );

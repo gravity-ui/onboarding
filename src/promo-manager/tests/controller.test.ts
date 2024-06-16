@@ -223,3 +223,73 @@ describe('update last call info', () => {
         expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeUndefined();
     });
 });
+
+describe('close with timeout', () => {
+    let controller: Controller;
+    const promo = 'boardPoll';
+    const promoType = 'poll';
+    const clearActiveTimeout = 1000;
+
+    beforeEach(async () => {
+        controller = new Controller(testOptions);
+        controller.requestStart(promo);
+
+        await waitForNextTick();
+    });
+
+    it('finish and save time', async () => {
+        controller.finishPromo(promo, true, clearActiveTimeout);
+
+        expect(
+            controller.state.progress?.progressInfoByType[promoType]?.lastCallTime,
+        ).toBeDefined();
+        expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeDefined();
+        expect(controller.state.base.activePromo).toBe(promo);
+
+        await waitForNextTick(clearActiveTimeout);
+
+        expect(controller.state.base.activePromo).toBe(null);
+    });
+
+    it('finish and not save time', async () => {
+        controller.finishPromo(promo, false, clearActiveTimeout);
+
+        expect(
+            controller.state.progress?.progressInfoByType[promoType]?.lastCallTime,
+        ).toBeUndefined();
+        expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeUndefined();
+        expect(controller.state.base.activePromo).toBe(promo);
+
+        await waitForNextTick(clearActiveTimeout);
+
+        expect(controller.state.base.activePromo).toBe(null);
+    });
+
+    it('cancel and save time', async () => {
+        controller.cancelPromo(promo, true, clearActiveTimeout);
+
+        expect(
+            controller.state.progress?.progressInfoByType[promoType]?.lastCallTime,
+        ).toBeDefined();
+        expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeDefined();
+        expect(controller.state.base.activePromo).toBe(promo);
+
+        await waitForNextTick(clearActiveTimeout);
+
+        expect(controller.state.base.activePromo).toBe(null);
+    });
+
+    it('cancel and not save time', async () => {
+        controller.cancelPromo(promo, false, clearActiveTimeout);
+
+        expect(
+            controller.state.progress?.progressInfoByType[promoType]?.lastCallTime,
+        ).toBeUndefined();
+        expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeUndefined();
+        expect(controller.state.base.activePromo).toBe(promo);
+
+        await waitForNextTick(clearActiveTimeout);
+
+        expect(controller.state.base.activePromo).toBe(null);
+    });
+});
