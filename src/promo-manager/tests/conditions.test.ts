@@ -33,7 +33,7 @@ test('finish promo and request after 2 months -> not show again', async () => {
 
     await waitForNextTick();
 
-    controller.finishPromo('every2Months', true);
+    controller.finishPromo('every2Months');
     controller.requestStart('every2Months', true);
 
     await waitForNextTick();

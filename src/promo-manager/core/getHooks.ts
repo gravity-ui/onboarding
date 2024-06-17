@@ -17,9 +17,9 @@ export function getHooks(controller: Controller) {
                         controller.logger.error(error);
                     });
                 },
-                finish: (updateProgressInfo = false, closeActiveTimeout = 0) =>
-                    controller.finishPromo(promo, updateProgressInfo, closeActiveTimeout),
-                cancel: (updateProgressInfo = false, closeActiveTimeout = 0) =>
+                finish: (closeActiveTimeout?: number) =>
+                    controller.finishPromo(promo, closeActiveTimeout),
+                cancel: (updateProgressInfo?: boolean, closeActiveTimeout?: number) =>
                     controller.cancelPromo(promo, updateProgressInfo, closeActiveTimeout),
                 cancelStart: () => controller.cancelStart(promo),
                 updateProgressInfo: () => controller.updateProgressInfo(promo),
@@ -40,9 +40,9 @@ export function getHooks(controller: Controller) {
                 promo,
                 preset: controller.getTypeBySlug(promo),
                 metaInfo: () => controller.getPromoConfig(promo),
-                finish: (updateProgressInfo = false, closeActiveTimeout = 0) =>
-                    controller.finishPromo(promo, updateProgressInfo, closeActiveTimeout),
-                cancel: (updateProgressInfo = false, closeActiveTimeout = 0) =>
+                finish: (closeActiveTimeout?: number) =>
+                    controller.finishPromo(promo, closeActiveTimeout),
+                cancel: (updateProgressInfo?: boolean, closeActiveTimeout?: number) =>
                     controller.cancelPromo(promo, updateProgressInfo, closeActiveTimeout),
                 cancelStart: () => controller.cancelStart(promo),
                 updateProgressInfo: () => controller.updateProgressInfo(promo),
@@ -62,9 +62,9 @@ export function getHooks(controller: Controller) {
             () => ({
                 promo,
                 requestStart: () => controller.requestStart(promo),
-                finish: (updateProgressInfo = false, closeActiveTimeout = 0) =>
-                    controller.finishPromo(promo, updateProgressInfo, closeActiveTimeout),
-                cancel: (updateProgressInfo = false, closeActiveTimeout = 0) =>
+                finish: (closeActiveTimeout?: number) =>
+                    controller.finishPromo(promo, closeActiveTimeout),
+                cancel: (updateProgressInfo?: boolean, closeActiveTimeout?: number) =>
                     controller.cancelPromo(promo, updateProgressInfo, closeActiveTimeout),
             }),
             [promo],

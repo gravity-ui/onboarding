@@ -130,11 +130,7 @@ export class Controller {
         }
     };
 
-    finishPromo = (
-        slug: Nullable<PromoSlug>,
-        updateProgressInfo = false,
-        closeActiveTimeout = 0,
-    ) => {
+    finishPromo = (slug: Nullable<PromoSlug>, closeActiveTimeout = 0) => {
         if (!slug) {
             return;
         }
@@ -143,9 +139,7 @@ export class Controller {
 
         this.addPromoToFinished(slug);
 
-        if (updateProgressInfo) {
-            this.updateProgressInfo(slug);
-        }
+        this.updateProgressInfo(slug);
     };
 
     cancelPromo = (

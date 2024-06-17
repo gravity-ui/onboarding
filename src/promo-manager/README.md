@@ -94,7 +94,7 @@ const { promo, metaInfo, cancel, finish } = useActivePromo('poll');
  * @param closeActiveTimeout - close current promo after timeout
   */
 
- finish: (updateProgressInfo = false, closeActiveTimeout = 0) => {...} // trigger next promo and add current to the finishedPromos
+ finish: (closeActiveTimeout = 0) => {...} // trigger next promo and add current to the finishedPromos
  cancel: (updateProgressInfo = false, closeActiveTimeout = 0) => {...} // trigger next promo
 ```
 
