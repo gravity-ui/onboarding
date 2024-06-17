@@ -213,6 +213,38 @@ describe('event subscriptions', function () {
         expect(mock).toHaveBeenCalled();
     });
 
+    it('beforeShowHint with cancel -> no hint', async function () {
+        const controller = new Controller(getOptions());
+
+        const mock = jest.fn(() => false);
+        controller.events.subscribe('beforeShowHint', mock);
+
+        await controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: getAnchorElement(),
+        });
+
+        expect(controller.hintStore.state.open).toBe(false);
+    });
+
+    it('beforeShowHint with cancel -> call all hooks', async function () {
+        const controller = new Controller(getOptions());
+
+        const mock1 = jest.fn(() => false);
+        const mock2 = jest.fn();
+
+        controller.events.subscribe('beforeShowHint', mock1);
+        controller.events.subscribe('beforeShowHint', mock2);
+
+        await controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: getAnchorElement(),
+        });
+
+        expect(mock1).toHaveBeenCalled();
+        expect(mock2).toHaveBeenCalled();
+    });
+
     it('showHint', async function () {
         const controller = new Controller(getOptions());
 

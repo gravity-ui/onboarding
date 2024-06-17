@@ -112,11 +112,9 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
 
         if (this.options.hooks) {
-            const hooks = Object.keys(this.options.hooks) as EventTypes[];
-            for (const hookEvent of hooks) {
-                const hookListener = this.options.hooks[hookEvent];
-                if (hookListener) {
-                    this.events.subscribe(hookEvent, hookListener);
+            for (const [hookName, hookFunction] of Object.entries(this.options.hooks)) {
+                if (hookFunction) {
+                    this.events.subscribe(hookName as EventTypes, hookFunction);
                 }
             }
         }
