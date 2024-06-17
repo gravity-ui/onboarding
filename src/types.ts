@@ -1,6 +1,7 @@
 import type {ReactNode} from 'react';
 import type {LoggerOptions} from './logger';
 import {Controller} from './controller';
+import {HintState} from './hints/hintStore';
 
 type HintPlacement =
     | 'top'
@@ -118,41 +119,42 @@ export type InitOptions<HintParams, Presets extends string, Steps extends string
     showHint?: (params: ShowHintParams<HintParams, Presets, Steps>) => void;
     logger?: LoggerOptions;
     debugMode?: boolean;
+    plugins?: OnboardingPlugin[];
     hooks?: {
-        onShowHint?: (
-            data: {preset: Presets; step: Steps},
+        [K in keyof EventsMap<HintParams, Presets, Steps>]?: (
+            data: EventsMap<HintParams, Presets, Steps>[K],
             instance: Controller<HintParams, Presets, Steps>,
-        ) => void;
-        onStepPass?: (
-            data: {preset: Presets; step: Steps},
-            instance: Controller<HintParams, Presets, Steps>,
-        ) => void;
-        onAddPreset?: (
-            data: {preset: Presets},
-            instance: Controller<HintParams, Presets, Steps>,
-        ) => void;
-        onBeforeRunPreset?: (
-            data: {preset: Presets},
-            instance: Controller<HintParams, Presets, Steps>,
-        ) => Promise<void>;
-        onRunPreset?: (
-            data: {preset: Presets},
-            instance: Controller<HintParams, Presets, Steps>,
-        ) => void;
-        onFinishPreset?: (
-            data: {preset: Presets},
-            instance: Controller<HintParams, Presets, Steps>,
-        ) => void;
-        onBeforeSuggestPreset?: (
-            data: {preset: string},
-            instance: Controller<HintParams, Presets, Steps>,
-        ) => Promise<boolean | undefined>;
-        onBeforeShowHint?: (
-            data: {stepData: ReachElementParams<Presets, Steps>},
-            instance: Controller<HintParams, Presets, Steps>,
-        ) => Promise<boolean | undefined>;
+        ) => HookCallbackReturnType;
     };
 };
+
+export type OnboardingPlugin = {
+    name: string;
+    apply: (pluginInterface: {onboarding: Controller<any, any, any>}) => void;
+};
+
+type HookCallbackReturnType = void | boolean | Promise<void | undefined>;
+export type EventListener = (...args: any[]) => HookCallbackReturnType;
+
+export type EventsMap<
+    HintParams = any,
+    Presets extends string = string,
+    Steps extends string = string,
+> = {
+    showHint: {preset: Presets; step: Steps};
+    stepPass: {preset: Presets; step: Steps};
+    addPreset: {preset: Presets};
+    beforeRunPreset: {preset: Presets};
+    runPreset: {preset: Presets};
+    finishPreset: {preset: Presets};
+    beforeSuggestPreset: {preset: string};
+    beforeShowHint: {stepData: ReachElementParams<Presets, Steps>};
+    stateChange: {state: Controller<any, any, any>['state']};
+    hintDataChanged: {state: HintState<HintParams, Presets, Steps>};
+    closeHint: {step: Steps};
+};
+
+export type EventTypes = keyof EventsMap<any, any, any>;
 
 // type inference utils
 type CommonKeys<T extends object> = keyof T;

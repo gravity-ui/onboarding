@@ -1,8 +1,9 @@
 import type {BaseState, InitOptions, ProgressState, ReachElementParams} from './types';
 import {HintStore} from './hints/hintStore';
 import {createLogger} from './logger';
-import {CommonPreset, PresetStatus} from './types';
+import {CommonPreset, EventTypes, PresetStatus} from './types';
 import {createDebounceHandler} from './debounce';
+import {EventEmitter} from './event-emitter';
 
 type Listener = () => void;
 
@@ -61,8 +62,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     reachedElements: Map<Steps, HTMLElement>;
     hintStore: HintStore<HintParams, Presets, Steps>;
     logger: ReturnType<typeof createLogger>;
-    stateListeners: Set<Listener>;
     passStepListeners: Set<Listener>;
+    events: EventEmitter<typeof this>;
 
     saveBaseState: () => void;
     saveProgressState: () => void;
@@ -83,8 +84,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.closedHints = new Set();
         this.reachedElements = new Map();
 
-        this.hintStore = hintStore || new HintStore();
-        this.stateListeners = new Set();
+        this.events = new EventEmitter(this);
+        this.hintStore = hintStore || new HintStore(this.events);
         this.passStepListeners = new Set();
         this.logger = createLogger(options.logger ?? {}); // переименовать в logger options
 
@@ -102,6 +103,21 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             );
         }
         instanceCounter++;
+
+        if (this.options.plugins) {
+            for (const plugin of this.options.plugins) {
+                plugin.apply({onboarding: this});
+                this.logger.debug('Init onboarding plugin', plugin.name);
+            }
+        }
+
+        if (this.options.hooks) {
+            for (const [hookName, hookFunction] of Object.entries(this.options.hooks)) {
+                if (hookFunction) {
+                    this.events.subscribe(hookName as EventTypes, hookFunction);
+                }
+            }
+        }
 
         if (this.options.baseState?.wizardState === 'visible') {
             this.ensureRunning();
@@ -141,7 +157,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             }
         }
 
-        this.options.hooks?.onStepPass?.({preset, step: stepSlug}, this);
+        this.events.emit('stepPass', {preset, step: stepSlug});
         step?.hooks?.onStepPass?.();
 
         await this.savePassedStepData(preset, stepSlug, () => {
@@ -190,9 +206,9 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
-        const allowRun = await this.options.hooks?.onBeforeShowHint?.({stepData}, this);
+        const allowRun = await this.events.emit('beforeShowHint', {stepData});
 
-        if (allowRun === false) {
+        if (!allowRun) {
             this.logger.debug('Show hint has been canceled', stepData);
             return;
         }
@@ -234,8 +250,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
 
         this.logger.debug(`Display hint for step ${stepSlug}`);
-
-        this.options.hooks?.onShowHint?.({preset, step: stepSlug}, this);
+        this.events.emit('showHint', {preset, step: stepSlug});
 
         this.options.showHint?.({preset, element, step});
         this.hintStore.showHint({preset, element, step});
@@ -279,9 +294,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     };
 
     subscribe = (listener: Listener) => {
-        this.stateListeners.add(listener);
+        this.events.subscribe('stateChange', listener);
+
         return () => {
-            this.stateListeners.delete(listener);
+            this.events.unsubscribe('stateChange', listener);
         };
     };
 
@@ -327,7 +343,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.logger.debug('Add new presets', presets);
 
         for (const preset of presets) {
-            this.options.hooks?.onAddPreset?.({preset}, this);
+            this.events.emit('addPreset', {preset});
 
             if (this.state.base.availablePresets.includes(preset)) {
                 return;
@@ -351,9 +367,9 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
-        const allowRun = await this.options.hooks?.onBeforeSuggestPreset?.({preset: preset}, this);
+        const allowRun = await this.events.emit('beforeSuggestPreset', {preset});
 
-        if (allowRun === false) {
+        if (!allowRun) {
             this.logger.debug('Preset suggestion cancelled', preset);
             return;
         }
@@ -385,7 +401,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
-        await this.options.hooks?.onBeforeRunPreset?.({preset: presetSlug}, this);
+        await this.events.emit('beforeRunPreset', {preset: presetSlug});
 
         this.state.base.activePresets.push(presetSlug);
 
@@ -403,7 +419,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             this.closedHints.delete(slug);
         });
 
-        this.options.hooks?.onRunPreset?.({preset: presetSlug}, this);
+        this.events.emit('runPreset', {preset: presetSlug});
         this.options.config.presets[presetToRunSlug].hooks?.onStart?.();
         if (presetSlug !== presetToRunSlug) {
             this.options.config.presets[presetSlug].hooks?.onStart?.();
@@ -420,7 +436,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         const presetSlug = this.resolvePresetSlug(presetToFinish);
         this.logger.debug('Preset finished', presetToFinish);
 
-        this.options.hooks?.onFinishPreset?.({preset: presetSlug}, this);
+        this.events.emit('finishPreset', {preset: presetSlug});
+
         this.options.config.presets[presetToFinish]?.hooks?.onEnd?.();
 
         if (presetSlug !== presetToFinish) {
@@ -488,7 +505,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
                 ...newProgressState,
             };
             this.status = 'active';
-            this.emitChange();
+            this.emitStateChange();
 
             this.logger.debug('Onboarding progress data loaded');
         } catch (e) {
@@ -520,6 +537,12 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
 
         this.hintStore.closeHint();
+    };
+
+    emitStateChange = () => {
+        this.state = JSON.parse(JSON.stringify(this.state));
+
+        this.events.emit('stateChange', {state: this.state});
     };
 
     private resolvePresetSlug = (presetSlug: Presets) => {
@@ -682,7 +705,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.assertProgressLoaded();
         this.logger.debug('Update progress data', this.state.progress);
 
-        this.emitChange();
+        this.emitStateChange();
 
         await this.saveProgressState();
     }
@@ -690,7 +713,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     private async updateBaseState() {
         this.logger.debug('Update onboarding state', this.state.base);
 
-        this.emitChange();
+        this.emitStateChange();
 
         await this.saveBaseState();
     }
@@ -745,12 +768,4 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         return undefined;
     }
-
-    private emitChange = () => {
-        this.state = JSON.parse(JSON.stringify(this.state));
-
-        for (const listener of this.stateListeners) {
-            listener();
-        }
-    };
 }

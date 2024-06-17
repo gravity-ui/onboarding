@@ -65,7 +65,6 @@ export function createOnboarding<T extends InitOptions<any, any, any>>(options: 
         InferPresetsFromOptions<T>,
         InferStepsFromOptions<T>
     >(options);
-
     // @ts-ignore
     controllerRef = controller;
 

@@ -30,7 +30,6 @@ export function getHooks<HintParams, Presets extends string, Steps extends strin
 
         return {pass, ref: onRefChange, closeHint};
     };
-
     const useOnboardingPresets = () => {
         return {
             addPreset: controller.addPreset,
