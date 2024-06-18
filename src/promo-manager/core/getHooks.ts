@@ -17,10 +17,10 @@ export function getHooks(controller: Controller) {
                         controller.logger.error(error);
                     });
                 },
-                finish: (updateProgressInfo = false, closeActiveTimeout = 0) =>
-                    controller.finishPromo(promo, updateProgressInfo, closeActiveTimeout),
-                cancel: (updateProgressInfo = false) =>
-                    controller.cancelPromo(promo, updateProgressInfo),
+                finish: (closeActiveTimeout?: number) =>
+                    controller.finishPromo(promo, closeActiveTimeout),
+                cancel: (updateProgressInfo?: boolean, closeActiveTimeout?: number) =>
+                    controller.cancelPromo(promo, updateProgressInfo, closeActiveTimeout),
                 cancelStart: () => controller.cancelStart(promo),
                 updateProgressInfo: () => controller.updateProgressInfo(promo),
             }),
@@ -30,30 +30,24 @@ export function getHooks(controller: Controller) {
         return callbacks;
     };
 
-    const useActivePromo = () => {
-        const promo = useSyncExternalStore(
-            controller.subscribe,
-            () => controller.state.base.activePromo,
+    const useActivePromo = (presetSlug?: PresetSlug) => {
+        const promo = useSyncExternalStore(controller.subscribe, () =>
+            controller.getActivePromo(presetSlug),
         );
-
-        const preset = promo ? controller.getTypeBySlug(promo) : null;
-        const metaInfo = promo ? controller.getPromoConfig(promo) : null;
 
         const callbacks = useMemo(
             () => ({
                 promo,
-                preset,
-                metaInfo,
-                finish: (updateProgressInfo = false, closeActiveTimeout = 0) =>
-                    promo
-                        ? controller.finishPromo(promo, updateProgressInfo, closeActiveTimeout)
-                        : {},
-                cancel: (updateProgressInfo = false) =>
-                    promo ? controller.cancelPromo(promo, updateProgressInfo) : {},
-                cancelStart: () => (promo ? controller.cancelStart(promo) : {}),
-                updateProgressInfo: () => (promo ? controller.updateProgressInfo(promo) : {}),
+                preset: controller.getTypeBySlug(promo),
+                metaInfo: () => controller.getPromoConfig(promo),
+                finish: (closeActiveTimeout?: number) =>
+                    controller.finishPromo(promo, closeActiveTimeout),
+                cancel: (updateProgressInfo?: boolean, closeActiveTimeout?: number) =>
+                    controller.cancelPromo(promo, updateProgressInfo, closeActiveTimeout),
+                cancelStart: () => controller.cancelStart(promo),
+                updateProgressInfo: () => controller.updateProgressInfo(promo),
             }),
-            [preset, promo, metaInfo],
+            [promo],
         );
 
         return callbacks;
@@ -67,13 +61,11 @@ export function getHooks(controller: Controller) {
         const callbacks = useMemo(
             () => ({
                 promo,
-                requestStart: () => (promo ? controller.requestStart(promo) : {}),
-                finish: (updateProgressInfo = false, closeActiveTimeout = 0) =>
-                    promo
-                        ? controller.finishPromo(promo, updateProgressInfo, closeActiveTimeout)
-                        : {},
-                cancel: (updateProgressInfo = false) =>
-                    promo ? controller.cancelPromo(promo, updateProgressInfo) : {},
+                requestStart: () => controller.requestStart(promo),
+                finish: (closeActiveTimeout?: number) =>
+                    controller.finishPromo(promo, closeActiveTimeout),
+                cancel: (updateProgressInfo?: boolean, closeActiveTimeout?: number) =>
+                    controller.cancelPromo(promo, updateProgressInfo, closeActiveTimeout),
             }),
             [promo],
         );

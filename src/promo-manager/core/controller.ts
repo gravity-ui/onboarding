@@ -106,7 +106,11 @@ export class Controller {
         }
     }
 
-    requestStart = async (slug: PromoSlug, updateProgressInfo = false) => {
+    requestStart = async (slug: Nullable<PromoSlug>, updateProgressInfo = false) => {
+        if (!slug) {
+            return;
+        }
+
         if (!this.state.progress) {
             await this.fetchProgressState();
         }
@@ -126,52 +130,40 @@ export class Controller {
         }
     };
 
-    finishPromo = (slug: PromoSlug, updateProgressInfo = false, closeActiveTimeout = 0) => {
-        this.assertProgressLoaded();
-
-        if (this.isActive(slug)) {
-            if (closeActiveTimeout) {
-                setTimeout(() => {
-                    this.clearActive();
-                }, closeActiveTimeout);
-            } else {
-                this.clearActive();
-            }
-        }
-
-        if (this.state.progress.finishedPromos.includes(slug)) {
+    finishPromo = (slug: Nullable<PromoSlug>, closeActiveTimeout = 0) => {
+        if (!slug) {
             return;
         }
 
+        this.closePromoWithTimeout(slug, closeActiveTimeout);
+
         this.addPromoToFinished(slug);
 
+        this.updateProgressInfo(slug);
+    };
+
+    cancelPromo = (
+        slug: Nullable<PromoSlug>,
+        updateProgressInfo = false,
+        closeActiveTimeout = 0,
+    ) => {
+        if (!slug) {
+            return;
+        }
+
+        this.closePromoWithTimeout(slug, closeActiveTimeout);
+
         if (updateProgressInfo) {
             this.updateProgressInfo(slug);
         }
-
-        this.removePromoFromActiveQueue(slug);
-
-        this.triggerNextPromo();
     };
 
-    cancelPromo = (slug: PromoSlug, updateProgressInfo = false) => {
-        if (this.isActive(slug)) {
-            this.clearActive();
+    cancelStart = (slug: Nullable<PromoSlug>) => {
+        if (!slug) {
+            return;
         }
 
-        if (updateProgressInfo) {
-            this.updateProgressInfo(slug);
-        }
-
-        this.removePromoFromActiveQueue(slug);
-
-        this.triggerNextPromo();
-    };
-
-    cancelStart = (slug: PromoSlug) => {
-        if (this.isActive(slug)) {
-            this.clearActive();
-        }
+        this.clearActive(slug);
 
         if (this.isPending(slug)) {
             this.removePromoFromActiveQueue(slug);
@@ -219,6 +211,14 @@ export class Controller {
         return availablePromo;
     };
 
+    getActivePromo = (presetSlug?: PresetSlug): Nullable<PromoSlug> => {
+        const activePromo = this.state.base.activePromo;
+
+        if (!presetSlug) return activePromo;
+
+        return this.getTypeBySlug(activePromo) === presetSlug ? activePromo : null;
+    };
+
     subscribe = (listener: Listener) => {
         this.stateListeners.add(listener);
 
@@ -227,8 +227,18 @@ export class Controller {
         };
     };
 
-    updateProgressInfo(slug: PromoSlug) {
+    updateProgressInfo(slug: Nullable<PromoSlug>) {
+        if (!slug) {
+            return;
+        }
+
+        this.assertProgressLoaded();
+
         const type = this.getTypeBySlug(slug);
+
+        if (!type) {
+            return;
+        }
 
         const info = {
             lastCallTime: Date.now(),
@@ -271,7 +281,11 @@ export class Controller {
         return this.helpers.configBySlug[slug] || {};
     };
 
-    getTypeBySlug = (slug: PromoSlug): PresetSlug => {
+    getTypeBySlug = (slug: Nullable<PromoSlug>): Nullable<PresetSlug> => {
+        if (!slug) {
+            return null;
+        }
+
         return this.helpers.typeBySlug[slug];
     };
 
@@ -320,9 +334,12 @@ export class Controller {
         return this.state.base.activeQueue.includes(slug);
     };
 
-    private clearActive = () => {
-        this.state.base.activePromo = null;
+    private clearActive = (slug: PromoSlug) => {
+        if (!this.isActive(slug)) {
+            return;
+        }
 
+        this.state.base.activePromo = null;
         this.emitChange();
     };
 
@@ -434,5 +451,21 @@ export class Controller {
         for (const listener of this.stateListeners) {
             listener();
         }
+    };
+
+    private closePromoWithTimeout = (slug: PromoSlug, timeout = 0) => {
+        if (timeout) {
+            setTimeout(() => {
+                this.closePromo(slug);
+            }, timeout);
+        } else {
+            this.closePromo(slug);
+        }
+    };
+
+    private closePromo = (slug: PromoSlug) => {
+        this.clearActive(slug);
+        this.removePromoFromActiveQueue(slug);
+        this.triggerNextPromo();
     };
 }
