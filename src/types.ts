@@ -133,7 +133,7 @@ export type OnboardingPlugin = {
     apply: (pluginInterface: {onboarding: Controller<any, any, any>}) => void;
 };
 
-type HookCallbackReturnType = void | boolean | Promise<void | undefined>;
+type HookCallbackReturnType = void | boolean | Promise<void | boolean>;
 export type EventListener = (...args: any[]) => HookCallbackReturnType;
 
 export type EventsMap<
