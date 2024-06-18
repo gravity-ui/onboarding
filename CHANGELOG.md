@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.2](https://github.com/gravity-ui/onboarding/compare/v0.16.1...v0.16.2) (2024-06-18)
+
+
+### Bug Fixes
+
+* usage of meta in hook ([b59b77a](https://github.com/gravity-ui/onboarding/commit/b59b77a07f6415a5bf876700dbab3afce2d5803e))
+
 ## [0.16.1](https://github.com/gravity-ui/onboarding/compare/v0.16.0...v0.16.1) (2024-06-18)
 
 
