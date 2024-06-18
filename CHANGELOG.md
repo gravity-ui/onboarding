@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.1](https://github.com/gravity-ui/onboarding/compare/v0.16.0...v0.16.1) (2024-06-18)
+
+
+### Bug Fixes
+
+* hook typing ([7738dec](https://github.com/gravity-ui/onboarding/commit/7738dec81dc6814df7a0643b9141af83a52f1562))
+
 ## [0.16.0](https://github.com/gravity-ui/onboarding/compare/v0.15.0...v0.16.0) (2024-06-18)
 
 
