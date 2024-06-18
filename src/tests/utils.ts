@@ -76,7 +76,7 @@ export const getOptionsWithHooks = (...args: Parameters<typeof getOptions>) => (
         beforeRunPreset: jest.fn(),
         finishPreset: jest.fn(),
         beforeSuggestPreset: jest.fn(),
-        beforeShowHint: jest.fn(),
+        beforeShowHint: jest.fn(async () => true),
     },
 });
 
