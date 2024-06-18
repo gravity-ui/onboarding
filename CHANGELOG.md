@@ -8,6 +8,7 @@
 * cancel promo timeout ([1cf980b](https://github.com/gravity-ui/onboarding/commit/1cf980ba1fa1e50fcc2f4ca5e9cd5821d238122f))
 * disable finish of promo without progress saving ([a531d77](https://github.com/gravity-ui/onboarding/commit/a531d77fb2b1b20269a231a5789b67132cb85b25))
 * validate preset in active promo hook ([09ca675](https://github.com/gravity-ui/onboarding/commit/09ca675cef8e4c521602800e4a8fc276b6fc74ac))
+* implement event system, plugins system, add tab sync plugin ([5da722a](https://github.com/gravity-ui/onboarding/commit/5da722a90c223aa6ae0ea8966186b9608e616817))
 
 ## [0.15.0](https://github.com/gravity-ui/onboarding/compare/v0.14.1...v0.15.0) (2024-03-07)
 
