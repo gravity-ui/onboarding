@@ -273,12 +273,12 @@ export class Controller {
         );
     };
 
-    getPromoConfig = (slug: Nullable<PromoSlug>) => {
+    getPromoMeta = (slug: Nullable<PromoSlug>) => {
         if (!slug) {
             return {};
         }
 
-        return this.helpers.configBySlug[slug] || {};
+        return this.helpers.metaBySlug[slug] || {};
     };
 
     getTypeBySlug = (slug: Nullable<PromoSlug>): Nullable<PresetSlug> => {

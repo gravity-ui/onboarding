@@ -1,6 +1,7 @@
 import {Controller} from '../core/controller';
 
 import {testOptions} from './options';
+import {testMetaInfo} from './presets';
 import {waitForNextTick} from './utils';
 
 describe('active promo', () => {
@@ -268,5 +269,29 @@ describe('close with timeout', () => {
         await waitForNextTick(clearActiveTimeout);
 
         expect(controller.state.base.activePromo).toBe(null);
+    });
+});
+
+describe('meta info', () => {
+    let controller: Controller;
+    const promo = 'boardPoll';
+
+    beforeEach(async () => {
+        controller = new Controller(testOptions);
+        controller.requestStart(promo);
+
+        await waitForNextTick();
+    });
+
+    it('promo with meta info', async () => {
+        const metaInfo = controller.getPromoMeta('boardPoll');
+
+        expect(metaInfo).toEqual(testMetaInfo);
+    });
+
+    it('promo without with meta info', async () => {
+        const metaInfo = controller.getPromoMeta('ganttPoll');
+
+        expect(metaInfo).toEqual({});
     });
 });

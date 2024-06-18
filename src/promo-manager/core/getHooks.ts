@@ -39,7 +39,7 @@ export function getHooks(controller: Controller) {
             () => ({
                 promo,
                 preset: controller.getTypeBySlug(promo),
-                metaInfo: () => controller.getPromoConfig(promo),
+                metaInfo: controller.getPromoMeta(promo),
                 finish: (closeActiveTimeout?: number) =>
                     controller.finishPromo(promo, closeActiveTimeout),
                 cancel: (updateProgressInfo?: boolean, closeActiveTimeout?: number) =>

@@ -85,7 +85,7 @@ export type Helpers = {
     prioritiesBySlug: {
         [slug: PromoSlug]: number;
     };
-    configBySlug: {[slug: PromoSlug]: PromoMeta};
+    metaBySlug: {[slug: PromoSlug]: PromoMeta};
 };
 
 export type Nullable<T> = T | null;
