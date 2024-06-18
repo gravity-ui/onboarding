@@ -7,7 +7,7 @@ const getPriority = (promo: Promo, counter: number) => {
 export const getHelpers = (presets: Presets): Helpers => {
     const typeBySlug: {[slug: string]: string} = {};
     const prioritiesBySlug: {[slug: string]: number} = {};
-    const configBySlug: {[slug: string]: PromoMeta} = {};
+    const metaBySlug: {[slug: string]: PromoMeta} = {};
 
     let priority = 0;
 
@@ -15,13 +15,13 @@ export const getHelpers = (presets: Presets): Helpers => {
         for (const promo of preset.promos) {
             typeBySlug[promo.slug] = preset.slug;
             prioritiesBySlug[promo.slug] = getPriority(promo, priority++);
-            configBySlug[promo.slug] = promo.meta || {};
+            metaBySlug[promo.slug] = promo.meta || {};
         }
     }
 
     return {
         typeBySlug,
         prioritiesBySlug,
-        configBySlug,
+        metaBySlug,
     };
 };

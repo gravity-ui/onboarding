@@ -1,6 +1,10 @@
 import {PromoInCurrentDay, ShowOncePerMonths} from '../core/conditions';
 import type {TypePreset} from '../core/types';
 
+export const testMetaInfo = {
+    testKey: 'testValue',
+};
+
 export const pollPreset: TypePreset = {
     slug: 'poll',
     conditions: [],
@@ -8,6 +12,7 @@ export const pollPreset: TypePreset = {
         {
             slug: 'boardPoll',
             conditions: [],
+            meta: testMetaInfo,
         },
         {
             slug: 'ganttPoll',
