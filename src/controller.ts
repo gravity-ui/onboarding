@@ -14,6 +14,7 @@ const getDefaultBaseState = (): BaseState => ({
     activePresets: [],
     suggestedPresets: [],
     wizardState: 'hidden' as const,
+    enabled: false,
 });
 
 const getDefaultProgressState = () => ({
@@ -201,12 +202,12 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         this.logger.debug('Step element reached', preset, stepSlug, element);
 
-        if (this.state.base.wizardState === 'hidden') {
+        const allowRun = await this.events.emit('beforeShowHint', {stepData});
+
+        if (!this.state.base.enabled) {
             this.logger.debug('Wizard is not active', preset, stepSlug);
             return;
         }
-
-        const allowRun = await this.events.emit('beforeShowHint', {stepData});
 
         if (!allowRun) {
             this.logger.debug('Show hint has been canceled', stepData);

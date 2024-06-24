@@ -67,6 +67,7 @@ const getOptions = (
             availablePresets: ['combinedPreset', 'otherPreset'],
             activePresets: ['internal1'],
             suggestedPresets: ['internal1'],
+            enabled: true,
             ...baseState,
         },
         getProgressState: jest.fn(() =>

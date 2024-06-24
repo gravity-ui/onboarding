@@ -89,7 +89,7 @@ it('reach element passed step -> nothing', async function () {
 });
 
 it('not active onboarding -> nothing', async function () {
-    const options = getOptions({wizardState: 'hidden'});
+    const options = getOptions({enabled: false});
 
     const controller = new Controller(options);
     await controller.stepElementReached({

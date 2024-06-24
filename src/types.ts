@@ -89,6 +89,7 @@ export type BaseState = {
     activePresets: string[];
     suggestedPresets: string[];
     wizardState: 'hidden' | 'collapsed' | 'visible' | 'invisible';
+    enabled: boolean;
 };
 
 export type ProgressState = {

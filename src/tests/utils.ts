@@ -38,6 +38,7 @@ export const getOptions = (
             availablePresets: ['createProject'],
             activePresets: ['createProject'],
             suggestedPresets: ['createProject'],
+            enabled: true,
             ...baseState,
         },
         getProgressState: jest.fn(() =>

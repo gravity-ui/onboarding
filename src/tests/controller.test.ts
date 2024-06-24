@@ -219,6 +219,7 @@ it('resetToDefaultState -> hidden and empty ', async function () {
             availablePresets: [],
             suggestedPresets: [],
             wizardState: 'hidden',
+            enabled: false,
         },
         progress: {
             finishedPresets: [],
