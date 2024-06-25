@@ -153,6 +153,8 @@ export type EventsMap<
     stateChange: {state: Controller<any, any, any>['state']};
     hintDataChanged: {state: HintState<HintParams, Presets, Steps>};
     closeHint: {step: Steps};
+    init: {};
+    wizardStateChanged: {wizardState: BaseState['wizardState']};
 };
 
 export type EventTypes = keyof EventsMap<any, any, any>;
