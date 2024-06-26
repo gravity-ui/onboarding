@@ -1,103 +1,12 @@
 import {Controller} from '../controller';
-import {getAnchorElement, waitForNextTick} from './utils';
-import {BaseState, CombinedPreset, PresetStep, ProgressState} from '../types';
-
-const getOptions = (
-    baseState: Partial<BaseState> = {},
-    progressState: Partial<ProgressState> = {},
-) => {
-    const internal1 = {
-        name: 'Internal1',
-        type: 'internal' as const,
-        steps: [
-            {
-                slug: 'someStepInternal11',
-                name: '',
-                description: '',
-            },
-            {
-                slug: 'someStepInternal12',
-                name: '',
-                description: '',
-            },
-        ] as Array<PresetStep<string, {}>>,
-    };
-
-    const internal2 = {
-        name: 'Internal2',
-        type: 'internal' as const,
-        steps: [
-            {
-                slug: 'someStepInternal2',
-                name: '',
-                description: '',
-            },
-        ] as Array<PresetStep<string, {}>>,
-    };
-
-    const combinedPreset: CombinedPreset<string> = {
-        name: 'combined',
-        type: 'combined' as const,
-        pickPreset: () => 'internal1',
-        internalPresets: ['internal1', 'internal2'],
-    };
-
-    const otherPreset = {
-        name: 'Other',
-        steps: [
-            {
-                slug: 'otherStep',
-                name: '',
-                description: '',
-            },
-        ] as Array<PresetStep<string, {}>>,
-    };
-
-    return {
-        config: {
-            presets: {
-                internal1,
-                internal2,
-                combinedPreset,
-                otherPreset,
-            },
-        },
-        baseState: {
-            wizardState: 'visible' as const,
-            availablePresets: ['combinedPreset', 'otherPreset'],
-            activePresets: ['internal1'],
-            suggestedPresets: ['internal1'],
-            ...baseState,
-        },
-        getProgressState: jest.fn(() =>
-            Promise.resolve({
-                presetPassedSteps: {},
-                finishedPresets: [],
-                ...progressState,
-            }),
-        ),
-        onSave: {
-            state: jest.fn(),
-            progress: jest.fn(),
-        },
-        showHint: jest.fn(),
-        debugMode: false,
-        logger: {
-            level: 'error' as const,
-            logger: {
-                log: () => {},
-                error: () => {},
-            },
-        },
-    };
-};
+import {getAnchorElement, getOptionsWithCombined, waitForNextTick} from './utils';
 
 describe('combined presets', function () {
     describe('run preset', function () {
-        let options = getOptions({availablePresets: ['combinedPreset']});
+        let options = getOptionsWithCombined({availablePresets: ['combinedPreset']});
 
         beforeEach(() => {
-            options = getOptions({
+            options = getOptionsWithCombined({
                 availablePresets: ['combinedPreset'],
                 activePresets: [],
             });
@@ -169,7 +78,7 @@ describe('combined presets', function () {
         });
 
         it('run preset -> close current hint', async function () {
-            const controller = new Controller(getOptions());
+            const controller = new Controller(getOptionsWithCombined());
             await controller.stepElementReached({
                 stepSlug: 'otherStep',
                 element: getAnchorElement(),
@@ -183,7 +92,7 @@ describe('combined presets', function () {
 
     describe('finish preset', function () {
         it('finish preset -> add to finished', async function () {
-            const options = getOptions();
+            const options = getOptionsWithCombined();
 
             const controller = new Controller(options);
             await controller.finishPreset('combinedPreset');
@@ -196,7 +105,7 @@ describe('combined presets', function () {
         });
 
         it('finish same preset -> not duplicate', async function () {
-            const options = getOptions();
+            const options = getOptionsWithCombined();
 
             const controller = new Controller(options);
             await controller.finishPreset('combinedPreset');
@@ -208,7 +117,7 @@ describe('combined presets', function () {
         });
 
         it('finish preset -> on combined and internal preset', async function () {
-            const options = getOptions();
+            const options = getOptionsWithCombined();
 
             const mock1 = jest.fn();
             const mock2 = jest.fn();
@@ -225,7 +134,7 @@ describe('combined presets', function () {
         });
 
         it('finish preset -> stay in suggested', async function () {
-            const options = getOptions();
+            const options = getOptionsWithCombined();
 
             const controller = new Controller(options);
             await controller.finishPreset('combinedPreset');
@@ -238,7 +147,7 @@ describe('combined presets', function () {
 
     describe('reset progress', function () {
         it('remove progress, remove from finished', async function () {
-            const options = getOptions({}, {finishedPresets: ['internal1']});
+            const options = getOptionsWithCombined({}, {finishedPresets: ['internal1']});
 
             const controller = new Controller(options);
             await controller.resetPresetProgress(['combinedPreset']);
@@ -260,17 +169,17 @@ describe('combined presets', function () {
 
 describe('combined user presets', function () {
     it('should show combined preset', function () {
-        const controller = new Controller(getOptions());
+        const controller = new Controller(getOptionsWithCombined());
         expect(controller.userPresets).toHaveLength(2);
     });
 
     it('should hide internal preset', function () {
-        const controller = new Controller(getOptions());
+        const controller = new Controller(getOptionsWithCombined());
         expect(controller.userPresets).not.toContain('internal1');
     });
 
     it('internal preset active -> combined status = inProgress', function () {
-        const controller = new Controller(getOptions());
+        const controller = new Controller(getOptionsWithCombined());
         const combinedPreset = controller.userPresets.find(
             (preset) => preset.slug === 'combinedPreset',
         );
@@ -280,11 +189,12 @@ describe('combined user presets', function () {
 
     it('internal preset finished -> combined status = finished', async function () {
         const controller = new Controller(
-            getOptions(
+            getOptionsWithCombined(
                 {activePresets: [], wizardState: 'visible'},
                 {finishedPresets: ['internal1']},
             ),
         );
+        await controller.ensureRunning();
         await waitForNextTick(); // progress loading
 
         const combinedPreset = controller.userPresets.find(
@@ -294,7 +204,7 @@ describe('combined user presets', function () {
     });
 
     it('internal preset untouched -> combined status = unPassed', function () {
-        const controller = new Controller(getOptions({activePresets: []}));
+        const controller = new Controller(getOptionsWithCombined({activePresets: []}));
 
         const combinedPreset = controller.userPresets.find(
             (preset) => preset.slug === 'combinedPreset',

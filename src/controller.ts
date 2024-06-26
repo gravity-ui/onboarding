@@ -14,6 +14,7 @@ const getDefaultBaseState = (): BaseState => ({
     activePresets: [],
     suggestedPresets: [],
     wizardState: 'hidden' as const,
+    enabled: false,
 });
 
 const getDefaultProgressState = () => ({
@@ -119,10 +120,6 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             }
         }
 
-        if (this.options.baseState?.wizardState === 'visible') {
-            this.ensureRunning();
-        }
-
         this.saveBaseState = createDebounceHandler(() => {
             this.options.onSave.state(this.state.base);
         }, 100);
@@ -132,6 +129,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
             this.options.onSave.progress(this.state.progress);
         }, 100);
+
+        this.events.emit('init', {});
     }
 
     passStep = async (stepSlug: Steps) => {
@@ -171,11 +170,13 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
     setWizardState = async (state: BaseState['wizardState']) => {
         this.state.base.wizardState = state;
+        await this.events.emit('wizardStateChanged', {wizardState: state});
         await this.updateBaseState();
+    };
 
-        if (state === 'visible') {
-            this.ensureRunning();
-        }
+    setOnboardingEnabled = async (enabled: boolean) => {
+        this.state.base.enabled = enabled;
+        await this.updateBaseState();
     };
 
     stepElementReached = async (stepData: Omit<ReachElementParams<Presets, Steps>, 'preset'>) => {
@@ -201,12 +202,12 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         this.logger.debug('Step element reached', preset, stepSlug, element);
 
-        if (this.state.base.wizardState === 'hidden') {
+        const allowRun = await this.events.emit('beforeShowHint', {stepData});
+
+        if (!this.state.base.enabled) {
             this.logger.debug('Wizard is not active', preset, stepSlug);
             return;
         }
-
-        const allowRun = await this.events.emit('beforeShowHint', {stepData});
 
         if (!allowRun) {
             this.logger.debug('Show hint has been canceled', stepData);
@@ -356,10 +357,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
     };
 
-    suggestPresetOnce = async (
-        preset: string,
-        wizardState: BaseState['wizardState'] = 'visible',
-    ) => {
+    suggestPresetOnce = async (preset: string) => {
         this.logger.debug('Suggest preset', preset);
 
         if (this.state.base.suggestedPresets.includes(preset)) {
@@ -374,7 +372,6 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
-        await this.setWizardState(wizardState);
         await this.runPreset(preset);
     };
 

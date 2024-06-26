@@ -89,6 +89,7 @@ export type BaseState = {
     activePresets: string[];
     suggestedPresets: string[];
     wizardState: 'hidden' | 'collapsed' | 'visible' | 'invisible';
+    enabled: boolean;
 };
 
 export type ProgressState = {
@@ -152,6 +153,8 @@ export type EventsMap<
     stateChange: {state: Controller<any, any, any>['state']};
     hintDataChanged: {state: HintState<HintParams, Presets, Steps>};
     closeHint: {step: Steps};
+    init: {};
+    wizardStateChanged: {wizardState: BaseState['wizardState']};
 };
 
 export type EventTypes = keyof EventsMap<any, any, any>;

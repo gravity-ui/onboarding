@@ -1,4 +1,4 @@
-import {BaseState, OnboardingPlugin, PresetStep, ProgressState} from '../types';
+import {BaseState, CombinedPreset, OnboardingPlugin, PresetStep, ProgressState} from '../types';
 
 export const getOptions = (
     baseState: Partial<BaseState> = {},
@@ -38,6 +38,7 @@ export const getOptions = (
             availablePresets: ['createProject'],
             activePresets: ['createProject'],
             suggestedPresets: ['createProject'],
+            enabled: true,
             ...baseState,
         },
         getProgressState: jest.fn(() =>
@@ -45,6 +46,98 @@ export const getOptions = (
                 presetPassedSteps: {
                     createProject: ['openBoard'],
                 },
+                finishedPresets: [],
+                ...progressState,
+            }),
+        ),
+        onSave: {
+            state: jest.fn(),
+            progress: jest.fn(),
+        },
+        showHint: jest.fn(),
+        debugMode: false,
+        logger: {
+            level: 'error' as const,
+            logger: {
+                log: () => {},
+                error: () => {},
+            },
+        },
+        plugins: [] as OnboardingPlugin[],
+    };
+};
+
+export const getOptionsWithCombined = (
+    baseState: Partial<BaseState> = {},
+    progressState: Partial<ProgressState> = {},
+) => {
+    const internal1 = {
+        name: 'Internal1',
+        type: 'internal' as const,
+        steps: [
+            {
+                slug: 'someStepInternal11',
+                name: '',
+                description: '',
+            },
+            {
+                slug: 'someStepInternal12',
+                name: '',
+                description: '',
+            },
+        ] as Array<PresetStep<string, {}>>,
+    };
+
+    const internal2 = {
+        name: 'Internal2',
+        type: 'internal' as const,
+        steps: [
+            {
+                slug: 'someStepInternal2',
+                name: '',
+                description: '',
+            },
+        ] as Array<PresetStep<string, {}>>,
+    };
+
+    const combinedPreset: CombinedPreset<string> = {
+        name: 'combined',
+        type: 'combined' as const,
+        pickPreset: () => 'internal1',
+        internalPresets: ['internal1', 'internal2'],
+    };
+
+    const otherPreset = {
+        name: 'Other',
+        steps: [
+            {
+                slug: 'otherStep',
+                name: '',
+                description: '',
+            },
+        ] as Array<PresetStep<string, {}>>,
+    };
+
+    return {
+        config: {
+            presets: {
+                internal1,
+                internal2,
+                combinedPreset,
+                otherPreset,
+            },
+        },
+        baseState: {
+            wizardState: 'visible' as const,
+            availablePresets: ['combinedPreset', 'otherPreset'],
+            activePresets: ['internal1'],
+            suggestedPresets: ['internal1'],
+            enabled: true,
+            ...baseState,
+        },
+        getProgressState: jest.fn(() =>
+            Promise.resolve({
+                presetPassedSteps: {},
                 finishedPresets: [],
                 ...progressState,
             }),

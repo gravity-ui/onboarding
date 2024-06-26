@@ -219,10 +219,35 @@ it('resetToDefaultState -> hidden and empty ', async function () {
             availablePresets: [],
             suggestedPresets: [],
             wizardState: 'hidden',
+            enabled: false,
         },
         progress: {
             finishedPresets: [],
             presetPassedSteps: {},
         },
     });
+});
+
+it('set onboarding state = false', async function () {
+    const options = getOptions();
+
+    const controller = new Controller(options);
+    await controller.setOnboardingEnabled(false);
+
+    const newState = options.onSave.state.mock.calls[options.onSave.state.mock.calls.length - 1][0];
+
+    expect(controller.state.base.enabled).toBe(false);
+    expect(newState.enabled).toBe(false);
+});
+
+it('set onboarding state = true', async function () {
+    const options = getOptions({enabled: false});
+
+    const controller = new Controller(options);
+    await controller.setOnboardingEnabled(true);
+
+    const newState = options.onSave.state.mock.calls[options.onSave.state.mock.calls.length - 1][0];
+
+    expect(controller.state.base.enabled).toBe(true);
+    expect(newState.enabled).toBe(true);
 });

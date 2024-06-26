@@ -309,17 +309,6 @@ describe('preset management', function () {
 });
 
 describe('suggest once', function () {
-    it('first preset run -> runs', async function () {
-        const options = getOptions({wizardState: 'hidden'});
-
-        const controller = new Controller(options);
-        await controller.suggestPresetOnce('createQueue');
-
-        const newState = options.onSave.state.mock.calls[0][0];
-
-        expect(newState.wizardState).toBe('visible');
-    });
-
     it('call -> add preset', async function () {
         const options = getOptions();
 
@@ -341,17 +330,6 @@ describe('suggest once', function () {
         await controller.suggestPresetOnce('createQueue');
 
         expect(controller.state.base.wizardState).toBe('hidden');
-    });
-
-    it('call -> use different wizard state', async function () {
-        const options = getOptions({wizardState: 'hidden'});
-
-        const controller = new Controller(options);
-        await controller.suggestPresetOnce('createQueue', 'invisible');
-
-        const newState = options.onSave.state.mock.calls[0][0];
-
-        expect(newState.wizardState).toBe('invisible');
     });
 
     it('onBeforeSuggestPreset returns false -> dont suggest', async function () {
@@ -456,6 +434,7 @@ describe('user presets', function () {
             options.config.presets.createProject.visibility = 'initialHidden';
 
             const controller = new Controller(options);
+            await controller.ensureRunning();
             await waitForNextTick(); // progress loading
             const presetSlugs = controller.userPresets.map(({slug}) => slug);
 

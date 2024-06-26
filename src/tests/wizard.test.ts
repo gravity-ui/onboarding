@@ -42,21 +42,3 @@ it('change style -> save', async function () {
 
     expect(newState.wizardState).toBe('hidden');
 });
-
-it('wizard visible -> load progress', async function () {
-    const options = getOptions({wizardState: 'visible'});
-
-    // eslint-disable-next-line no-new
-    new Controller(options);
-
-    expect(options.getProgressState).toHaveBeenCalled();
-});
-
-it('become visible -> load progress', async function () {
-    const options = getOptions({wizardState: 'collapsed'});
-
-    const controller = new Controller(options);
-    await controller.setWizardState('visible');
-
-    expect(options.getProgressState).toHaveBeenCalled();
-});
