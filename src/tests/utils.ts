@@ -1,4 +1,5 @@
 import {BaseState, CombinedPreset, OnboardingPlugin, PresetStep, ProgressState} from '../types';
+import {PromoPresetsPlugin} from '../plugins/promo-presets';
 
 export const getOptions = (
     baseState: Partial<BaseState> = {},
@@ -156,6 +157,68 @@ export const getOptionsWithCombined = (
             },
         },
         plugins: [] as OnboardingPlugin[],
+    };
+};
+
+export const getOptionsWithPromo = (baseState: Partial<BaseState> = {}) => {
+    return {
+        config: {
+            presets: {
+                createProject: {
+                    name: 'Creating project',
+                    steps: [
+                        {
+                            slug: 'openBoard',
+                            name: '',
+                            description: '',
+                        },
+                    ] as Array<PresetStep<string, {}>>,
+                },
+                coolNewFeature: {
+                    name: 'Cool feature',
+                    visibility: 'alwaysHidden' as const,
+                    steps: [
+                        {
+                            slug: 'showCoolFeature',
+                            name: '',
+                            description: '',
+                        },
+                    ] as Array<PresetStep<string, {}>>,
+                },
+                coolNewFeature2: {
+                    name: 'Cool feature2',
+                    visibility: 'alwaysHidden' as const,
+                    steps: [
+                        {
+                            slug: 'showCoolFeature2',
+                            name: '',
+                            description: '',
+                        },
+                    ] as Array<PresetStep<string, {}>>,
+                },
+            },
+        },
+        baseState: {
+            wizardState: 'visible' as const,
+            availablePresets: ['createProject', 'coolNewFeature'],
+            activePresets: ['createProject', 'coolNewFeature'],
+            suggestedPresets: ['createProject', 'coolNewFeature'],
+            enabled: true,
+            ...baseState,
+        },
+        getProgressState: async () => ({}),
+        onSave: {
+            state: jest.fn(),
+            progress: jest.fn(),
+        },
+        logger: {
+            level: 'error' as const,
+            logger: {
+                log: () => {},
+                error: () => {},
+            },
+        },
+        plugins: [new PromoPresetsPlugin()] as OnboardingPlugin[],
     };
 };
 

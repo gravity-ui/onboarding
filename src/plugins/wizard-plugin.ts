@@ -7,8 +7,9 @@ export class WizardPlugin implements OnboardingPlugin {
         this.onboardingInstance = onboarding;
 
         onboarding.events.subscribe('init', this.onInit);
-
         onboarding.events.subscribe('wizardStateChanged', this.onWizardStateChanged);
+        onboarding.events.subscribe('beforeRunPreset', this.onRunPreset);
+        onboarding.events.subscribe('finishPreset', this.onFinishPreset);
     };
 
     onInit = () => {
@@ -30,8 +31,11 @@ export class WizardPlugin implements OnboardingPlugin {
             return;
         }
 
-        const isWizardVisible = wizardState === 'visible' || wizardState === 'collapsed';
-        if (isWizardVisible) {
+        if (wizardState === 'visible') {
+            await this.onboardingInstance.closeHint();
+        }
+
+        if (wizardState === 'visible' || wizardState === 'collapsed') {
             await this.onboardingInstance.ensureRunning();
         }
 
@@ -39,17 +43,52 @@ export class WizardPlugin implements OnboardingPlugin {
             this.onboardingInstance.state.base.enabled = false;
             this.onboardingInstance.emitStateChange();
 
-            const presetToEraseProgress = this.onboardingInstance.state.base.activePresets.filter(
-                (presetSlug) => {
-                    if (!this.onboardingInstance) {
-                        return false;
-                    }
-                    const preset = this.onboardingInstance.options.config.presets[presetSlug];
-                    return preset.type === 'internal' || preset.visibility !== 'alwaysHidden';
-                },
-            );
-
-            await this.onboardingInstance.resetPresetProgress(presetToEraseProgress);
+            this.onboardingInstance.closeHint();
+            await this.eraseCommonPresetsProgress();
         }
+    };
+
+    onRunPreset = async () => {
+        if (!this.onboardingInstance) {
+            return;
+        }
+
+        this.onboardingInstance?.closeHintByUser();
+
+        await this.eraseCommonPresetsProgress();
+    };
+
+    onFinishPreset = ({preset}: EventsMap['finishPreset']) => {
+        if (!this.onboardingInstance) {
+            return;
+        }
+
+        const presets = this.onboardingInstance?.options.config.presets;
+        const currentPreset = presets[preset];
+
+        const presetVisibility =
+            'visibility' in currentPreset ? currentPreset.visibility : undefined;
+
+        if (presetVisibility !== 'alwaysHidden') {
+            this.onboardingInstance.setWizardState('visible');
+        }
+    };
+
+    private eraseCommonPresetsProgress = async () => {
+        if (!this.onboardingInstance) {
+            return;
+        }
+
+        const presetToEraseProgress = this.onboardingInstance.state.base.activePresets.filter(
+            (presetSlug) => {
+                if (!this.onboardingInstance) {
+                    return false;
+                }
+                const preset = this.onboardingInstance.options.config.presets[presetSlug];
+                return preset.type === 'internal' || preset.visibility !== 'alwaysHidden';
+            },
+        );
+
+        await this.onboardingInstance.resetPresetProgress(presetToEraseProgress);
     };
 }

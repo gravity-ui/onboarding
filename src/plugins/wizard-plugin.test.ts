@@ -1,4 +1,9 @@
-import {getOptions, getOptionsWithCombined} from '../tests/utils';
+import {
+    getAnchorElement,
+    getOptions,
+    getOptionsWithCombined,
+    getOptionsWithPromo,
+} from '../tests/utils';
 import {Controller} from '../controller';
 import {WizardPlugin} from './wizard-plugin';
 
@@ -45,6 +50,21 @@ describe('open wizard', function () {
         await controller.setWizardState('visible');
 
         expect(options.getProgressState).toHaveBeenCalled();
+    });
+
+    it('become visible -> close hint', async function () {
+        const options = getOptions({wizardState: 'hidden'});
+        options.plugins = [new WizardPlugin()];
+        const controller = new Controller(options);
+
+        await controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: getAnchorElement(),
+        });
+
+        await controller.setWizardState('visible');
+
+        expect(controller.hintStore.state.open).toBe(false);
     });
 });
 
@@ -93,5 +113,89 @@ describe('close wizard', function () {
         await controller.setWizardState('hidden');
 
         expect(controller.state.base.enabled).toBe(false);
+    });
+
+    it('close hint', async function () {
+        const options = getOptions();
+        options.plugins = [new WizardPlugin()];
+        const controller = new Controller(options);
+
+        await controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: getAnchorElement(),
+        });
+
+        await controller.setWizardState('hidden');
+
+        expect(controller.hintStore.state.open).toBe(false);
+    });
+});
+
+describe('run preset', function () {
+    it('close hint', async function () {
+        const options = getOptions();
+        options.plugins = [new WizardPlugin()];
+        const controller = new Controller(options);
+
+        await controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: getAnchorElement(),
+        });
+
+        await controller.runPreset('createQueue');
+
+        expect(controller.hintStore.state.open).toBe(false);
+    });
+
+    it('run same preset -> reset progress', async function () {
+        const options = getOptions();
+        options.plugins = [new WizardPlugin()];
+        const controller = new Controller(options);
+
+        await controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: getAnchorElement(),
+        });
+
+        await controller.runPreset('createProject');
+
+        expect(controller.state.progress?.presetPassedSteps.createProject).toBe(undefined);
+    });
+
+    it('run other preset -> reset progress', async function () {
+        const options = getOptions();
+        options.plugins = [new WizardPlugin()];
+        const controller = new Controller(options);
+
+        await controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: getAnchorElement(),
+        });
+
+        await controller.runPreset('createQueue');
+
+        expect(controller.state.progress?.presetPassedSteps.createProject).toBe(undefined);
+    });
+});
+
+describe('finish preset', function () {
+    it('finish common preset -> show wizard', async function () {
+        const options = getOptionsWithPromo({wizardState: 'collapsed'});
+        options.plugins = [new WizardPlugin()];
+
+        const controller = new Controller(options);
+        await controller.finishPreset('createProject');
+
+        expect(controller.state.base.wizardState).toBe('visible');
+    });
+
+    it('finish always hidden preset -> nothing', async function () {
+        const options = getOptionsWithPromo({wizardState: 'collapsed'});
+        options.plugins = [new WizardPlugin()];
+
+        const controller = new Controller(options);
+        await controller.finishPreset('coolNewFeature');
+
+        expect(controller.state.base.wizardState).toBe('collapsed');
     });
 });

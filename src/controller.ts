@@ -390,6 +390,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             await this.options.config.presets[presetSlug].hooks?.onBeforeStart?.();
         }
 
+        await this.events.emit('beforeRunPreset', {preset: presetSlug});
+
         if (!this.state.base.availablePresets.includes(presetSlug)) {
             this.state.base.availablePresets.push(presetSlug);
         }
@@ -397,8 +399,6 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         if (this.state.base.activePresets.includes(presetSlug)) {
             return;
         }
-
-        await this.events.emit('beforeRunPreset', {preset: presetSlug});
 
         this.state.base.activePresets.push(presetSlug);
 
