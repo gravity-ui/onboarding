@@ -36,6 +36,7 @@ export function getHooks<HintParams, Presets extends string, Steps extends strin
             finishPreset: controller.finishPreset,
             runPreset: controller.runPreset,
             resetPresetProgress: controller.resetPresetProgress,
+            suggestPresetOnce: controller.suggestPresetOnce,
         };
     };
 
