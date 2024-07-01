@@ -1,6 +1,6 @@
 {
   "name": "@gravity-ui/onboarding",
-  "version": "0.16.2",
+  "version": "0.17.0",
   "description": "",
   "license": "MIT",
   "main": "dist/index.js",
