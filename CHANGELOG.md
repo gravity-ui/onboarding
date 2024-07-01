@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.17.0](https://github.com/gravity-ui/onboarding/compare/v0.16.2...v0.17.0) (2024-07-01)
+
+
+### Features
+
+* **onboarding:** add promo preset plugin ([a2745de](https://github.com/gravity-ui/onboarding/commit/a2745ded27d5d09be004831fb75ee7a6569547c9))
+* **onboarding:** add wizard plugin ([0e384b8](https://github.com/gravity-ui/onboarding/commit/0e384b8bcc2e64113b47014fe707bcc3aa6697c3))
+* **onboarding:** wizard preset improvements ([c15931c](https://github.com/gravity-ui/onboarding/commit/c15931c8762f4622c76dc8a43c868908fe8ae607))
+
 ## [0.16.2](https://github.com/gravity-ui/onboarding/compare/v0.16.1...v0.16.2) (2024-06-18)
 
 
