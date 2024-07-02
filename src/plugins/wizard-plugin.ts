@@ -48,14 +48,20 @@ export class WizardPlugin implements OnboardingPlugin {
         }
     };
 
-    onRunPreset = async () => {
+    onRunPreset = async ({preset}: EventsMap['runPreset']) => {
         if (!this.onboardingInstance) {
             return;
         }
 
         this.onboardingInstance?.closeHintByUser();
 
-        await this.eraseCommonPresetsProgress();
+        const currentPreset = this.onboardingInstance?.options.config.presets[preset];
+        const presetVisibility =
+            'visibility' in currentPreset ? currentPreset.visibility : undefined;
+
+        if (presetVisibility !== 'alwaysHidden') {
+            await this.eraseCommonPresetsProgress();
+        }
     };
 
     onFinishPreset = ({preset}: EventsMap['finishPreset']) => {

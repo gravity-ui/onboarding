@@ -176,6 +176,23 @@ describe('run preset', function () {
 
         expect(controller.state.progress?.presetPassedSteps.createProject).toBe(undefined);
     });
+
+    it('run always hidden preset -> NOT reset progress', async function () {
+        const options = getOptions();
+        options.plugins = [new WizardPlugin()];
+        // @ts-ignore
+        options.config.presets.createQueue.visibility = 'alwaysHidden';
+        const controller = new Controller(options);
+
+        await controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: getAnchorElement(),
+        });
+
+        await controller.runPreset('createQueue');
+
+        expect(controller.state.progress?.presetPassedSteps.createProject).not.toBe(undefined);
+    });
 });
 
 describe('finish preset', function () {
