@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.1](https://github.com/gravity-ui/onboarding/compare/v0.17.0...v0.17.1) (2024-07-02)
+
+
+### Bug Fixes
+
+* **onboarding:** run always hidden preset -&gt; not erase progress ([c449b8f](https://github.com/gravity-ui/onboarding/commit/c449b8fac988f5954ac027ee6cf0d59b3d668530))
+
 ## [0.17.0](https://github.com/gravity-ui/onboarding/compare/v0.16.2...v0.17.0) (2024-07-01)
 
 
