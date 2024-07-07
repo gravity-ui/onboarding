@@ -53,7 +53,6 @@ describe('json conditions', function () {
                                 conditions: [
                                     {
                                         helper: 'alwaysTrue',
-                                        args: [],
                                     },
                                 ],
                             },
@@ -71,6 +70,38 @@ describe('json conditions', function () {
         expect(controller.state.base.activePromo).toBe('someSlug');
     });
 
+    it('can use arguments', async function () {
+        const mock = jest.fn(() => () => true);
+        const controller = new Controller({
+            ...testOptions,
+            config: {
+                presets: [
+                    {
+                        slug: 'someType',
+                        promos: [
+                            {
+                                slug: 'someSlug',
+                                conditions: [
+                                    {
+                                        helper: 'alwaysTrue',
+                                        args: ['someParam'],
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            },
+            conditionHelpers: {
+                alwaysTrue: mock,
+            },
+        });
+
+        await controller.requestStart('someSlug', true);
+
+        expect(mock).toHaveBeenCalledWith('someParam');
+    });
+
     it('helper not found -> dont run', async function () {
         const controller = new Controller({
             ...testOptions,
@@ -84,7 +115,6 @@ describe('json conditions', function () {
                                 conditions: [
                                     {
                                         helper: 'undefinedHelper',
-                                        args: [],
                                     },
                                 ],
                             },

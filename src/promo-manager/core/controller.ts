@@ -199,7 +199,7 @@ export class Controller {
             return 'pending';
         }
 
-        if (!this.isValidPromo(slug)) {
+        if (!this.checkPromoConditions(slug)) {
             return 'forbidden';
         }
 
@@ -268,7 +268,7 @@ export class Controller {
         this.saveProgress();
     }
 
-    isValidPromo = (slug: PromoSlug): boolean => {
+    checkPromoConditions = (slug: PromoSlug): boolean => {
         const type = this.getTypeBySlug(slug);
 
         if (!type) {
@@ -335,6 +335,19 @@ export class Controller {
         }
     }
 
+    private checkConstraints() {
+        if (!this.options.config.constraints) {
+            return true;
+        }
+
+        return checkCondition(
+            this.state,
+            {currentDate: this.dateNow(), helpers: this.conditionHelpers},
+            this.options.config.constraints,
+            this.logger,
+        );
+    }
+
     private assertProgressLoaded(): asserts this is this & {
         state: {base: BaseState; progress: ProgressState};
     } {
@@ -386,9 +399,12 @@ export class Controller {
             return;
         }
 
-        const nextPromoSlug = this.state.base.activeQueue.find((slug) => this.isValidPromo(slug));
+        const nextPromoSlug = this.state.base.activeQueue.find((slug) =>
+            this.checkPromoConditions(slug),
+        );
+        const compliesWithConstraints = this.checkConstraints();
 
-        if (!nextPromoSlug) {
+        if (!nextPromoSlug || !compliesWithConstraints) {
             return;
         }
 
@@ -419,7 +435,7 @@ export class Controller {
         if (
             this.state.progress.finishedPromos.includes(slug) ||
             this.state.base.activeQueue.includes(slug) ||
-            !this.isValidPromo(slug)
+            !this.checkPromoConditions(slug)
         ) {
             return;
         }

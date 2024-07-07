@@ -27,6 +27,7 @@ export type Presets = TypePreset<PromoMeta>[];
 export type PromoOptions = {
     config: {
         presets: Presets;
+        constraints?: Condition[];
     };
     conditionHelpers?: Record<string, ConditionHelper>;
     progressState: Partial<PromoProgressState> | undefined;
@@ -39,9 +40,10 @@ export type PromoOptions = {
 };
 
 export type ConditionContext = {
-    promoType: PresetSlug;
+    promoType?: PresetSlug;
     promoSlug?: PromoSlug;
     currentDate: number;
+    helpers?: Record<string, ConditionHelper>;
 };
 export type ConditionParams = [PromoState, ConditionContext];
 
@@ -49,7 +51,7 @@ export type ConditionFn = (...params: ConditionParams) => boolean;
 export type ConditionHelper = (...args: any[]) => ConditionFn;
 export type ConditionObject = {
     helper: string;
-    args: Array<string | number | object>;
+    args?: Array<string | number | object>;
 };
 
 export type Condition = ConditionFn | ConditionObject;

@@ -1,19 +1,5 @@
-import {
-    Condition,
-    ConditionHelper,
-    ConditionObject,
-    PresetSlug,
-    PromoSlug,
-    PromoState,
-} from './types';
+import {Condition, ConditionContext, ConditionObject, PromoState} from './types';
 import type {Logger} from '../../logger';
-
-type ConditionContext = {
-    promoType: PresetSlug;
-    promoSlug?: PromoSlug;
-    currentDate: number;
-    helpers?: Record<string, ConditionHelper>;
-};
 
 const resolveConditionObject = (
     condition: ConditionObject,
@@ -28,7 +14,9 @@ const resolveConditionObject = (
         return false;
     }
 
-    return conditionHelper(condition.args)(state, ctx);
+    const args = condition.args ?? [];
+
+    return conditionHelper(...args)(state, ctx);
 };
 
 export const checkCondition = (

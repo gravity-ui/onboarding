@@ -2,6 +2,10 @@ import type {PromoState} from './types';
 import {ConditionContext, ConditionHelper} from './types';
 
 const getLastTimeCall = (state: PromoState, {promoType, promoSlug}: ConditionContext) => {
+    if (!promoType) {
+        return undefined;
+    }
+
     return promoSlug
         ? state.progress?.progressInfoByPromo[promoSlug]?.lastCallTime
         : state.progress?.progressInfoByType[promoType]?.lastCallTime;
