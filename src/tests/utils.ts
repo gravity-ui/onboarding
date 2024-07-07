@@ -60,7 +60,7 @@ export const getOptions = (
         logger: {
             level: 'error' as const,
             logger: {
-                log: () => {},
+                debug: () => {},
                 error: () => {},
             },
         },
@@ -152,7 +152,7 @@ export const getOptionsWithCombined = (
         logger: {
             level: 'error' as const,
             logger: {
-                log: () => {},
+                debug: () => {},
                 error: () => {},
             },
         },
@@ -214,7 +214,7 @@ export const getOptionsWithPromo = (baseState: Partial<BaseState> = {}) => {
         logger: {
             level: 'error' as const,
             logger: {
-                log: () => {},
+                debug: () => {},
                 error: () => {},
             },
         },

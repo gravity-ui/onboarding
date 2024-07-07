@@ -1,3 +1,5 @@
+import {Logger} from '../../logger';
+
 export type PromoStatus = 'forbidden' | 'canRun' | 'active' | 'finished' | 'pending';
 export type Priority = 'high';
 export type PromoManagerStatus = 'idle' | 'error' | 'active';
@@ -26,23 +28,31 @@ export type PromoOptions = {
     config: {
         presets: Presets;
     };
+    conditionHelpers?: Record<string, ConditionHelper>;
     progressState: Partial<PromoProgressState> | undefined;
     getProgressState: () => Promise<Partial<PromoProgressState>>;
     onSave: {
         progress: (state: PromoProgressState) => Promise<any>;
     };
     debugMode?: boolean;
+    logger?: Logger;
 };
 
-export type ConditionParams = {
-    type: PresetSlug;
-    slug: PromoSlug;
-    state: PromoState;
-    byType: boolean;
-    date: number;
+export type ConditionContext = {
+    promoType: PresetSlug;
+    promoSlug?: PromoSlug;
+    currentDate: number;
+};
+export type ConditionParams = [PromoState, ConditionContext];
+
+export type ConditionFn = (...params: ConditionParams) => boolean;
+export type ConditionHelper = (...args: any[]) => ConditionFn;
+export type ConditionObject = {
+    helper: string;
+    args: Array<string | number | object>;
 };
 
-export type Condition = (params: ConditionParams) => boolean;
+export type Condition = ConditionFn | ConditionObject;
 
 export type Conditions = {
     typeConditions: {

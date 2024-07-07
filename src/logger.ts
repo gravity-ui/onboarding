@@ -1,7 +1,7 @@
 type LogLevel = 'debug' | 'error';
 
-type Logger = {
-    log: (...args: Array<unknown>) => void;
+export type Logger = {
+    debug: (...args: Array<unknown>) => void;
     error: (...args: Array<unknown>) => void;
 };
 
@@ -17,10 +17,12 @@ export const createLogger = ({
     level = 'error',
     logger = console,
     context = 'Onboarding',
-}: LoggerOptions) => {
+}: LoggerOptions): Logger => {
     return {
         debug:
-            level === 'debug' ? (...args: unknown[]) => logger.log(`[${context}]`, ...args) : noop,
+            level === 'debug'
+                ? (...args: unknown[]) => logger?.debug(`[${context}]`, ...args)
+                : noop,
         error: logger.error,
     };
 };

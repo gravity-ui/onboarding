@@ -20,4 +20,8 @@ export const testOptions = {
     onSave: {
         progress: () => new Promise(() => {}),
     },
+    logger: {
+        debug: () => {},
+        error: () => {},
+    },
 };

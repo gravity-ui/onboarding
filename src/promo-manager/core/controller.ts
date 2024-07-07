@@ -1,24 +1,27 @@
 import {createDebounceHandler} from '../../debounce';
 import {createLogger} from '../../logger';
 import type {
-    PromoBaseState as BaseState,
-    Condition,
     Conditions,
     Helpers,
     Nullable,
     PresetSlug,
     ProgressInfoConfig,
-    PromoProgressState as ProgressState,
     Promo,
+    PromoBaseState as BaseState,
     PromoManagerStatus,
     PromoOptions,
+    PromoProgressState as ProgressState,
     PromoSlug,
     PromoState,
     PromoStatus,
     TypePreset,
 } from './types';
+import {ConditionHelper} from './types';
 import {getConditions} from './utils/getConditions';
 import {getHelpers} from './utils/getHelpers';
+import {checkCondition} from './condition-checker';
+
+import * as defaultConditionHelpers from './condition-helpers';
 
 type Listener = () => void;
 
@@ -33,6 +36,7 @@ export class Controller {
     options: PromoOptions;
     state: PromoState;
     conditions: Conditions;
+    conditionHelpers: Record<string, ConditionHelper>;
     helpers: Helpers;
     stateListeners: Set<Listener>;
 
@@ -64,9 +68,11 @@ export class Controller {
             }),
         ) as PromoState;
 
-        this.logger = createLogger({
-            context: 'Promo manager',
-        });
+        this.logger =
+            this.options.logger ??
+            createLogger({
+                context: 'Promo manager',
+            });
 
         if (!options.progressState) {
             this.fetchProgressState().catch((error) => {
@@ -75,7 +81,13 @@ export class Controller {
         }
 
         this.conditions = getConditions(options.config.presets);
+
         this.helpers = getHelpers(options.config.presets);
+
+        this.conditionHelpers = {
+            ...defaultConditionHelpers,
+            ...this.options.conditionHelpers,
+        };
 
         this.stateListeners = new Set();
 
@@ -121,7 +133,7 @@ export class Controller {
 
         this.addPromoToActiveQueue(slug);
 
-        this.triggerPromoInNextTick(updateProgressInfo);
+        await this.triggerPromoInNextTick(updateProgressInfo);
     };
 
     startPromoImmediately = (slug: PromoSlug) => {
@@ -203,12 +215,11 @@ export class Controller {
             return null;
         }
 
-        const availablePromo =
+        return (
             preset.promos.find(
                 (promo: Promo) => this.isAbleToRun(promo.slug) || this.isPending(promo.slug),
-            )?.slug ?? null;
-
-        return availablePromo;
+            )?.slug ?? null
+        );
     };
 
     getActivePromo = (presetSlug?: PresetSlug): Nullable<PromoSlug> => {
@@ -264,13 +275,29 @@ export class Controller {
             return false;
         }
 
-        const conditionsByType = this.conditions.typeConditions[type] ?? [];
-        const conditionsBySlug = this.conditions.promoConditions[slug] ?? [];
+        const conditionsForType = this.conditions.typeConditions[type] ?? [];
+        const conditionsForSlug = this.conditions.promoConditions[slug] ?? [];
 
-        return (
-            this.applyConditions(type, slug, conditionsByType, true) &&
-            this.applyConditions(type, slug, conditionsBySlug, false)
+        const resultForType = checkCondition(
+            this.state,
+            {promoType: type, currentDate: this.dateNow()},
+            conditionsForType,
+            this.logger,
         );
+
+        const resultForSlug = checkCondition(
+            this.state,
+            {
+                promoType: type,
+                promoSlug: slug,
+                currentDate: this.dateNow(),
+                helpers: this.conditionHelpers,
+            },
+            conditionsForSlug,
+            this.logger,
+        );
+
+        return resultForType && resultForSlug;
     };
 
     getPromoMeta = (slug: Nullable<PromoSlug>) => {
@@ -384,25 +411,6 @@ export class Controller {
             ...this.state.progress.progressInfoByPromo[slug],
             ...info,
         };
-    };
-
-    private applyConditions = (
-        type: PresetSlug,
-        slug: PromoSlug,
-        conditions: Condition[],
-        byType: boolean,
-    ) => {
-        for (const condition of conditions) {
-            const date = this.dateNow();
-
-            const result = condition({type, slug, state: this.state, byType, date});
-
-            if (!result) {
-                return false;
-            }
-        }
-
-        return true;
     };
 
     private addPromoToActiveQueue = (slug: PromoSlug) => {

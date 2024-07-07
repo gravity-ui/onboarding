@@ -1,4 +1,4 @@
-import {PromoInCurrentDay, ShowOncePerMonths} from '../core/conditions';
+import {PromoInCurrentDay, ShowOncePerMonths} from '../core/condition-helpers';
 import type {TypePreset} from '../core/types';
 
 export const testMetaInfo = {
@@ -64,6 +64,30 @@ export const pollWithConditions: TypePreset = {
         {
             slug: 'every2Months',
             conditions: [ShowOncePerMonths(2)],
+        },
+        {
+            slug: 'free',
+            conditions: [],
+        },
+        {
+            slug: 'every2Months2',
+            conditions: [ShowOncePerMonths(2)],
+        },
+    ],
+};
+
+export const pollWitJsonConditions: TypePreset = {
+    slug: 'ask',
+    conditions: [ShowOncePerMonths(1)],
+    promos: [
+        {
+            slug: 'every2Months',
+            conditions: [
+                {
+                    helper: 'ShowOncePerMonth',
+                    args: [2],
+                },
+            ],
         },
         {
             slug: 'free',
