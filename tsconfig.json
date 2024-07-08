@@ -5,7 +5,9 @@
     "resolveJsonModule": true,
     "outDir": "dist",
     "module": "esnext",
-    "jsx": "react"
+    "jsx": "react",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
   },
   "include": [
     "src/**/*.ts",

@@ -1,7 +1,15 @@
 import {Controller} from '../core/controller';
-import {datePlusMonthsCallback} from './utils';
 import {testOptions} from './options';
 import {pollWithConditions} from './presets';
+import dayjs from 'dayjs';
+
+const datePlusMonthsCallback = (monthsCount: number) => {
+    return () => {
+        const date = dayjs();
+
+        return date.add(monthsCount, 'month').add(1, 'second').valueOf();
+    };
+};
 
 describe('periodic runs', function () {
     const options = {

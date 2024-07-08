@@ -1,6 +1,11 @@
 import type {PromoState} from './types';
 import {ConditionContext, ConditionHelper} from './types';
 
+import dayjs from 'dayjs';
+import duration from 'dayjs/plugin/duration';
+
+dayjs.extend(duration);
+
 const getLastTimeCall = (state: PromoState, {promoType, promoSlug}: ConditionContext) => {
     if (!promoType) {
         return undefined;
@@ -15,18 +20,23 @@ export const PromoInCurrentDay: ConditionHelper = (date: Date) => {
     return () => date.toDateString() === new Date().toDateString();
 };
 
-export const ShowOncePerMonths: ConditionHelper = (months: number) => {
+export const ShowOnceForPeriod: ConditionHelper = (
+    ...params: Parameters<typeof dayjs.duration>
+) => {
     return (state, ctx) => {
-        const dateNow = new Date(ctx.currentDate);
+        const targetInterval = dayjs.duration(...params);
 
-        dateNow.setMonth(dateNow.getMonth() - months);
+        const nowDate = dayjs(ctx.currentDate);
 
         const lastTimeCall = getLastTimeCall(state, ctx);
+        const lastCallDate = dayjs(lastTimeCall);
+
+        const timeFromLastCall = dayjs.duration(nowDate.diff(lastCallDate));
 
         if (!lastTimeCall) {
             return true;
         }
 
-        return dateNow.getTime() >= lastTimeCall;
+        return timeFromLastCall.asMilliseconds() > targetInterval.asMilliseconds();
     };
 };
