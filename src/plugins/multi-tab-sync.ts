@@ -12,12 +12,29 @@ const DEFAULT_PLUGIN_OPTIONS = {
     changeStateLSKey: 'onboarding.plugin-sync.changeState',
     closeHintLSKey: 'onboarding.plugin-sync.closeHint',
     enableCloseHintSync: true,
-    enableStateSync: true,
+    enableStateSync: false,
 };
 export class MultiTabSyncPlugin implements OnboardingPlugin {
+    static isQuotaExceededError(err: unknown): boolean {
+        return (
+            err instanceof DOMException &&
+            // everything except Firefox
+            (err.code === 22 ||
+                // Firefox
+                err.code === 1014 ||
+                // test name field too, because code might not be present
+                // everything except Firefox
+                err.name === 'QuotaExceededError' ||
+                // Firefox
+                err.name === 'NS_ERROR_DOM_QUOTA_REACHED')
+        );
+    }
+
     name = 'multiTabSyncPlugin';
     onboardingInstance?: Controller<any, any, any>;
     options: PluginOptions;
+
+    isQuotaExceeded = false;
 
     constructor(userOptions: Partial<PluginOptions> = {}) {
         this.options = {
@@ -25,6 +42,7 @@ export class MultiTabSyncPlugin implements OnboardingPlugin {
             ...userOptions,
         };
     }
+
     apply: OnboardingPlugin['apply'] = ({onboarding}) => {
         this.onboardingInstance = onboarding;
 
@@ -61,6 +79,15 @@ export class MultiTabSyncPlugin implements OnboardingPlugin {
     };
 
     changeState = (newValue: any) => {
-        localStorage.setItem(this.options.changeStateLSKey, JSON.stringify(newValue));
+        if (this.isQuotaExceeded) {
+            return;
+        }
+        try {
+            localStorage.setItem(this.options.changeStateLSKey, JSON.stringify(newValue));
+        } catch (e) {
+            if (MultiTabSyncPlugin.isQuotaExceededError(e)) {
+                this.isQuotaExceeded = true;
+            }
+        }
     };
 }

@@ -142,7 +142,7 @@ describe('state sync', function () {
     describe('send event', function () {
         it('change ls on state change', async function () {
             const options = getOptions();
-            options.plugins = [new MultiTabSyncPlugin()];
+            options.plugins = [new MultiTabSyncPlugin({enableStateSync: true})];
 
             const controller = new Controller(options);
             await controller.runPreset('createQueue');
@@ -157,6 +157,7 @@ describe('state sync', function () {
             options.plugins = [
                 new MultiTabSyncPlugin({
                     changeStateLSKey: 'somekey3',
+                    enableStateSync: true,
                 }),
             ];
 
@@ -186,7 +187,7 @@ describe('state sync', function () {
     describe('receive event', function () {
         it('get state LS event -> apply new state', async function () {
             const options = getOptions();
-            options.plugins = [new MultiTabSyncPlugin()];
+            options.plugins = [new MultiTabSyncPlugin({enableStateSync: true})];
 
             const controller = new Controller(options);
 
@@ -208,6 +209,7 @@ describe('state sync', function () {
             options.plugins = [
                 new MultiTabSyncPlugin({
                     changeStateLSKey: 'somekey4',
+                    enableStateSync: true,
                 }),
             ];
 
@@ -248,5 +250,27 @@ describe('state sync', function () {
 
             expect(controller.state.base.activePresets).not.toContain('createQueue');
         });
+    });
+});
+
+describe('local storage errors', function () {
+    afterAll(() => {
+        jest.clearAllMocks();
+    });
+
+    it('got quota error -> dont write again', async function () {
+        jest.spyOn(Storage.prototype, 'setItem');
+        Storage.prototype.setItem = jest.fn(() => {
+            throw new DOMException('', 'QuotaExceededError');
+        });
+
+        const options = getOptions();
+        options.plugins = [new MultiTabSyncPlugin({enableStateSync: true})];
+
+        const controller = new Controller(options);
+        await controller.setWizardState('collapsed');
+        await controller.setWizardState('visible');
+
+        expect(Storage.prototype.setItem).toHaveBeenCalledTimes(1);
     });
 });
