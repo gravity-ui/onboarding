@@ -19,9 +19,9 @@ import type {
 import {ConditionHelper} from './types';
 import {getConditions} from './utils/getConditions';
 import {getHelpers} from './utils/getHelpers';
-import {checkCondition} from './condition-checker';
+import {checkCondition} from './condition/condition-checker';
 
-import * as defaultConditionHelpers from './condition-helpers';
+import * as defaultConditionHelpers from './condition/condition-helpers';
 
 type Listener = () => void;
 

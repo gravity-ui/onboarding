@@ -1,4 +1,4 @@
-import {PromoInCurrentDay, ShowOnceForPeriod} from '../core/condition-helpers';
+import {PromoInCurrentDay, ShowOnceForPeriod} from '../core/condition/condition-helpers';
 import type {TypePreset} from '../core/types';
 
 export const testMetaInfo = {

@@ -1,7 +1,9 @@
 import {Controller} from '../core/controller';
 import {testOptions} from './options';
-import {pollWithConditions} from './presets';
+import {pollPreset2, pollWithConditions} from './presets';
 import dayjs from 'dayjs';
+import {LimitFrequency} from '../core/condition/condition-helpers';
+import {PromoProgressState} from '../core/types';
 
 const datePlusMonthsCallback = (monthsCount: number) => {
     return () => {
@@ -51,4 +53,41 @@ describe('periodic runs', function () {
 
         expect(controller.state.base.activePromo).toBe(null);
     });
+});
+
+it('LimitFrequency', async function () {
+    const progressState = {
+        finishedPromos: ['boardPoll2'],
+        progressInfoByType: {},
+        progressInfoByPromo: {
+            boardPoll2: {
+                lastCallTime: new Date('07-15-2024').valueOf(),
+            },
+        },
+    };
+    const controller = new Controller({
+        config: {
+            presets: [pollPreset2],
+            constraints: [
+                LimitFrequency({
+                    slugs: ['boardPoll2', 'ganttPoll2'],
+                    interval: {weeks: 1},
+                }),
+            ],
+        },
+        progressState: progressState,
+        getProgressState: () => new Promise<PromoProgressState>(() => progressState),
+        onSave: {
+            progress: () => new Promise(() => {}),
+        },
+        logger: {
+            debug: () => {},
+            error: () => {},
+        },
+    });
+    controller.dateNow = () => new Date('07-15-2024').valueOf();
+
+    await controller.requestStart('ganttPoll2', true);
+
+    expect(controller.state.base.activePromo).toBe(null);
 });

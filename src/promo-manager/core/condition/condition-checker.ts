@@ -1,5 +1,5 @@
-import {Condition, ConditionContext, ConditionObject, PromoState} from './types';
-import type {Logger} from '../../logger';
+import {Condition, ConditionContext, ConditionObject, PromoState} from '../types';
+import type {Logger} from '../../../logger';
 
 const resolveConditionObject = (
     condition: ConditionObject,
