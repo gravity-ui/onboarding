@@ -86,4 +86,3 @@ export function createOnboarding<T extends InitOptions<any, any, any>>(options: 
 }
 
 export * from './types';
-export * from './promo-manager/index';
