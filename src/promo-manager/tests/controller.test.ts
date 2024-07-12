@@ -176,9 +176,7 @@ describe('update last call info', () => {
 
     beforeEach(async () => {
         controller = new Controller(testOptions);
-        controller.requestStart(promo);
-
-        await waitForNextTick();
+        await controller.requestStart(promo);
     });
 
     it('activate => not save time', () => {

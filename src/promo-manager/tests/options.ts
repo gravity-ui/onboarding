@@ -20,4 +20,11 @@ export const testOptions = {
     onSave: {
         progress: () => new Promise(() => {}),
     },
+    logger: {
+        level: 'error' as const,
+        logger: {
+            log: () => {},
+            error: () => {},
+        },
+    },
 };

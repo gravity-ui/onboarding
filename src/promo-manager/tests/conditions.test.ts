@@ -1,125 +1,134 @@
 import {Controller} from '../core/controller';
 
 import {testOptions} from './options';
-import {datePlusMonthsCallback, waitForNextTick} from './utils';
 
-test('cancel promo and request after 2 months -> show again', async () => {
-    const controller = new Controller(testOptions);
+it('promo with NO condition -> runs', async function () {
+    const presetWithNoCondition = {
+        slug: 'noConditionType',
+        promos: [
+            {
+                slug: 'noConditionPromo',
+                conditions: [],
+            },
+        ],
+    };
+    const controller = new Controller({...testOptions, config: {presets: [presetWithNoCondition]}});
 
-    controller.requestStart('every2Months', true);
+    await controller.requestStart('noConditionPromo', true);
 
-    await waitForNextTick();
-
-    controller.cancelPromo('every2Months');
-    controller.requestStart('every2Months', true);
-
-    await waitForNextTick();
-
-    expect(controller.state.base.activePromo).toBe(null);
-
-    controller.dateNow = datePlusMonthsCallback(2);
-
-    controller.requestStart('every2Months', true);
-
-    await waitForNextTick();
-
-    expect(controller.state.base.activePromo).toBe('every2Months');
+    expect(controller.state.base.activePromo).toBe('noConditionPromo');
 });
 
-test('finish promo and request after 2 months -> not show again', async () => {
-    const controller = new Controller(testOptions);
+it('promo with false condition -> dont run', async function () {
+    const presetWithFalseCondition = {
+        slug: 'someConditionType',
+        promos: [
+            {
+                slug: 'someConditionPromo',
+                conditions: [() => false],
+            },
+        ],
+    };
+    const controller = new Controller({
+        ...testOptions,
+        config: {presets: [presetWithFalseCondition]},
+    });
 
-    controller.requestStart('every2Months', true);
-
-    await waitForNextTick();
-
-    controller.finishPromo('every2Months');
-    controller.requestStart('every2Months', true);
-
-    await waitForNextTick();
-
-    expect(controller.state.base.activePromo).toBe(null);
-
-    controller.dateNow = datePlusMonthsCallback(2);
-
-    controller.requestStart('every2Months', true);
-
-    await waitForNextTick();
+    await controller.requestStart('someConditionPromo', true);
 
     expect(controller.state.base.activePromo).toBe(null);
 });
 
-test('show preset once per month [cancel]', async () => {
-    const controller = new Controller(testOptions);
+describe('json conditions', function () {
+    it('take custom helper from config', async function () {
+        const controller = new Controller({
+            ...testOptions,
+            config: {
+                presets: [
+                    {
+                        slug: 'someType',
+                        promos: [
+                            {
+                                slug: 'someSlug',
+                                conditions: [
+                                    {
+                                        helper: 'alwaysTrue',
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            },
+            conditionHelpers: {
+                alwaysTrue: () => () => true,
+            },
+        });
 
-    controller.requestStart('every2Months', true);
+        await controller.requestStart('someSlug', true);
 
-    await waitForNextTick();
+        expect(controller.state.base.activePromo).toBe('someSlug');
+    });
 
-    controller.cancelPromo('every2Months');
+    it('can use arguments', async function () {
+        const mock = jest.fn(() => () => true);
+        const controller = new Controller({
+            ...testOptions,
+            config: {
+                presets: [
+                    {
+                        slug: 'someType',
+                        promos: [
+                            {
+                                slug: 'someSlug',
+                                conditions: [
+                                    {
+                                        helper: 'alwaysTrue',
+                                        args: ['someParam'],
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            },
+            conditionHelpers: {
+                alwaysTrue: mock,
+            },
+        });
 
-    controller.dateNow = datePlusMonthsCallback(1);
+        await controller.requestStart('someSlug', true);
 
-    controller.requestStart('every2Months', true);
-    controller.requestStart('every2Months2', true);
+        expect(mock).toHaveBeenCalledWith('someParam');
+    });
 
-    await waitForNextTick();
+    it('helper not found -> dont run', async function () {
+        const controller = new Controller({
+            ...testOptions,
+            config: {
+                presets: [
+                    {
+                        slug: 'someType',
+                        promos: [
+                            {
+                                slug: 'someSlug',
+                                conditions: [
+                                    {
+                                        helper: 'undefinedHelper',
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            },
+            conditionHelpers: {
+                alwaysTrue: () => () => true,
+            },
+        });
 
-    expect(controller.state.base.activePromo).toBe('every2Months2');
-});
+        await controller.requestStart('someSlug', true);
 
-test('show preset once per month [cancel]', async () => {
-    const controller = new Controller(testOptions);
-
-    controller.requestStart('every2Months', true);
-    await waitForNextTick();
-
-    controller.finishPromo('every2Months');
-
-    controller.dateNow = datePlusMonthsCallback(1);
-
-    controller.requestStart('every2Months', true);
-    controller.requestStart('every2Months2', true);
-
-    await waitForNextTick();
-
-    expect(controller.state.base.activePromo).toBe('every2Months2');
-});
-
-test('show promo and cancel -> show again in 2 months', async () => {
-    const controller = new Controller(testOptions);
-
-    controller.requestStart('every2Months', true);
-
-    await waitForNextTick();
-
-    controller.cancelPromo('every2Months');
-
-    controller.dateNow = datePlusMonthsCallback(2);
-
-    controller.requestStart('every2Months', true);
-    controller.requestStart('every2Months2', true);
-
-    await waitForNextTick();
-
-    expect(controller.state.base.activePromo).toBe('every2Months');
-});
-
-test('show promo and finish -> show new promo in 2 months', async () => {
-    const controller = new Controller(testOptions);
-
-    controller.requestStart('every2Months', true);
-
-    await waitForNextTick();
-
-    controller.finishPromo('every2Months');
-
-    controller.dateNow = datePlusMonthsCallback(2);
-
-    controller.requestStart('every2Months', true);
-    controller.requestStart('every2Months2', true);
-
-    await waitForNextTick();
-
-    expect(controller.state.base.activePromo).toBe('every2Months2');
+        expect(controller.state.base.activePromo).toBe(null);
+    });
 });

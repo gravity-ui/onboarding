@@ -88,7 +88,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.events = new EventEmitter(this);
         this.hintStore = hintStore || new HintStore(this.events);
         this.passStepListeners = new Set();
-        this.logger = createLogger(options.logger ?? {}); // переименовать в logger options
+        this.logger = createLogger(options.logger ?? {});
 
         if (this.options.debugMode) {
             // @ts-ignore
