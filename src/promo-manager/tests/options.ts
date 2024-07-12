@@ -23,7 +23,7 @@ export const testOptions = {
     logger: {
         level: 'error' as const,
         logger: {
-            log: () => {},
+            debug: () => {},
             error: () => {},
         },
     },

@@ -1,5 +1,5 @@
 import {createDebounceHandler} from '../../debounce';
-import {createLogger} from '../../logger';
+import {createLogger, Logger} from '../../logger';
 import type {
     Conditions,
     Helpers,
@@ -45,7 +45,7 @@ export class Controller {
     emitChange: () => void;
     saveProgress: () => void;
     triggerPromoInNextTick: () => void;
-    logger: ReturnType<typeof createLogger>;
+    logger: Logger;
 
     constructor(options: PromoOptions) {
         this.options = options;
