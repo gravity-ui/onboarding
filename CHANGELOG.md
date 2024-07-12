@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.17.2](https://github.com/gravity-ui/onboarding/compare/v0.17.1...v0.17.2) (2024-07-12)
+
+
+### Bug Fixes
+
+* **onboarding:** handle localstorage quota exceeded error ([9fe9f19](https://github.com/gravity-ui/onboarding/commit/9fe9f19620dc35550d0245ff563539e36747927a))
+* **onboarding:** wizard become visible -&gt; don't close common hint ([72399e1](https://github.com/gravity-ui/onboarding/commit/72399e1809890888b6362fd6435eef741974c5cc))
+
 ## [0.17.1](https://github.com/gravity-ui/onboarding/compare/v0.17.0...v0.17.1) (2024-07-02)
 
 
