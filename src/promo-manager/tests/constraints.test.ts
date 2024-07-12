@@ -30,7 +30,7 @@ it('empty constraints -> run', async function () {
     options.config.constraints = [];
     const controller = new Controller(options);
 
-    await controller.requestStart('someSlug', true);
+    await controller.requestStart('someSlug');
 
     expect(controller.state.base.activePromo).toBe('someSlug');
 });
@@ -40,7 +40,7 @@ it('false in constraints -> dont run', async function () {
     options.config.constraints = [() => true, () => false];
     const controller = new Controller(options);
 
-    await controller.requestStart('someSlug', true);
+    await controller.requestStart('someSlug');
 
     expect(controller.state.base.activePromo).toBe(null);
 });
@@ -50,7 +50,7 @@ it('true in constraints -> run', async function () {
     options.config.constraints = [() => true, () => true];
     const controller = new Controller(options);
 
-    await controller.requestStart('someSlug', true);
+    await controller.requestStart('someSlug');
 
     expect(controller.state.base.activePromo).toBe('someSlug');
 });
@@ -66,7 +66,7 @@ it('can use json helpers', async function () {
     options.conditionHelpers = {someConstraint: mock};
     const controller = new Controller(options);
 
-    await controller.requestStart('someSlug', true);
+    await controller.requestStart('someSlug');
 
     expect(controller.state.base.activePromo).toBe(null);
     expect(mock).toHaveBeenCalled();
@@ -84,7 +84,7 @@ it('can pass arg to helper', async function () {
     options.conditionHelpers = {someConstraint: mock};
     const controller = new Controller(options);
 
-    await controller.requestStart('someSlug', true);
+    await controller.requestStart('someSlug');
 
     expect(controller.state.base.activePromo).toBe(null);
     expect(mock).toHaveBeenCalledWith(123);

@@ -179,13 +179,6 @@ describe('update last call info', () => {
         await controller.requestStart(promo);
     });
 
-    it('activate => not save time', () => {
-        expect(
-            controller.state.progress?.progressInfoByType[promoType]?.lastCallTime,
-        ).toBeUndefined();
-        expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeUndefined();
-    });
-
     it('finish and save time', () => {
         controller.finishPromo(promo);
 
@@ -196,21 +189,12 @@ describe('update last call info', () => {
     });
 
     it('cancel and save time', () => {
-        controller.cancelPromo(promo, true);
+        controller.cancelPromo(promo);
 
         expect(
             controller.state.progress?.progressInfoByType[promoType]?.lastCallTime,
         ).toBeDefined();
         expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeDefined();
-    });
-
-    it('cancel and not save time', () => {
-        controller.cancelPromo(promo);
-
-        expect(
-            controller.state.progress?.progressInfoByType[promoType]?.lastCallTime,
-        ).toBeUndefined();
-        expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeUndefined();
     });
 });
 
@@ -242,26 +226,12 @@ describe('close with timeout', () => {
     });
 
     it('cancel and save time', async () => {
-        controller.cancelPromo(promo, true, clearActiveTimeout);
+        controller.cancelPromo(promo, clearActiveTimeout);
 
         expect(
             controller.state.progress?.progressInfoByType[promoType]?.lastCallTime,
         ).toBeDefined();
         expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeDefined();
-        expect(controller.state.base.activePromo).toBe(promo);
-
-        await waitForNextTick(clearActiveTimeout);
-
-        expect(controller.state.base.activePromo).toBe(null);
-    });
-
-    it('cancel and not save time', async () => {
-        controller.cancelPromo(promo, false, clearActiveTimeout);
-
-        expect(
-            controller.state.progress?.progressInfoByType[promoType]?.lastCallTime,
-        ).toBeUndefined();
-        expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeUndefined();
         expect(controller.state.base.activePromo).toBe(promo);
 
         await waitForNextTick(clearActiveTimeout);

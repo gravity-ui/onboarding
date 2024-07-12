@@ -19,8 +19,8 @@ export function getHooks(controller: Controller) {
                 },
                 finish: (closeActiveTimeout?: number) =>
                     controller.finishPromo(promo, closeActiveTimeout),
-                cancel: (updateProgressInfo?: boolean, closeActiveTimeout?: number) =>
-                    controller.cancelPromo(promo, updateProgressInfo, closeActiveTimeout),
+                cancel: (closeActiveTimeout?: number) =>
+                    controller.cancelPromo(promo, closeActiveTimeout),
                 cancelStart: () => controller.cancelStart(promo),
                 updateProgressInfo: () => controller.updateProgressInfo(promo),
             }),
@@ -42,8 +42,8 @@ export function getHooks(controller: Controller) {
                 metaInfo: controller.getPromoMeta(promo),
                 finish: (closeActiveTimeout?: number) =>
                     controller.finishPromo(promo, closeActiveTimeout),
-                cancel: (updateProgressInfo?: boolean, closeActiveTimeout?: number) =>
-                    controller.cancelPromo(promo, updateProgressInfo, closeActiveTimeout),
+                cancel: (closeActiveTimeout?: number) =>
+                    controller.cancelPromo(promo, closeActiveTimeout),
                 cancelStart: () => controller.cancelStart(promo),
                 updateProgressInfo: () => controller.updateProgressInfo(promo),
             }),
@@ -64,8 +64,8 @@ export function getHooks(controller: Controller) {
                 requestStart: () => controller.requestStart(promo),
                 finish: (closeActiveTimeout?: number) =>
                     controller.finishPromo(promo, closeActiveTimeout),
-                cancel: (updateProgressInfo?: boolean, closeActiveTimeout?: number) =>
-                    controller.cancelPromo(promo, updateProgressInfo, closeActiveTimeout),
+                cancel: (closeActiveTimeout?: number) =>
+                    controller.cancelPromo(promo, closeActiveTimeout),
             }),
             [promo],
         );

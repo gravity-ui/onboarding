@@ -44,9 +44,7 @@ export class Controller {
 
     emitChange: () => void;
     saveProgress: () => void;
-    triggerPromoInNextTick: (updateProgressInfo?: boolean) => void;
-    dateNow: () => number;
-
+    triggerPromoInNextTick: () => void;
     logger: ReturnType<typeof createLogger>;
 
     constructor(options: PromoOptions) {
@@ -104,13 +102,11 @@ export class Controller {
             this.emitListeners();
         }, 100);
 
-        this.triggerPromoInNextTick = (updateProgressInfo?: boolean) => {
+        this.triggerPromoInNextTick = () => {
             return createDebounceHandler(() => {
-                this.triggerNextPromo(updateProgressInfo);
+                this.triggerNextPromo();
             }, 0)();
         };
-
-        this.dateNow = () => Date.now();
 
         if (options.debugMode) {
             // @ts-ignore
@@ -118,7 +114,9 @@ export class Controller {
         }
     }
 
-    requestStart = async (slug: Nullable<PromoSlug>, updateProgressInfo = false) => {
+    dateNow = () => Date.now();
+
+    requestStart = async (slug: Nullable<PromoSlug>) => {
         if (!slug) {
             return;
         }
@@ -133,13 +131,7 @@ export class Controller {
 
         this.addPromoToActiveQueue(slug);
 
-        await this.triggerPromoInNextTick(updateProgressInfo);
-    };
-
-    startPromoImmediately = (slug: PromoSlug) => {
-        if (this.isAbleToRun(slug) || this.isPending(slug)) {
-            this.activatePromo(slug);
-        }
+        await this.triggerPromoInNextTick();
     };
 
     finishPromo = (slug: Nullable<PromoSlug>, closeActiveTimeout = 0) => {
@@ -154,20 +146,14 @@ export class Controller {
         this.updateProgressInfo(slug);
     };
 
-    cancelPromo = (
-        slug: Nullable<PromoSlug>,
-        updateProgressInfo = false,
-        closeActiveTimeout = 0,
-    ) => {
+    cancelPromo = (slug: Nullable<PromoSlug>, closeActiveTimeout = 0) => {
         if (!slug) {
             return;
         }
 
         this.closePromoWithTimeout(slug, closeActiveTimeout);
 
-        if (updateProgressInfo) {
-            this.updateProgressInfo(slug);
-        }
+        this.updateProgressInfo(slug);
     };
 
     cancelStart = (slug: Nullable<PromoSlug>) => {
@@ -269,6 +255,10 @@ export class Controller {
     }
 
     checkPromoConditions = (slug: PromoSlug): boolean => {
+        if (!this.checkConstraints()) {
+            return false;
+        }
+
         const type = this.getTypeBySlug(slug);
 
         if (!type) {
@@ -383,18 +373,16 @@ export class Controller {
         this.emitChange();
     };
 
-    private activatePromo = (slug: PromoSlug, updateProgressInfo = false) => {
+    private activatePromo = (slug: PromoSlug) => {
         this.state.base.activePromo = slug;
         this.removePromoFromActiveQueue(slug);
 
-        if (updateProgressInfo) {
-            this.updateProgressInfo(slug);
-        }
+        this.updateProgressInfo(slug);
 
         this.emitChange();
     };
 
-    private triggerNextPromo = (updateProgressInfo = false) => {
+    private triggerNextPromo = () => {
         if (this.state.base.activeQueue.length === 0 || this.state.base.activePromo !== null) {
             return;
         }
@@ -402,13 +390,12 @@ export class Controller {
         const nextPromoSlug = this.state.base.activeQueue.find((slug) =>
             this.checkPromoConditions(slug),
         );
-        const compliesWithConstraints = this.checkConstraints();
 
-        if (!nextPromoSlug || !compliesWithConstraints) {
+        if (!nextPromoSlug) {
             return;
         }
 
-        this.activatePromo(nextPromoSlug, updateProgressInfo);
+        this.activatePromo(nextPromoSlug);
     };
 
     private updateProgressInfoByType = (type: PresetSlug, info: ProgressInfoConfig) => {

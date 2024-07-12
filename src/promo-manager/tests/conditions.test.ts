@@ -14,7 +14,7 @@ it('promo with NO condition -> runs', async function () {
     };
     const controller = new Controller({...testOptions, config: {presets: [presetWithNoCondition]}});
 
-    await controller.requestStart('noConditionPromo', true);
+    await controller.requestStart('noConditionPromo');
 
     expect(controller.state.base.activePromo).toBe('noConditionPromo');
 });
@@ -34,7 +34,7 @@ it('promo with false condition -> dont run', async function () {
         config: {presets: [presetWithFalseCondition]},
     });
 
-    await controller.requestStart('someConditionPromo', true);
+    await controller.requestStart('someConditionPromo');
 
     expect(controller.state.base.activePromo).toBe(null);
 });
@@ -65,7 +65,7 @@ describe('json conditions', function () {
             },
         });
 
-        await controller.requestStart('someSlug', true);
+        await controller.requestStart('someSlug');
 
         expect(controller.state.base.activePromo).toBe('someSlug');
     });
@@ -97,7 +97,7 @@ describe('json conditions', function () {
             },
         });
 
-        await controller.requestStart('someSlug', true);
+        await controller.requestStart('someSlug');
 
         expect(mock).toHaveBeenCalledWith('someParam');
     });
@@ -127,7 +127,7 @@ describe('json conditions', function () {
             },
         });
 
-        await controller.requestStart('someSlug', true);
+        await controller.requestStart('someSlug');
 
         expect(controller.state.base.activePromo).toBe(null);
     });
