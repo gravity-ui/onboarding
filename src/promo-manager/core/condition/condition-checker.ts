@@ -1,11 +1,11 @@
 import {Condition, ConditionContext, ConditionObject, PromoState} from '../types';
-import type {Logger} from '../../../logger';
+import {createLogger} from '../../../logger';
 
 const resolveConditionObject = (
     condition: ConditionObject,
     state: PromoState,
     ctx: ConditionContext,
-    logger: Logger,
+    logger: ReturnType<typeof createLogger>,
 ) => {
     const conditionHelper = ctx.helpers?.[condition.helper];
     if (!conditionHelper) {
@@ -23,7 +23,7 @@ export const checkCondition = (
     state: PromoState,
     ctx: ConditionContext,
     conditions: Condition[],
-    logger: Logger,
+    logger: ReturnType<typeof createLogger>,
 ) => {
     for (const condition of conditions) {
         let result = false;

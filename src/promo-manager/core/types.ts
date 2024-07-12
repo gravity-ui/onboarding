@@ -1,4 +1,4 @@
-import {Logger} from '../../logger';
+import {LoggerOptions} from '../../logger';
 
 export type PromoStatus = 'forbidden' | 'canRun' | 'active' | 'finished' | 'pending';
 export type Priority = 'high';
@@ -36,7 +36,7 @@ export type PromoOptions = {
         progress: (state: PromoProgressState) => Promise<any>;
     };
     debugMode?: boolean;
-    logger?: Logger;
+    logger?: LoggerOptions;
 };
 
 export type ConditionContext = {

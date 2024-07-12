@@ -68,11 +68,11 @@ export class Controller {
             }),
         ) as PromoState;
 
-        this.logger =
-            this.options.logger ??
-            createLogger({
+        this.logger = createLogger(
+            this.options.logger ?? {
                 context: 'Promo manager',
-            });
+            },
+        );
 
         if (!options.progressState) {
             this.fetchProgressState().catch((error) => {

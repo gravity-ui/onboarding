@@ -21,7 +21,10 @@ export const testOptions = {
         progress: () => new Promise(() => {}),
     },
     logger: {
-        debug: () => {},
-        error: () => {},
+        level: 'error' as const,
+        logger: {
+            log: () => {},
+            error: () => {},
+        },
     },
 };

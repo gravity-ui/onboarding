@@ -80,10 +80,6 @@ it('LimitFrequency', async function () {
         onSave: {
             progress: () => new Promise(() => {}),
         },
-        logger: {
-            debug: () => {},
-            error: () => {},
-        },
     });
     controller.dateNow = () => new Date('07-15-2024').valueOf();
 
