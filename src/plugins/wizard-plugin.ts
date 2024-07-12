@@ -31,10 +31,6 @@ export class WizardPlugin implements OnboardingPlugin {
             return;
         }
 
-        if (wizardState === 'visible') {
-            await this.onboardingInstance.closeHint();
-        }
-
         if (wizardState === 'visible' || wizardState === 'collapsed') {
             await this.onboardingInstance.ensureRunning();
         }

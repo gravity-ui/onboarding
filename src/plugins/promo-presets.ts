@@ -27,6 +27,8 @@ export class PromoPresetsPlugin implements OnboardingPlugin {
         onboarding.events.subscribe('beforeShowHint', this.onHintShow);
 
         onboarding.events.subscribe('beforeSuggestPreset', this.onSuggestPreset);
+
+        onboarding.events.subscribe('wizardStateChanged', this.onWizardStateChanged);
     };
 
     onHintShow = ({stepData}: EventsMap['beforeShowHint']) => {
@@ -34,11 +36,9 @@ export class PromoPresetsPlugin implements OnboardingPlugin {
             return true;
         }
 
-        const preset = this.onboardingInstance.options.config.presets[stepData.preset];
-
         const {wizardState} = this.onboardingInstance.state.base;
 
-        const isPromoPreset = preset?.type !== 'internal' && preset?.visibility === 'alwaysHidden';
+        const isPromoPreset = this.checkIsPromoPreset(stepData.preset);
 
         const isGuideVisible = wizardState === 'visible' || wizardState === 'collapsed';
 
@@ -66,13 +66,36 @@ export class PromoPresetsPlugin implements OnboardingPlugin {
             return;
         }
 
-        const preset = this.onboardingInstance.options.config.presets[presetSlug];
-
-        const isPromoPreset = preset?.type !== 'internal' && preset?.visibility === 'alwaysHidden';
-
-        if (isPromoPreset) {
+        if (this.checkIsPromoPreset(presetSlug)) {
             this.onboardingInstance.state.base.enabled = true;
             this.onboardingInstance.emitStateChange();
         }
+    };
+
+    onWizardStateChanged = async ({wizardState}: EventsMap['wizardStateChanged']) => {
+        if (!this.onboardingInstance) {
+            return;
+        }
+
+        if (wizardState === 'visible') {
+            const isHintOpen = this.onboardingInstance.hintStore.state.open;
+            const isPromoPreset = this.checkIsPromoPreset(
+                this.onboardingInstance.hintStore.state.hint?.preset,
+            );
+
+            if (isHintOpen && isPromoPreset) {
+                this.onboardingInstance.closeHint();
+            }
+        }
+    };
+
+    private checkIsPromoPreset = (presetSlug: string) => {
+        if (!this.onboardingInstance) {
+            return false;
+        }
+
+        const preset = this.onboardingInstance.options.config.presets[presetSlug];
+
+        return preset?.type !== 'internal' && preset?.visibility === 'alwaysHidden';
     };
 }

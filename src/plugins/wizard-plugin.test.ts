@@ -51,21 +51,6 @@ describe('open wizard', function () {
 
         expect(options.getProgressState).toHaveBeenCalled();
     });
-
-    it('become visible -> close hint', async function () {
-        const options = getOptions({wizardState: 'hidden'});
-        options.plugins = [new WizardPlugin()];
-        const controller = new Controller(options);
-
-        await controller.stepElementReached({
-            stepSlug: 'createSprint',
-            element: getAnchorElement(),
-        });
-
-        await controller.setWizardState('visible');
-
-        expect(controller.hintStore.state.open).toBe(false);
-    });
 });
 
 describe('close wizard', function () {

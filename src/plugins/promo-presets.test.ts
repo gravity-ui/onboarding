@@ -176,3 +176,33 @@ describe('promo preset', function () {
         });
     });
 });
+
+it('open wizard -> close promo hint', async function () {
+    const options = getOptionsWithPromo();
+    options.plugins = [new PromoPresetsPlugin()];
+    const controller = new Controller(options);
+
+    await controller.stepElementReached({
+        stepSlug: 'showCoolFeature',
+        element: getAnchorElement(),
+    });
+
+    await controller.setWizardState('visible');
+
+    expect(controller.hintStore.state.open).toBe(false);
+});
+
+it('open wizard -> NOT close common hint', async function () {
+    const options = getOptionsWithPromo();
+    options.plugins = [new PromoPresetsPlugin()];
+    const controller = new Controller(options);
+
+    await controller.stepElementReached({
+        stepSlug: 'openBoard',
+        element: getAnchorElement(),
+    });
+
+    await controller.setWizardState('visible');
+
+    expect(controller.hintStore.state.open).toBe(true);
+});
