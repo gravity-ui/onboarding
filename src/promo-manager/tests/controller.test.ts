@@ -1,7 +1,7 @@
 import {Controller} from '../core/controller';
 
 import {testOptions} from './options';
-import {testMetaInfo} from './presets';
+import {testMetaInfo} from './promoGroups';
 import {waitForNextTick} from './utils';
 
 describe('active promo', () => {

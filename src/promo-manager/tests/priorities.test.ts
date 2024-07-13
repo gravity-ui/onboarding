@@ -3,7 +3,7 @@ import {Controller} from '../core/controller';
 import {testOptions} from './options';
 import {waitForNextTick} from './utils';
 
-test('priorities in one preset', async () => {
+test('priorities in one group', async () => {
     const controller = new Controller(testOptions);
 
     controller.requestStart('ganttPoll');
@@ -16,7 +16,7 @@ test('priorities in one preset', async () => {
     expect(controller.state.base.activeQueue).toEqual(['ganttPoll', 'taskPoll']);
 });
 
-test('priorities in two presets', async () => {
+test('priorities in two groups', async () => {
     const controller = new Controller(testOptions);
 
     controller.requestStart('ganttPoll2');
@@ -39,7 +39,7 @@ test('priorities in two presets', async () => {
     ]);
 });
 
-test('hight priority in two presets', async () => {
+test('high priority in two groups', async () => {
     const controller = new Controller(testOptions);
 
     controller.requestStart('ganttPoll2');

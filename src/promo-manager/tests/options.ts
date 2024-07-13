@@ -1,10 +1,10 @@
 import type {PromoProgressState} from '../core/types';
 
-import {pollPreset, pollPreset2, pollWithConditions} from './presets';
+import {pollGroup, pollGroup2, pollWithConditions} from './promoGroups';
 
 export const testOptions = {
     config: {
-        presets: [pollPreset, pollPreset2, pollWithConditions],
+        promoGroups: [pollGroup, pollGroup2, pollWithConditions],
     },
     progressState: {
         finishedPromos: [],

@@ -1,11 +1,11 @@
 import {PromoInCurrentDay, ShowOnceForPeriod} from '../core/condition/condition-helpers';
-import type {TypePreset} from '../core/types';
+import type {PromoGroup} from '../core/types';
 
 export const testMetaInfo = {
     testKey: 'testValue',
 };
 
-export const pollPreset: TypePreset = {
+export const pollGroup: PromoGroup = {
     slug: 'poll',
     conditions: [],
     promos: [
@@ -33,7 +33,7 @@ export const pollPreset: TypePreset = {
     ],
 };
 
-export const pollPreset2: TypePreset = {
+export const pollGroup2: PromoGroup = {
     slug: 'poll2',
     conditions: [],
     promos: [
@@ -57,7 +57,7 @@ export const pollPreset2: TypePreset = {
     ],
 };
 
-export const pollWithConditions: TypePreset = {
+export const pollWithConditions: PromoGroup = {
     slug: 'ask',
     conditions: [ShowOnceForPeriod({month: 1})],
     promos: [
@@ -76,7 +76,7 @@ export const pollWithConditions: TypePreset = {
     ],
 };
 
-export const pollWitJsonConditions: TypePreset = {
+export const pollWitJsonConditions: PromoGroup = {
     slug: 'ask',
     conditions: [ShowOnceForPeriod({month: 1})],
     promos: [

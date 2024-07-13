@@ -1,6 +1,6 @@
 import {Controller} from '../core/controller';
 import {testOptions} from './options';
-import {pollPreset2, pollWithConditions} from './presets';
+import {pollGroup2, pollWithConditions} from './promoGroups';
 import dayjs from 'dayjs';
 import {LimitFrequency} from '../core/condition/condition-helpers';
 import {PromoProgressState} from '../core/types';
@@ -17,7 +17,7 @@ describe('periodic runs', function () {
     const options = {
         ...testOptions,
         config: {
-            presets: [pollWithConditions],
+            promoGroups: [pollWithConditions],
         },
     };
 
@@ -67,7 +67,7 @@ it('LimitFrequency', async function () {
     };
     const controller = new Controller({
         config: {
-            presets: [pollPreset2],
+            promoGroups: [pollGroup2],
             constraints: [
                 LimitFrequency({
                     slugs: ['boardPoll2', 'ganttPoll2'],

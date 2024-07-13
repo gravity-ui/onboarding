@@ -4,7 +4,7 @@ import type {
     Conditions,
     Helpers,
     Nullable,
-    PresetSlug,
+    PromoGroupSlug,
     ProgressInfoConfig,
     Promo,
     PromoBaseState as BaseState,
@@ -14,7 +14,7 @@ import type {
     PromoSlug,
     PromoState,
     PromoStatus,
-    TypePreset,
+    PromoGroup,
 } from './types';
 import {ConditionHelper} from './types';
 import {getConditions} from './utils/getConditions';
@@ -78,9 +78,9 @@ export class Controller {
             });
         }
 
-        this.conditions = getConditions(options.config.presets);
+        this.conditions = getConditions(options.config.promoGroups);
 
-        this.helpers = getHelpers(options.config.presets);
+        this.helpers = getHelpers(options.config.promoGroups);
 
         this.conditionHelpers = {
             ...defaultConditionHelpers,
@@ -192,28 +192,28 @@ export class Controller {
         return 'canRun';
     };
 
-    getFirstAvailablePromoByType = (slug: PresetSlug): Nullable<PromoSlug> => {
-        const preset = Object.values(this.options.config.presets).find(
-            (typePreset: TypePreset<unknown>) => typePreset.slug === slug,
+    getFirstAvailablePromoByType = (slug: PromoGroupSlug): Nullable<PromoSlug> => {
+        const promoGroup = Object.values(this.options.config.promoGroups).find(
+            (currentPromoGroup: PromoGroup<unknown>) => currentPromoGroup.slug === slug,
         );
 
-        if (!preset) {
+        if (!promoGroup) {
             return null;
         }
 
         return (
-            preset.promos.find(
+            promoGroup.promos.find(
                 (promo: Promo) => this.isAbleToRun(promo.slug) || this.isPending(promo.slug),
             )?.slug ?? null
         );
     };
 
-    getActivePromo = (presetSlug?: PresetSlug): Nullable<PromoSlug> => {
+    getActivePromo = (promoType?: PromoGroupSlug): Nullable<PromoSlug> => {
         const activePromo = this.state.base.activePromo;
 
-        if (!presetSlug) return activePromo;
+        if (!promoType) return activePromo;
 
-        return this.getTypeBySlug(activePromo) === presetSlug ? activePromo : null;
+        return this.getGroupBySlug(activePromo) === promoType ? activePromo : null;
     };
 
     subscribe = (listener: Listener) => {
@@ -231,7 +231,7 @@ export class Controller {
 
         this.assertProgressLoaded();
 
-        const type = this.getTypeBySlug(slug);
+        const type = this.getGroupBySlug(slug);
 
         if (!type) {
             return;
@@ -259,7 +259,7 @@ export class Controller {
             return false;
         }
 
-        const type = this.getTypeBySlug(slug);
+        const type = this.getGroupBySlug(slug);
 
         if (!type) {
             return false;
@@ -298,7 +298,7 @@ export class Controller {
         return this.helpers.metaBySlug[slug] || {};
     };
 
-    getTypeBySlug = (slug: Nullable<PromoSlug>): Nullable<PresetSlug> => {
+    getGroupBySlug = (slug: Nullable<PromoSlug>): Nullable<PromoGroupSlug> => {
         if (!slug) {
             return null;
         }
@@ -398,7 +398,7 @@ export class Controller {
         this.activatePromo(nextPromoSlug);
     };
 
-    private updateProgressInfoByType = (type: PresetSlug, info: ProgressInfoConfig) => {
+    private updateProgressInfoByType = (type: PromoGroupSlug, info: ProgressInfoConfig) => {
         this.assertProgressLoaded();
 
         this.state.progress.progressInfoByType[type] = {

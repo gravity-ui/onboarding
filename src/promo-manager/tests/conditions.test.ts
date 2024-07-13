@@ -3,7 +3,7 @@ import {Controller} from '../core/controller';
 import {testOptions} from './options';
 
 it('promo with NO condition -> runs', async function () {
-    const presetWithNoCondition = {
+    const groupWithNoCondition = {
         slug: 'noConditionType',
         promos: [
             {
@@ -12,7 +12,10 @@ it('promo with NO condition -> runs', async function () {
             },
         ],
     };
-    const controller = new Controller({...testOptions, config: {presets: [presetWithNoCondition]}});
+    const controller = new Controller({
+        ...testOptions,
+        config: {promoGroups: [groupWithNoCondition]},
+    });
 
     await controller.requestStart('noConditionPromo');
 
@@ -20,7 +23,7 @@ it('promo with NO condition -> runs', async function () {
 });
 
 it('promo with false condition -> dont run', async function () {
-    const presetWithFalseCondition = {
+    const groupWithFalseCondition = {
         slug: 'someConditionType',
         promos: [
             {
@@ -31,7 +34,7 @@ it('promo with false condition -> dont run', async function () {
     };
     const controller = new Controller({
         ...testOptions,
-        config: {presets: [presetWithFalseCondition]},
+        config: {promoGroups: [groupWithFalseCondition]},
     });
 
     await controller.requestStart('someConditionPromo');
@@ -44,7 +47,7 @@ describe('json conditions', function () {
         const controller = new Controller({
             ...testOptions,
             config: {
-                presets: [
+                promoGroups: [
                     {
                         slug: 'someType',
                         promos: [
@@ -75,7 +78,7 @@ describe('json conditions', function () {
         const controller = new Controller({
             ...testOptions,
             config: {
-                presets: [
+                promoGroups: [
                     {
                         slug: 'someType',
                         promos: [
@@ -106,7 +109,7 @@ describe('json conditions', function () {
         const controller = new Controller({
             ...testOptions,
             config: {
-                presets: [
+                promoGroups: [
                     {
                         slug: 'someType',
                         promos: [

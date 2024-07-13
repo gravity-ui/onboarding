@@ -5,7 +5,7 @@ import {Condition} from '../core/types';
 const getOptions = () => ({
     ...testOptions,
     config: {
-        presets: [
+        promoGroups: [
             {
                 slug: 'someType',
                 promos: [
