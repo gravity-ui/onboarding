@@ -16,7 +16,7 @@ import type {
     PromoStatus,
     PromoGroup,
 } from './types';
-import {ConditionHelper} from './types';
+import {ConditionHelper, InitPromoManagerOptions} from './types';
 import {getConditions} from './utils/getConditions';
 import {getHelpers} from './utils/getHelpers';
 import {checkCondition} from './condition/condition-checker';
@@ -31,8 +31,17 @@ const defaultProgressState: ProgressState = {
     progressInfoByPromo: {},
 };
 
+const defaultInitOptions: InitPromoManagerOptions = {
+    initType: 'timeout',
+    timeout: 0,
+};
+
+const delay = (timeout: number) =>
+    new Promise<void>((resolve) => {
+        setTimeout(resolve, timeout);
+    });
+
 export class Controller {
-    status: PromoManagerStatus;
     options: PromoOptions;
     state: PromoState;
     conditions: Conditions;
@@ -41,14 +50,17 @@ export class Controller {
     stateListeners: Set<Listener>;
 
     progressStatePromise?: Promise<Partial<ProgressState>>;
-
-    emitChange: () => void;
+    initPromise: Promise<void> | undefined;
     saveProgress: () => void;
     triggerPromoInNextTick: () => void;
     logger: Logger;
 
+    private status: PromoManagerStatus;
+
     constructor(options: PromoOptions) {
         this.options = options;
+        this.options.config.init = options.config.init ?? defaultInitOptions;
+
         this.status = 'idle';
 
         this.state = JSON.parse(
@@ -98,10 +110,6 @@ export class Controller {
             }
         }, 100);
 
-        this.emitChange = createDebounceHandler(() => {
-            this.emitListeners();
-        }, 100);
-
         this.triggerPromoInNextTick = () => {
             return createDebounceHandler(() => {
                 this.triggerNextPromo();
@@ -112,7 +120,25 @@ export class Controller {
             // @ts-ignore
             window.promoManager = this;
         }
+
+        if (this.options.config.init.initType === 'timeout') {
+            this.initPromise = delay(this.options.config.init.timeout);
+            this.ensureInit();
+        } else {
+            // this.initPromise = delay(this.options.config.init.timeout);
+            this.ensureInit();
+        }
     }
+
+    ensureInit = async () => {
+        if (this.status === 'initialized') {
+            return;
+        }
+
+        await this.initPromise;
+        this.status = 'initialized';
+        await this.triggerPromoInNextTick();
+    };
 
     dateNow = () => Date.now();
 
@@ -131,6 +157,8 @@ export class Controller {
 
         this.addPromoToActiveQueue(slug);
 
+        await this.ensureInit();
+
         await this.triggerPromoInNextTick();
     };
 
@@ -140,10 +168,12 @@ export class Controller {
         }
 
         this.closePromoWithTimeout(slug, closeActiveTimeout);
-
-        this.addPromoToFinished(slug);
+        this.stateActions.addPromoToFinished(slug);
+        this.stateActions.removeFromQueue(slug);
 
         this.updateProgressInfo(slug);
+
+        this.triggerNextPromo();
     };
 
     cancelPromo = (slug: Nullable<PromoSlug>, closeActiveTimeout = 0) => {
@@ -152,7 +182,6 @@ export class Controller {
         }
 
         this.closePromoWithTimeout(slug, closeActiveTimeout);
-
         this.updateProgressInfo(slug);
     };
 
@@ -161,11 +190,15 @@ export class Controller {
             return;
         }
 
-        this.clearActive(slug);
+        if (this.isActive(slug)) {
+            this.stateActions.clearActive();
+        }
 
         if (this.isPending(slug)) {
-            this.removePromoFromActiveQueue(slug);
+            this.stateActions.removeFromQueue(slug);
         }
+
+        this.emitChange();
     };
 
     getPromoStatus = (slug: PromoSlug): PromoStatus => {
@@ -244,6 +277,7 @@ export class Controller {
         this.updateProgressInfoByType(type, info);
         this.updateProgressInfoByPromo(slug, info);
 
+        this.emitChange();
         this.saveProgress();
     }
 
@@ -364,22 +398,11 @@ export class Controller {
         return this.state.base.activeQueue.includes(slug);
     };
 
-    private clearActive = (slug: PromoSlug) => {
-        if (!this.isActive(slug)) {
-            return;
-        }
-
-        this.state.base.activePromo = null;
-        this.emitChange();
-    };
-
     private activatePromo = (slug: PromoSlug) => {
         this.state.base.activePromo = slug;
-        this.removePromoFromActiveQueue(slug);
+        this.stateActions.removeFromQueue(slug);
 
         this.updateProgressInfo(slug);
-
-        this.emitChange();
     };
 
     private triggerNextPromo = () => {
@@ -432,31 +455,9 @@ export class Controller {
             (a, b) =>
                 (this.helpers.prioritiesBySlug[a] ?? 0) - (this.helpers.prioritiesBySlug[b] ?? 0),
         );
-
-        this.emitChange();
     };
 
-    private removePromoFromActiveQueue = (slug: PromoSlug) => {
-        if (!this.isPending(slug)) {
-            return;
-        }
-
-        this.state.base.activeQueue = this.state.base.activeQueue.filter(
-            (promoSlug: PromoSlug) => promoSlug !== slug,
-        );
-
-        this.emitChange();
-    };
-
-    private addPromoToFinished = (slug: PromoSlug) => {
-        this.assertProgressLoaded();
-
-        this.state.progress.finishedPromos.push(slug);
-
-        this.emitChange();
-    };
-
-    private emitListeners = () => {
+    private emitChange = () => {
         this.state = JSON.parse(JSON.stringify(this.state)) as PromoState;
 
         for (const listener of this.stateListeners) {
@@ -475,8 +476,29 @@ export class Controller {
     };
 
     private closePromo = (slug: PromoSlug) => {
-        this.clearActive(slug);
-        this.removePromoFromActiveQueue(slug);
+        if (!this.isActive(slug)) {
+            return;
+        }
+
+        this.stateActions.clearActive();
+        this.stateActions.removeFromQueue(slug);
         this.triggerNextPromo();
+    };
+
+    // eslint-disable-next-line @typescript-eslint/member-ordering
+    stateActions = {
+        clearActive: () => {
+            this.state.base.activePromo = null;
+        },
+        removeFromQueue: (slug: PromoSlug) => {
+            this.state.base.activeQueue = this.state.base.activeQueue.filter(
+                (promoSlug: PromoSlug) => promoSlug !== slug,
+            );
+        },
+        addPromoToFinished: (slug: PromoSlug) => {
+            this.assertProgressLoaded();
+
+            this.state.progress.finishedPromos.push(slug);
+        },
     };
 }

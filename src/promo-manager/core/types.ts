@@ -2,7 +2,7 @@ import {LoggerOptions} from '../../logger';
 
 export type PromoStatus = 'forbidden' | 'canRun' | 'active' | 'finished' | 'pending';
 export type Priority = 'high';
-export type PromoManagerStatus = 'idle' | 'error' | 'active';
+export type PromoManagerStatus = 'idle' | 'initialized';
 
 export type PromoMeta = Record<string, any>;
 
@@ -22,10 +22,16 @@ export type PromoGroup<Config = PromoMeta> = {
     promos: Promo<Config>[];
 };
 
+export type InitPromoManagerOptions = {
+    initType: 'timeout';
+    timeout: number;
+};
+
 export type PromoOptions = {
     config: {
         promoGroups: PromoGroup[];
         constraints?: Condition[];
+        init?: InitPromoManagerOptions;
     };
     conditionHelpers?: Record<string, ConditionHelper>;
     progressState: Partial<PromoProgressState> | undefined;
