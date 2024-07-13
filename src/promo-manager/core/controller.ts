@@ -52,7 +52,6 @@ export class Controller {
     progressStatePromise?: Promise<Partial<ProgressState>>;
     initPromise: Promise<void> | undefined;
     saveProgress: () => void;
-    triggerPromoInNextTick: () => void;
     logger: Logger;
 
     private status: PromoManagerStatus;
@@ -110,12 +109,6 @@ export class Controller {
             }
         }, 100);
 
-        this.triggerPromoInNextTick = () => {
-            return createDebounceHandler(() => {
-                this.triggerNextPromo();
-            }, 0)();
-        };
-
         if (options.debugMode) {
             // @ts-ignore
             window.promoManager = this;
@@ -137,7 +130,7 @@ export class Controller {
 
         await this.initPromise;
         this.status = 'initialized';
-        await this.triggerPromoInNextTick();
+        await this.triggerNextPromo();
     };
 
     dateNow = () => Date.now();
@@ -159,7 +152,7 @@ export class Controller {
 
         await this.ensureInit();
 
-        await this.triggerPromoInNextTick();
+        await this.triggerNextPromo();
     };
 
     finishPromo = (slug: Nullable<PromoSlug>, closeActiveTimeout = 0) => {
