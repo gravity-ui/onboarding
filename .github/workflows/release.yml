@@ -10,5 +10,6 @@ jobs:
     steps:
     - uses: gravity-ui/release-action@v1
       with:
+        node-version: 20
         github-token: ${{ secrets.GRAVITY_UI_BOT_GITHUB_TOKEN }}
         npm-token: ${{ secrets.GRAVITY_UI_BOT_NPM_TOKEN }}
