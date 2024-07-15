@@ -20,9 +20,14 @@ describe('active promo', () => {
     test('run one promo not from the config', async () => {
         await controller.requestStart('boardPollFake');
 
-        await controller.ensureInit();
-
         expect(controller.state.base.activePromo).toBe(null);
+    });
+
+    it('wait init, then start', async function () {
+        await controller.ensureInit();
+        await controller.requestStart('boardPoll');
+
+        expect(controller.state.base.activePromo).toBe('boardPoll');
     });
 
     it('finish promo -> trigger next', async () => {
@@ -211,7 +216,6 @@ describe('close with timeout', () => {
         expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeDefined();
         expect(controller.state.base.activePromo).toBe(promo);
 
-        // jest.runAllTimers();
         jest.advanceTimersByTime(clearActiveTimeout);
         jest.useRealTimers();
 

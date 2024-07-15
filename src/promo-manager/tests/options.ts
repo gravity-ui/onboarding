@@ -5,6 +5,10 @@ import {pollGroup, pollGroup2, pollWithConditions} from './promoGroups';
 export const testOptions = {
     config: {
         promoGroups: [pollGroup, pollGroup2, pollWithConditions],
+        init: {
+            initType: 'timeout' as const,
+            timeout: 0,
+        },
     },
     progressState: {
         finishedPromos: [],

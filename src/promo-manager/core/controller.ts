@@ -117,9 +117,6 @@ export class Controller {
         if (this.options.config.init.initType === 'timeout') {
             this.initPromise = delay(this.options.config.init.timeout);
             this.ensureInit();
-        } else {
-            // this.initPromise = delay(this.options.config.init.timeout);
-            this.ensureInit();
         }
     }
 
