@@ -186,6 +186,17 @@ describe('preset management', function () {
     });
 
     describe('finish preset', function () {
+        it('finish preset -> add to finished', async function () {
+            const options = getOptions();
+
+            const controller = new Controller(options);
+            await controller.finishPreset('createProject');
+
+            const newProgressState = options.onSave.progress.mock.calls[0][0];
+
+            expect(newProgressState.finishedPresets).toContain('createProject');
+        });
+
         it('finish same preset -> not duplicate', async function () {
             const options = getOptions();
 
@@ -195,7 +206,7 @@ describe('preset management', function () {
 
             const newProgressState = options.onSave.progress.mock.calls[1][0];
 
-            expect(newProgressState.finishedPresets).toContain('createProject');
+            expect(newProgressState.finishedPresets).toEqual(['createProject']);
         });
 
         it('finish preset -> calls enEnd', async function () {
@@ -257,6 +268,20 @@ describe('preset management', function () {
 
             const controller = new Controller(options);
             await controller.passStep('createSprint');
+            await controller.passStep('createIssue');
+
+            const newProgressState = options.onSave.progress.mock.lastCall[0];
+
+            expect(newProgressState.finishedPresets).toContain('createProject');
+        });
+
+        it('pass last steps for NOT active preset -> finish preset', async function () {
+            const options = getOptionsWithHooks(
+                {activePresets: []},
+                {presetPassedSteps: {createProject: []}},
+            );
+
+            const controller = new Controller(options);
             await controller.passStep('createIssue');
 
             const newProgressState = options.onSave.progress.mock.lastCall[0];
