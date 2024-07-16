@@ -264,8 +264,8 @@ export class Controller {
             lastCallTime: Date.now(),
         };
 
-        this.updateProgressInfoByType(type, info);
-        this.updateProgressInfoByPromo(slug, info);
+        this.stateActions.updateProgressInfoByType(type, info);
+        this.stateActions.updateProgressInfoByPromo(slug, info);
 
         this.emitChange();
         this.saveProgress();
@@ -389,7 +389,7 @@ export class Controller {
     };
 
     private activatePromo = (slug: PromoSlug) => {
-        this.state.base.activePromo = slug;
+        this.stateActions.setActivePromo(slug);
         this.stateActions.removeFromQueue(slug);
 
         this.updateProgressInfo(slug);
@@ -409,24 +409,6 @@ export class Controller {
         }
 
         this.activatePromo(nextPromoSlug);
-    };
-
-    private updateProgressInfoByType = (type: PromoGroupSlug, info: ProgressInfoConfig) => {
-        this.assertProgressLoaded();
-
-        this.state.progress.progressInfoByType[type] = {
-            ...this.state.progress.progressInfoByType[type],
-            ...info,
-        };
-    };
-
-    private updateProgressInfoByPromo = (slug: PromoSlug, info: ProgressInfoConfig) => {
-        this.assertProgressLoaded();
-
-        this.state.progress.progressInfoByPromo[slug] = {
-            ...this.state.progress.progressInfoByPromo[slug],
-            ...info,
-        };
     };
 
     private addPromoToActiveQueue = (slug: PromoSlug) => {
@@ -477,6 +459,9 @@ export class Controller {
 
     // eslint-disable-next-line @typescript-eslint/member-ordering
     stateActions = {
+        setActivePromo: (slug: string) => {
+            this.state.base.activePromo = slug;
+        },
         clearActive: () => {
             this.state.base.activePromo = null;
         },
@@ -489,6 +474,22 @@ export class Controller {
             this.assertProgressLoaded();
 
             this.state.progress.finishedPromos.push(slug);
+        },
+        updateProgressInfoByType: (type: PromoGroupSlug, info: ProgressInfoConfig) => {
+            this.assertProgressLoaded();
+
+            this.state.progress.progressInfoByType[type] = {
+                ...this.state.progress.progressInfoByType[type],
+                ...info,
+            };
+        },
+        updateProgressInfoByPromo: (slug: PromoSlug, info: ProgressInfoConfig) => {
+            this.assertProgressLoaded();
+
+            this.state.progress.progressInfoByPromo[slug] = {
+                ...this.state.progress.progressInfoByPromo[slug],
+                ...info,
+            };
         },
     };
 }
