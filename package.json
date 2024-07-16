@@ -65,11 +65,5 @@
     "*.md": [
       "prettier --write"
     ]
-  },
-  "size-limit": [
-    {
-      "path": "src/index.ts",
-      "limit": "11 kB"
-    }
-  ]
+  }
 }

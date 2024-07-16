@@ -1,20 +1,20 @@
-import {createPromoManager} from '../core/index';
-import type {PromoProgressState, PromoOptions, TypePreset} from '../core/types';
+import {createPromoManager} from '../core';
+import type {PromoProgressState, PromoOptions, PromoGroup} from '../core/types';
 
 type CreateSurveyOptions = {
-    preset?: TypePreset;
+    group?: PromoGroup;
     onProgressSave: (state: PromoProgressState) => Promise<any>;
 } & Pick<PromoOptions, 'progressState' | 'getProgressState'>;
 
 export const createSurveyManager = ({
-    preset: surveyPreset,
+    group: surveyGroup,
     progressState,
     getProgressState,
     onProgressSave,
 }: CreateSurveyOptions) => {
     const {controller, usePromoManager, useActivePromo} = createPromoManager({
         config: {
-            presets: surveyPreset ? [surveyPreset] : [],
+            promoGroups: surveyGroup ? [surveyGroup] : [],
         },
         progressState,
         getProgressState,
@@ -23,14 +23,14 @@ export const createSurveyManager = ({
         },
     });
 
-    const surveySlug = surveyPreset?.slug;
+    const surveySlug = surveyGroup?.slug;
 
     const useActiveSurvey = () => {
-        const {promo, preset, metaInfo, finish, cancel, cancelStart, updateProgressInfo} =
+        const {promo, promoGroup, metaInfo, finish, cancel, cancelStart, updateProgressInfo} =
             useActivePromo();
 
         return {
-            active: preset === surveySlug ? promo : null,
+            active: promoGroup === surveySlug ? promo : null,
             config: metaInfo,
             finish,
             cancel,

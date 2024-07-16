@@ -1,7 +1,7 @@
 import type {BaseState, InitOptions, ProgressState, ReachElementParams} from './types';
 import {HintStore} from './hints/hintStore';
-import {createLogger} from './logger';
-import {CommonPreset, EventTypes, PresetStatus} from './types';
+import {createLogger, Logger} from './logger';
+import {CommonPreset, EventsMap, EventTypes, PresetStatus} from './types';
 import {createDebounceHandler} from './debounce';
 import {EventEmitter} from './event-emitter';
 
@@ -62,9 +62,9 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     closedHints: Set<Steps>;
     reachedElements: Map<Steps, HTMLElement>;
     hintStore: HintStore<HintParams, Presets, Steps>;
-    logger: ReturnType<typeof createLogger>;
+    logger: Logger;
     passStepListeners: Set<Listener>;
-    events: EventEmitter<typeof this>;
+    events: EventEmitter<EventTypes, EventsMap, any>;
 
     saveBaseState: () => void;
     saveProgressState: () => void;

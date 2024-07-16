@@ -1,10 +1,10 @@
 import {createDebounceHandler} from '../../debounce';
-import {createLogger} from '../../logger';
+import {createLogger, Logger} from '../../logger';
 import type {
     Conditions,
     Helpers,
     Nullable,
-    PresetSlug,
+    PromoGroupSlug,
     ProgressInfoConfig,
     Promo,
     PromoBaseState as BaseState,
@@ -14,9 +14,9 @@ import type {
     PromoSlug,
     PromoState,
     PromoStatus,
-    TypePreset,
+    PromoGroup,
 } from './types';
-import {ConditionHelper} from './types';
+import {ConditionHelper, InitPromoManagerOptions} from './types';
 import {getConditions} from './utils/getConditions';
 import {getHelpers} from './utils/getHelpers';
 import {checkCondition} from './condition/condition-checker';
@@ -31,8 +31,17 @@ const defaultProgressState: ProgressState = {
     progressInfoByPromo: {},
 };
 
+const defaultInitOptions: InitPromoManagerOptions = {
+    initType: 'timeout',
+    timeout: 0,
+};
+
+const delay = (timeout: number) =>
+    new Promise<void>((resolve) => {
+        setTimeout(resolve, timeout);
+    });
+
 export class Controller {
-    status: PromoManagerStatus;
     options: PromoOptions;
     state: PromoState;
     conditions: Conditions;
@@ -41,16 +50,16 @@ export class Controller {
     stateListeners: Set<Listener>;
 
     progressStatePromise?: Promise<Partial<ProgressState>>;
-
-    emitChange: () => void;
+    initPromise: Promise<void> | undefined;
     saveProgress: () => void;
-    triggerPromoInNextTick: (updateProgressInfo?: boolean) => void;
-    dateNow: () => number;
+    logger: Logger;
 
-    logger: ReturnType<typeof createLogger>;
+    private status: PromoManagerStatus;
 
     constructor(options: PromoOptions) {
         this.options = options;
+        this.options.config.init = options.config.init ?? defaultInitOptions;
+
         this.status = 'idle';
 
         this.state = JSON.parse(
@@ -80,9 +89,9 @@ export class Controller {
             });
         }
 
-        this.conditions = getConditions(options.config.presets);
+        this.conditions = getConditions(options.config.promoGroups);
 
-        this.helpers = getHelpers(options.config.presets);
+        this.helpers = getHelpers(options.config.promoGroups);
 
         this.conditionHelpers = {
             ...defaultConditionHelpers,
@@ -100,25 +109,30 @@ export class Controller {
             }
         }, 100);
 
-        this.emitChange = createDebounceHandler(() => {
-            this.emitListeners();
-        }, 100);
-
-        this.triggerPromoInNextTick = (updateProgressInfo?: boolean) => {
-            return createDebounceHandler(() => {
-                this.triggerNextPromo(updateProgressInfo);
-            }, 0)();
-        };
-
-        this.dateNow = () => Date.now();
-
         if (options.debugMode) {
             // @ts-ignore
             window.promoManager = this;
         }
+
+        if (this.options.config.init.initType === 'timeout') {
+            this.initPromise = delay(this.options.config.init.timeout);
+            this.ensureInit();
+        }
     }
 
-    requestStart = async (slug: Nullable<PromoSlug>, updateProgressInfo = false) => {
+    ensureInit = async () => {
+        if (this.status === 'initialized') {
+            return;
+        }
+
+        await this.initPromise;
+        this.status = 'initialized';
+        await this.triggerNextPromo();
+    };
+
+    dateNow = () => Date.now();
+
+    requestStart = async (slug: Nullable<PromoSlug>) => {
         if (!slug) {
             return;
         }
@@ -133,13 +147,9 @@ export class Controller {
 
         this.addPromoToActiveQueue(slug);
 
-        await this.triggerPromoInNextTick(updateProgressInfo);
-    };
+        await this.ensureInit();
 
-    startPromoImmediately = (slug: PromoSlug) => {
-        if (this.isAbleToRun(slug) || this.isPending(slug)) {
-            this.activatePromo(slug);
-        }
+        await this.triggerNextPromo();
     };
 
     finishPromo = (slug: Nullable<PromoSlug>, closeActiveTimeout = 0) => {
@@ -148,26 +158,21 @@ export class Controller {
         }
 
         this.closePromoWithTimeout(slug, closeActiveTimeout);
-
-        this.addPromoToFinished(slug);
+        this.stateActions.addPromoToFinished(slug);
+        this.stateActions.removeFromQueue(slug);
 
         this.updateProgressInfo(slug);
+
+        this.triggerNextPromo();
     };
 
-    cancelPromo = (
-        slug: Nullable<PromoSlug>,
-        updateProgressInfo = false,
-        closeActiveTimeout = 0,
-    ) => {
+    cancelPromo = (slug: Nullable<PromoSlug>, closeActiveTimeout = 0) => {
         if (!slug) {
             return;
         }
 
         this.closePromoWithTimeout(slug, closeActiveTimeout);
-
-        if (updateProgressInfo) {
-            this.updateProgressInfo(slug);
-        }
+        this.updateProgressInfo(slug);
     };
 
     cancelStart = (slug: Nullable<PromoSlug>) => {
@@ -175,11 +180,15 @@ export class Controller {
             return;
         }
 
-        this.clearActive(slug);
+        if (this.isActive(slug)) {
+            this.stateActions.clearActive();
+        }
 
         if (this.isPending(slug)) {
-            this.removePromoFromActiveQueue(slug);
+            this.stateActions.removeFromQueue(slug);
         }
+
+        this.emitChange();
     };
 
     getPromoStatus = (slug: PromoSlug): PromoStatus => {
@@ -206,28 +215,28 @@ export class Controller {
         return 'canRun';
     };
 
-    getFirstAvailablePromoByType = (slug: PresetSlug): Nullable<PromoSlug> => {
-        const preset = Object.values(this.options.config.presets).find(
-            (typePreset: TypePreset<unknown>) => typePreset.slug === slug,
+    getFirstAvailablePromoByType = (slug: PromoGroupSlug): Nullable<PromoSlug> => {
+        const promoGroup = Object.values(this.options.config.promoGroups).find(
+            (currentPromoGroup: PromoGroup<unknown>) => currentPromoGroup.slug === slug,
         );
 
-        if (!preset) {
+        if (!promoGroup) {
             return null;
         }
 
         return (
-            preset.promos.find(
+            promoGroup.promos.find(
                 (promo: Promo) => this.isAbleToRun(promo.slug) || this.isPending(promo.slug),
             )?.slug ?? null
         );
     };
 
-    getActivePromo = (presetSlug?: PresetSlug): Nullable<PromoSlug> => {
+    getActivePromo = (promoType?: PromoGroupSlug): Nullable<PromoSlug> => {
         const activePromo = this.state.base.activePromo;
 
-        if (!presetSlug) return activePromo;
+        if (!promoType) return activePromo;
 
-        return this.getTypeBySlug(activePromo) === presetSlug ? activePromo : null;
+        return this.getGroupBySlug(activePromo) === promoType ? activePromo : null;
     };
 
     subscribe = (listener: Listener) => {
@@ -245,7 +254,7 @@ export class Controller {
 
         this.assertProgressLoaded();
 
-        const type = this.getTypeBySlug(slug);
+        const type = this.getGroupBySlug(slug);
 
         if (!type) {
             return;
@@ -255,9 +264,10 @@ export class Controller {
             lastCallTime: Date.now(),
         };
 
-        this.updateProgressInfoByType(type, info);
-        this.updateProgressInfoByPromo(slug, info);
+        this.stateActions.updateProgressInfoByType(type, info);
+        this.stateActions.updateProgressInfoByPromo(slug, info);
 
+        this.emitChange();
         this.saveProgress();
     }
 
@@ -269,7 +279,11 @@ export class Controller {
     }
 
     checkPromoConditions = (slug: PromoSlug): boolean => {
-        const type = this.getTypeBySlug(slug);
+        if (!this.checkConstraints()) {
+            return false;
+        }
+
+        const type = this.getGroupBySlug(slug);
 
         if (!type) {
             return false;
@@ -308,7 +322,7 @@ export class Controller {
         return this.helpers.metaBySlug[slug] || {};
     };
 
-    getTypeBySlug = (slug: Nullable<PromoSlug>): Nullable<PresetSlug> => {
+    getGroupBySlug = (slug: Nullable<PromoSlug>): Nullable<PromoGroupSlug> => {
         if (!slug) {
             return null;
         }
@@ -374,27 +388,14 @@ export class Controller {
         return this.state.base.activeQueue.includes(slug);
     };
 
-    private clearActive = (slug: PromoSlug) => {
-        if (!this.isActive(slug)) {
-            return;
-        }
+    private activatePromo = (slug: PromoSlug) => {
+        this.stateActions.setActivePromo(slug);
+        this.stateActions.removeFromQueue(slug);
 
-        this.state.base.activePromo = null;
-        this.emitChange();
+        this.updateProgressInfo(slug);
     };
 
-    private activatePromo = (slug: PromoSlug, updateProgressInfo = false) => {
-        this.state.base.activePromo = slug;
-        this.removePromoFromActiveQueue(slug);
-
-        if (updateProgressInfo) {
-            this.updateProgressInfo(slug);
-        }
-
-        this.emitChange();
-    };
-
-    private triggerNextPromo = (updateProgressInfo = false) => {
+    private triggerNextPromo = () => {
         if (this.state.base.activeQueue.length === 0 || this.state.base.activePromo !== null) {
             return;
         }
@@ -402,31 +403,12 @@ export class Controller {
         const nextPromoSlug = this.state.base.activeQueue.find((slug) =>
             this.checkPromoConditions(slug),
         );
-        const compliesWithConstraints = this.checkConstraints();
 
-        if (!nextPromoSlug || !compliesWithConstraints) {
+        if (!nextPromoSlug) {
             return;
         }
 
-        this.activatePromo(nextPromoSlug, updateProgressInfo);
-    };
-
-    private updateProgressInfoByType = (type: PresetSlug, info: ProgressInfoConfig) => {
-        this.assertProgressLoaded();
-
-        this.state.progress.progressInfoByType[type] = {
-            ...this.state.progress.progressInfoByType[type],
-            ...info,
-        };
-    };
-
-    private updateProgressInfoByPromo = (slug: PromoSlug, info: ProgressInfoConfig) => {
-        this.assertProgressLoaded();
-
-        this.state.progress.progressInfoByPromo[slug] = {
-            ...this.state.progress.progressInfoByPromo[slug],
-            ...info,
-        };
+        this.activatePromo(nextPromoSlug);
     };
 
     private addPromoToActiveQueue = (slug: PromoSlug) => {
@@ -445,31 +427,9 @@ export class Controller {
             (a, b) =>
                 (this.helpers.prioritiesBySlug[a] ?? 0) - (this.helpers.prioritiesBySlug[b] ?? 0),
         );
-
-        this.emitChange();
     };
 
-    private removePromoFromActiveQueue = (slug: PromoSlug) => {
-        if (!this.isPending(slug)) {
-            return;
-        }
-
-        this.state.base.activeQueue = this.state.base.activeQueue.filter(
-            (promoSlug: PromoSlug) => promoSlug !== slug,
-        );
-
-        this.emitChange();
-    };
-
-    private addPromoToFinished = (slug: PromoSlug) => {
-        this.assertProgressLoaded();
-
-        this.state.progress.finishedPromos.push(slug);
-
-        this.emitChange();
-    };
-
-    private emitListeners = () => {
+    private emitChange = () => {
         this.state = JSON.parse(JSON.stringify(this.state)) as PromoState;
 
         for (const listener of this.stateListeners) {
@@ -488,8 +448,48 @@ export class Controller {
     };
 
     private closePromo = (slug: PromoSlug) => {
-        this.clearActive(slug);
-        this.removePromoFromActiveQueue(slug);
+        if (!this.isActive(slug)) {
+            return;
+        }
+
+        this.stateActions.clearActive();
+        this.stateActions.removeFromQueue(slug);
         this.triggerNextPromo();
+    };
+
+    // eslint-disable-next-line @typescript-eslint/member-ordering
+    stateActions = {
+        setActivePromo: (slug: string) => {
+            this.state.base.activePromo = slug;
+        },
+        clearActive: () => {
+            this.state.base.activePromo = null;
+        },
+        removeFromQueue: (slug: PromoSlug) => {
+            this.state.base.activeQueue = this.state.base.activeQueue.filter(
+                (promoSlug: PromoSlug) => promoSlug !== slug,
+            );
+        },
+        addPromoToFinished: (slug: PromoSlug) => {
+            this.assertProgressLoaded();
+
+            this.state.progress.finishedPromos.push(slug);
+        },
+        updateProgressInfoByType: (type: PromoGroupSlug, info: ProgressInfoConfig) => {
+            this.assertProgressLoaded();
+
+            this.state.progress.progressInfoByType[type] = {
+                ...this.state.progress.progressInfoByType[type],
+                ...info,
+            };
+        },
+        updateProgressInfoByPromo: (slug: PromoSlug, info: ProgressInfoConfig) => {
+            this.assertProgressLoaded();
+
+            this.state.progress.progressInfoByPromo[slug] = {
+                ...this.state.progress.progressInfoByPromo[slug],
+                ...info,
+            };
+        },
     };
 }

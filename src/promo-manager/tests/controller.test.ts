@@ -1,7 +1,7 @@
 import {Controller} from '../core/controller';
 
 import {testOptions} from './options';
-import {testMetaInfo} from './presets';
+import {testMetaInfo} from './promoGroups';
 import {waitForNextTick} from './utils';
 
 describe('active promo', () => {
@@ -12,37 +12,36 @@ describe('active promo', () => {
     });
 
     test('run one promo', async () => {
-        controller.requestStart('boardPoll');
-
-        await waitForNextTick();
+        await controller.requestStart('boardPoll');
 
         expect(controller.state.base.activePromo).toBe('boardPoll');
     });
 
     test('run one promo not from the config', async () => {
-        controller.requestStart('boardPollFake');
-
-        await waitForNextTick();
+        await controller.requestStart('boardPollFake');
 
         expect(controller.state.base.activePromo).toBe(null);
     });
 
+    it('wait init, then start', async function () {
+        await controller.ensureInit();
+        await controller.requestStart('boardPoll');
+
+        expect(controller.state.base.activePromo).toBe('boardPoll');
+    });
+
     it('finish promo -> trigger next', async () => {
-        controller.requestStart('boardPoll');
-        controller.requestStart('ganttPoll');
+        await controller.requestStart('boardPoll');
+        await controller.requestStart('ganttPoll');
 
-        await waitForNextTick();
-
-        controller.finishPromo('boardPoll');
+        await controller.finishPromo('boardPoll');
 
         expect(controller.state.base.activePromo).toBe('ganttPoll');
     });
 
     it('run 2 duplicates -> finish promo -> not trigger next', async () => {
-        controller.requestStart('boardPoll');
-        controller.requestStart('boardPoll');
-
-        await waitForNextTick();
+        await controller.requestStart('boardPoll');
+        await controller.requestStart('boardPoll');
 
         controller.finishPromo('boardPoll');
 
@@ -57,41 +56,45 @@ describe('trigger subscribe', () => {
         controller = new Controller(testOptions);
     });
 
-    it('request promo -> no callback', () => {
+    it('request start -> 1 update', async () => {
         const callback = jest.fn();
 
         controller.subscribe(callback);
 
-        controller.requestStart('boardPoll');
-
-        expect(callback).toHaveBeenCalledTimes(0);
-    });
-
-    it('request promo and wait for next tick -> 1 update', async () => {
-        const callback = jest.fn();
-
-        controller.subscribe(callback);
-
-        controller.requestStart('boardPoll');
-
-        await waitForNextTick();
-        // wait for trigger next promo and debounce
-        await waitForNextTick(100);
+        await controller.requestStart('boardPoll');
 
         expect(callback).toHaveBeenCalledTimes(1);
     });
 
-    it('start and finish immediately -> 1 update', async () => {
-        const callback = jest.fn();
+    it('finish -> 1 update', async () => {
+        await controller.requestStart('boardPoll');
 
+        const callback = jest.fn();
         controller.subscribe(callback);
 
-        controller.requestStart('boardPoll');
-        controller.finishPromo('boardPoll');
+        await controller.finishPromo('boardPoll');
 
-        await waitForNextTick();
-        // wait for trigger next promo and debounce
-        await waitForNextTick(100);
+        expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    it('cancel -> 1 update', async () => {
+        await controller.requestStart('boardPoll');
+
+        const callback = jest.fn();
+        controller.subscribe(callback);
+
+        await controller.cancelPromo('boardPoll');
+
+        expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    it('cancelStart -> 1 update', async () => {
+        await controller.requestStart('boardPoll');
+
+        const callback = jest.fn();
+        controller.subscribe(callback);
+
+        await controller.cancelStart('boardPoll');
 
         expect(callback).toHaveBeenCalledTimes(1);
     });
@@ -101,18 +104,25 @@ describe('trigger subscribe', () => {
 
         controller.subscribe(callback);
 
-        controller.requestStart('boardPoll');
-        controller.requestStart('ganttPoll');
-
-        await waitForNextTick();
-        // wait for trigger next promo and debounce
-        await waitForNextTick(100);
-
-        controller.finishPromo('boardPoll');
-
-        await waitForNextTick(100);
+        await controller.requestStart('boardPoll');
+        await controller.finishPromo('boardPoll');
 
         expect(callback).toHaveBeenCalledTimes(2);
+    });
+
+    it('start, finish and has next -> 3 updates', async () => {
+        const callback = jest.fn();
+
+        controller.subscribe(callback);
+
+        const promise1 = controller.requestStart('boardPoll');
+        const promise2 = controller.requestStart('ganttPoll');
+
+        await Promise.all([promise1, promise2]);
+
+        await controller.finishPromo('boardPoll');
+
+        expect(callback).toHaveBeenCalledTimes(3);
     });
 
     it('start and cancel -> 2 updates', async () => {
@@ -120,52 +130,25 @@ describe('trigger subscribe', () => {
 
         controller.subscribe(callback);
 
-        controller.requestStart('boardPoll');
-
-        await waitForNextTick();
-        // wait for trigger next promo and debounce
-        await waitForNextTick(100);
-
-        controller.cancelPromo('boardPoll');
-
-        await waitForNextTick(100);
+        await controller.requestStart('boardPoll');
+        await controller.cancelPromo('boardPoll');
 
         expect(callback).toHaveBeenCalledTimes(2);
     });
 
-    it('double start and cancel -> 2 updates', async () => {
+    it('double start and cancel -> 3 updates', async () => {
         const callback = jest.fn();
 
         controller.subscribe(callback);
 
-        controller.requestStart('boardPoll');
-        controller.requestStart('ganttPoll');
+        const promise1 = controller.requestStart('boardPoll');
+        const promise2 = controller.requestStart('ganttPoll');
 
-        await waitForNextTick();
-        // wait for trigger next promo and debounce
-        await waitForNextTick(100);
+        await Promise.all([promise1, promise2]);
 
-        controller.cancelPromo('boardPoll');
+        await controller.cancelPromo('boardPoll');
 
-        await waitForNextTick(100);
-
-        expect(callback).toHaveBeenCalledTimes(2);
-    });
-
-    it('double start and cancel without next tick -> 1 update', async () => {
-        const callback = jest.fn();
-
-        controller.subscribe(callback);
-
-        controller.requestStart('boardPoll');
-        controller.requestStart('ganttPoll');
-        controller.cancelPromo('boardPoll');
-
-        await waitForNextTick();
-        // wait for trigger next promo and debounce
-        await waitForNextTick(100);
-
-        expect(callback).toHaveBeenCalledTimes(1);
+        expect(callback).toHaveBeenCalledTimes(3);
     });
 });
 
@@ -179,13 +162,6 @@ describe('update last call info', () => {
         await controller.requestStart(promo);
     });
 
-    it('activate => not save time', () => {
-        expect(
-            controller.state.progress?.progressInfoByType[promoType]?.lastCallTime,
-        ).toBeUndefined();
-        expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeUndefined();
-    });
-
     it('finish and save time', () => {
         controller.finishPromo(promo);
 
@@ -196,21 +172,12 @@ describe('update last call info', () => {
     });
 
     it('cancel and save time', () => {
-        controller.cancelPromo(promo, true);
+        controller.cancelPromo(promo);
 
         expect(
             controller.state.progress?.progressInfoByType[promoType]?.lastCallTime,
         ).toBeDefined();
         expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeDefined();
-    });
-
-    it('cancel and not save time', () => {
-        controller.cancelPromo(promo);
-
-        expect(
-            controller.state.progress?.progressInfoByType[promoType]?.lastCallTime,
-        ).toBeUndefined();
-        expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeUndefined();
     });
 });
 
@@ -222,9 +189,7 @@ describe('close with timeout', () => {
 
     beforeEach(async () => {
         controller = new Controller(testOptions);
-        controller.requestStart(promo);
-
-        await waitForNextTick();
+        await controller.requestStart(promo);
     });
 
     it('finish and save time', async () => {
@@ -242,7 +207,8 @@ describe('close with timeout', () => {
     });
 
     it('cancel and save time', async () => {
-        controller.cancelPromo(promo, true, clearActiveTimeout);
+        jest.useFakeTimers();
+        controller.cancelPromo(promo, clearActiveTimeout);
 
         expect(
             controller.state.progress?.progressInfoByType[promoType]?.lastCallTime,
@@ -250,21 +216,8 @@ describe('close with timeout', () => {
         expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeDefined();
         expect(controller.state.base.activePromo).toBe(promo);
 
-        await waitForNextTick(clearActiveTimeout);
-
-        expect(controller.state.base.activePromo).toBe(null);
-    });
-
-    it('cancel and not save time', async () => {
-        controller.cancelPromo(promo, false, clearActiveTimeout);
-
-        expect(
-            controller.state.progress?.progressInfoByType[promoType]?.lastCallTime,
-        ).toBeUndefined();
-        expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeUndefined();
-        expect(controller.state.base.activePromo).toBe(promo);
-
-        await waitForNextTick(clearActiveTimeout);
+        jest.advanceTimersByTime(clearActiveTimeout);
+        jest.useRealTimers();
 
         expect(controller.state.base.activePromo).toBe(null);
     });
@@ -278,7 +231,7 @@ describe('meta info', () => {
         controller = new Controller(testOptions);
         controller.requestStart(promo);
 
-        await waitForNextTick();
+        await controller.ensureInit();
     });
 
     it('promo with meta info', async () => {

@@ -1,7 +1,7 @@
 import {useMemo, useSyncExternalStore} from 'react';
 
 import type {Controller} from './controller';
-import type {PresetSlug, PromoSlug} from './types';
+import type {PromoGroupSlug, PromoSlug} from './types';
 
 export function getHooks(controller: Controller) {
     const usePromoManager = (promo: PromoSlug) => {
@@ -9,7 +9,7 @@ export function getHooks(controller: Controller) {
             controller.getPromoStatus(promo),
         );
 
-        const callbacks = useMemo(
+        return useMemo(
             () => ({
                 status,
                 requestStart: () => {
@@ -19,58 +19,52 @@ export function getHooks(controller: Controller) {
                 },
                 finish: (closeActiveTimeout?: number) =>
                     controller.finishPromo(promo, closeActiveTimeout),
-                cancel: (updateProgressInfo?: boolean, closeActiveTimeout?: number) =>
-                    controller.cancelPromo(promo, updateProgressInfo, closeActiveTimeout),
+                cancel: (closeActiveTimeout?: number) =>
+                    controller.cancelPromo(promo, closeActiveTimeout),
                 cancelStart: () => controller.cancelStart(promo),
                 updateProgressInfo: () => controller.updateProgressInfo(promo),
             }),
             [promo, status],
         );
-
-        return callbacks;
     };
 
-    const useActivePromo = (presetSlug?: PresetSlug) => {
+    const useActivePromo = (promoGroupSlug?: PromoGroupSlug) => {
         const promo = useSyncExternalStore(controller.subscribe, () =>
-            controller.getActivePromo(presetSlug),
+            controller.getActivePromo(promoGroupSlug),
         );
 
-        const callbacks = useMemo(
+        return useMemo(
             () => ({
                 promo,
-                preset: controller.getTypeBySlug(promo),
+                promoGroup: controller.getGroupBySlug(promo),
                 metaInfo: controller.getPromoMeta(promo),
                 finish: (closeActiveTimeout?: number) =>
                     controller.finishPromo(promo, closeActiveTimeout),
-                cancel: (updateProgressInfo?: boolean, closeActiveTimeout?: number) =>
-                    controller.cancelPromo(promo, updateProgressInfo, closeActiveTimeout),
+                cancel: (closeActiveTimeout?: number) =>
+                    controller.cancelPromo(promo, closeActiveTimeout),
                 cancelStart: () => controller.cancelStart(promo),
                 updateProgressInfo: () => controller.updateProgressInfo(promo),
             }),
             [promo],
         );
-
-        return callbacks;
     };
 
-    const useAvailablePromo = (type: PresetSlug) => {
+    const useAvailablePromo = (type: PromoGroupSlug) => {
         const promo = useSyncExternalStore(controller.subscribe, () =>
             controller.getFirstAvailablePromoByType(type),
         );
 
-        const callbacks = useMemo(
+        return useMemo(
             () => ({
                 promo,
                 requestStart: () => controller.requestStart(promo),
                 finish: (closeActiveTimeout?: number) =>
                     controller.finishPromo(promo, closeActiveTimeout),
-                cancel: (updateProgressInfo?: boolean, closeActiveTimeout?: number) =>
-                    controller.cancelPromo(promo, updateProgressInfo, closeActiveTimeout),
+                cancel: (closeActiveTimeout?: number) =>
+                    controller.cancelPromo(promo, closeActiveTimeout),
             }),
             [promo],
         );
-
-        return callbacks;
     };
 
     return {

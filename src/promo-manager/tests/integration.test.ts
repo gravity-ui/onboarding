@@ -1,6 +1,6 @@
 import {Controller} from '../core/controller';
 import {testOptions} from './options';
-import {pollPreset2, pollWithConditions} from './presets';
+import {pollGroup2, pollWithConditions} from './promoGroups';
 import dayjs from 'dayjs';
 import {LimitFrequency} from '../core/condition/condition-helpers';
 import {PromoProgressState} from '../core/types';
@@ -17,22 +17,22 @@ describe('periodic runs', function () {
     const options = {
         ...testOptions,
         config: {
-            presets: [pollWithConditions],
+            promoGroups: [pollWithConditions],
         },
     };
 
     it('cancel promo and request after 2 months -> show again', async () => {
         const controller = new Controller(options);
 
-        await controller.requestStart('every2Months', true);
+        await controller.requestStart('every2Months');
         controller.cancelPromo('every2Months');
-        await controller.requestStart('every2Months', true);
+        await controller.requestStart('every2Months');
 
         expect(controller.state.base.activePromo).toBe(null);
 
         controller.dateNow = datePlusMonthsCallback(2);
 
-        await controller.requestStart('every2Months', true);
+        await controller.requestStart('every2Months');
 
         expect(controller.state.base.activePromo).toBe('every2Months');
     });
@@ -40,16 +40,16 @@ describe('periodic runs', function () {
     it('finish promo and request after 2 months -> not show again', async () => {
         const controller = new Controller(options);
 
-        await controller.requestStart('every2Months', true);
+        await controller.requestStart('every2Months');
 
         controller.finishPromo('every2Months');
-        await controller.requestStart('every2Months', true);
+        await controller.requestStart('every2Months');
 
         expect(controller.state.base.activePromo).toBe(null);
 
         controller.dateNow = datePlusMonthsCallback(2);
 
-        await controller.requestStart('every2Months', true);
+        await controller.requestStart('every2Months');
 
         expect(controller.state.base.activePromo).toBe(null);
     });
@@ -67,7 +67,7 @@ it('LimitFrequency', async function () {
     };
     const controller = new Controller({
         config: {
-            presets: [pollPreset2],
+            promoGroups: [pollGroup2],
             constraints: [
                 LimitFrequency({
                     slugs: ['boardPoll2', 'ganttPoll2'],
@@ -83,7 +83,7 @@ it('LimitFrequency', async function () {
     });
     controller.dateNow = () => new Date('07-15-2024').valueOf();
 
-    await controller.requestStart('ganttPoll2', true);
+    await controller.requestStart('ganttPoll2');
 
     expect(controller.state.base.activePromo).toBe(null);
 });

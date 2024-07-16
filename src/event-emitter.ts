@@ -1,6 +1,10 @@
-import {EventListener, EventsMap, EventTypes} from './types';
+import {EventListener} from './types';
 
-export class EventEmitter<Arg> {
+export class EventEmitter<
+    EventTypes extends string,
+    EventsMap extends {[P in EventTypes]: any},
+    Arg,
+> {
     map: Record<string, Set<any>> = {};
 
     extraArg?: Arg;

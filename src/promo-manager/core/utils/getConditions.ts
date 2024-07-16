@@ -1,15 +1,15 @@
-import type {Conditions, Presets} from '../types';
+import type {Conditions, PromoGroup} from '../types';
 
-export const getConditions = (presets: Presets): Conditions => {
+export const getConditions = (groups: PromoGroup[]): Conditions => {
     const conditions: Conditions = {
         typeConditions: {},
         promoConditions: {},
     };
 
-    for (const preset of presets) {
-        conditions.typeConditions[preset.slug] = preset.conditions ?? [];
+    for (const group of groups) {
+        conditions.typeConditions[group.slug] = group.conditions ?? [];
 
-        for (const promo of preset.promos) {
+        for (const promo of group.promos) {
             conditions.promoConditions[promo.slug] = promo.conditions ?? [];
         }
     }

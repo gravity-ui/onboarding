@@ -1,7 +1,7 @@
 import type {MutableRefObject} from 'react';
 import type {ShowHintParams} from '../types';
 import {EventEmitter} from '../event-emitter';
-import {EventListener} from '../types';
+import {EventListener, EventsMap, EventTypes} from '../types';
 
 export type HintState<HintParams, Preset extends string, Steps extends string> = {
     anchorRef: MutableRefObject<HTMLElement | null>;
@@ -16,9 +16,9 @@ export class HintStore<HintParams, Preset extends string, Steps extends string> 
         hint: undefined,
     };
 
-    emitter: EventEmitter<any>;
+    emitter: EventEmitter<EventTypes, EventsMap, any>;
 
-    constructor(emitter: EventEmitter<any>) {
+    constructor(emitter: EventEmitter<EventTypes, EventsMap, any>) {
         this.emitter = emitter;
     }
 

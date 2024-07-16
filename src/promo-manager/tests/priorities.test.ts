@@ -1,22 +1,21 @@
 import {Controller} from '../core/controller';
 
 import {testOptions} from './options';
-import {waitForNextTick} from './utils';
 
-test('priorities in one preset', async () => {
+test('priorities in one group', async () => {
     const controller = new Controller(testOptions);
 
     controller.requestStart('ganttPoll');
     controller.requestStart('taskPoll');
     controller.requestStart('boardPoll');
 
-    await waitForNextTick();
+    await controller.ensureInit();
 
     expect(controller.state.base.activePromo).toBe('boardPoll');
     expect(controller.state.base.activeQueue).toEqual(['ganttPoll', 'taskPoll']);
 });
 
-test('priorities in two presets', async () => {
+test('priorities in two groups', async () => {
     const controller = new Controller(testOptions);
 
     controller.requestStart('ganttPoll2');
@@ -27,7 +26,7 @@ test('priorities in two presets', async () => {
     controller.requestStart('taskPoll');
     controller.requestStart('boardPoll');
 
-    await waitForNextTick();
+    await controller.ensureInit();
 
     expect(controller.state.base.activePromo).toBe('boardPoll');
     expect(controller.state.base.activeQueue).toEqual([
@@ -39,7 +38,7 @@ test('priorities in two presets', async () => {
     ]);
 });
 
-test('hight priority in two presets', async () => {
+test('high priority in two groups', async () => {
     const controller = new Controller(testOptions);
 
     controller.requestStart('ganttPoll2');
@@ -51,7 +50,7 @@ test('hight priority in two presets', async () => {
     controller.requestStart('taskPoll');
     controller.requestStart('boardPoll');
 
-    await waitForNextTick();
+    await controller.ensureInit();
 
     expect(controller.state.base.activePromo).toBe('hightPoll2');
     expect(controller.state.base.activeQueue).toEqual([

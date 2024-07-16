@@ -3,7 +3,7 @@ import {Controller} from '../core/controller';
 import {testOptions} from './options';
 
 it('promo with NO condition -> runs', async function () {
-    const presetWithNoCondition = {
+    const groupWithNoCondition = {
         slug: 'noConditionType',
         promos: [
             {
@@ -12,15 +12,18 @@ it('promo with NO condition -> runs', async function () {
             },
         ],
     };
-    const controller = new Controller({...testOptions, config: {presets: [presetWithNoCondition]}});
+    const controller = new Controller({
+        ...testOptions,
+        config: {promoGroups: [groupWithNoCondition]},
+    });
 
-    await controller.requestStart('noConditionPromo', true);
+    await controller.requestStart('noConditionPromo');
 
     expect(controller.state.base.activePromo).toBe('noConditionPromo');
 });
 
 it('promo with false condition -> dont run', async function () {
-    const presetWithFalseCondition = {
+    const groupWithFalseCondition = {
         slug: 'someConditionType',
         promos: [
             {
@@ -31,10 +34,10 @@ it('promo with false condition -> dont run', async function () {
     };
     const controller = new Controller({
         ...testOptions,
-        config: {presets: [presetWithFalseCondition]},
+        config: {promoGroups: [groupWithFalseCondition]},
     });
 
-    await controller.requestStart('someConditionPromo', true);
+    await controller.requestStart('someConditionPromo');
 
     expect(controller.state.base.activePromo).toBe(null);
 });
@@ -44,7 +47,7 @@ describe('json conditions', function () {
         const controller = new Controller({
             ...testOptions,
             config: {
-                presets: [
+                promoGroups: [
                     {
                         slug: 'someType',
                         promos: [
@@ -65,7 +68,7 @@ describe('json conditions', function () {
             },
         });
 
-        await controller.requestStart('someSlug', true);
+        await controller.requestStart('someSlug');
 
         expect(controller.state.base.activePromo).toBe('someSlug');
     });
@@ -75,7 +78,7 @@ describe('json conditions', function () {
         const controller = new Controller({
             ...testOptions,
             config: {
-                presets: [
+                promoGroups: [
                     {
                         slug: 'someType',
                         promos: [
@@ -97,7 +100,7 @@ describe('json conditions', function () {
             },
         });
 
-        await controller.requestStart('someSlug', true);
+        await controller.requestStart('someSlug');
 
         expect(mock).toHaveBeenCalledWith('someParam');
     });
@@ -106,7 +109,7 @@ describe('json conditions', function () {
         const controller = new Controller({
             ...testOptions,
             config: {
-                presets: [
+                promoGroups: [
                     {
                         slug: 'someType',
                         promos: [
@@ -127,7 +130,7 @@ describe('json conditions', function () {
             },
         });
 
-        await controller.requestStart('someSlug', true);
+        await controller.requestStart('someSlug');
 
         expect(controller.state.base.activePromo).toBe(null);
     });

@@ -2,12 +2,12 @@ import {LoggerOptions} from '../../logger';
 
 export type PromoStatus = 'forbidden' | 'canRun' | 'active' | 'finished' | 'pending';
 export type Priority = 'high';
-export type PromoManagerStatus = 'idle' | 'error' | 'active';
+export type PromoManagerStatus = 'idle' | 'initialized';
 
 export type PromoMeta = Record<string, any>;
 
 export type PromoSlug = string;
-export type PresetSlug = string;
+export type PromoGroupSlug = string;
 
 export type Promo<T = PromoMeta> = {
     slug: PromoSlug;
@@ -16,18 +16,22 @@ export type Promo<T = PromoMeta> = {
     meta?: T;
 };
 
-export type TypePreset<Config = PromoMeta> = {
-    slug: PresetSlug;
+export type PromoGroup<Config = PromoMeta> = {
+    slug: PromoGroupSlug;
     conditions?: Condition[];
     promos: Promo<Config>[];
 };
 
-export type Presets = TypePreset<PromoMeta>[];
+export type InitPromoManagerOptions = {
+    initType: 'timeout';
+    timeout: number;
+};
 
 export type PromoOptions = {
     config: {
-        presets: Presets;
+        promoGroups: PromoGroup[];
         constraints?: Condition[];
+        init?: InitPromoManagerOptions;
     };
     conditionHelpers?: Record<string, ConditionHelper>;
     progressState: Partial<PromoProgressState> | undefined;
@@ -40,7 +44,7 @@ export type PromoOptions = {
 };
 
 export type ConditionContext = {
-    promoType?: PresetSlug;
+    promoType?: PromoGroupSlug;
     promoSlug?: PromoSlug;
     currentDate: number;
     helpers?: Record<string, ConditionHelper>;
@@ -58,7 +62,7 @@ export type Condition = ConditionFn | ConditionObject;
 
 export type Conditions = {
     typeConditions: {
-        [slug: PresetSlug]: Condition[];
+        [slug: PromoGroupSlug]: Condition[];
     };
 
     promoConditions: {
@@ -87,12 +91,12 @@ export type ProgressInfoConfig = {
 };
 
 type ProgressInfo = {
-    [key: PresetSlug]: ProgressInfoConfig;
+    [key: PromoGroupSlug]: ProgressInfoConfig;
 };
 
 export type Helpers = {
     typeBySlug: {
-        [slug: PromoSlug]: PresetSlug;
+        [slug: PromoSlug]: PromoGroupSlug;
     };
     prioritiesBySlug: {
         [slug: PromoSlug]: number;
