@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.18.0](https://github.com/gravity-ui/onboarding/compare/v0.17.2...v0.18.0) (2024-07-16)
+
+
+### Features
+
+* **promo-manager:** add constraints ([17f8a42](https://github.com/gravity-ui/onboarding/commit/17f8a4210c3e050ceb0fc3dc55b55c9fabcc0e98))
+* **promo-manager:** add LimitFrequency constraint ([1081edf](https://github.com/gravity-ui/onboarding/commit/1081edf084098cc84bc52c8c1048a3645f5d04b3))
+* **promo-manager:** fix and improve periodic helpers ([a1b7398](https://github.com/gravity-ui/onboarding/commit/a1b7398f3bda30ac5d919149d2a359afc67bb6d7))
+* **promo-manager:** support json format for conditions ([148124f](https://github.com/gravity-ui/onboarding/commit/148124f1401d36d77365dc76b3cb87cd693c6ba0))
+
+
+### Bug Fixes
+
+* fix logger ([5571e0e](https://github.com/gravity-ui/onboarding/commit/5571e0e37ef97d53f039483a17e4a66868db4f3f))
+
 ## [0.17.2](https://github.com/gravity-ui/onboarding/compare/v0.17.1...v0.17.2) (2024-07-12)
 
 
