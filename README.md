@@ -1,7 +1,7 @@
 # @gravity-ui/onboarding &middot; [![npm package](https://img.shields.io/npm/v/@gravity-ui/onboarding)](https://www.npmjs.com/package/@gravity-ui/onboarding) [![CI](https://img.shields.io/github/actions/workflow/status/gravity-ui/onboarding/.github/workflows/ci.yml?label=CI&logo=github)](https://github.com/gravity-ui/onboarding/actions/workflows/ci.yml?query=branch:main)
 
-Onboarding for users - important part of any service.
-@gravity-ui/onboarding helps you to create hint based onboarding scenarios. Can use with React, any other frameworks and vanilla JS.
+Create hint based onboarding scenarios and manage promo activities in your service.
+Can use with React, any other frameworks and vanilla JS.
 
 - **Small**. ~7Kb(minified and gzipped) with zero dependencies
 - **Well tested**. ~90% test coverage
