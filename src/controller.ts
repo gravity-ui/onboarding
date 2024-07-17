@@ -746,7 +746,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     }
 
     private getStepBySlug(stepSlug: Steps) {
-        for (const presetName of this.state.base.activePresets) {
+        for (const presetName of Object.keys(this.options.config.presets)) {
             const preset = this.options.config.presets[presetName as Presets];
             if (!preset) {
                 continue;
