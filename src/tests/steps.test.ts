@@ -146,9 +146,20 @@ describe('pass step', function () {
         });
     });
 
-    describe('passAvailable=afterPrevious', function () {
+    describe('passRestriction=afterPrevious', function () {
         it("not next step -> can't pass", async function () {
             const options = getOptions();
+            // @ts-ignore
+            options.config.presets.createProject.steps[2].passRestriction = 'afterPrevious';
+
+            const controller = new Controller(options);
+            await controller.passStep('createIssue');
+
+            expect(options.onSave.progress).not.toHaveBeenCalled();
+        });
+
+        it("not active preset, not next step -> can't pass", async function () {
+            const options = getOptions({activePresets: []});
             // @ts-ignore
             options.config.presets.createProject.steps[2].passRestriction = 'afterPrevious';
 
