@@ -1,4 +1,5 @@
 import {LoggerOptions} from '../../logger';
+import {Controller as OnboardingController} from '../../controller';
 
 export type PromoStatus = 'forbidden' | 'canRun' | 'active' | 'finished' | 'pending';
 export type Priority = 'high';
@@ -27,6 +28,12 @@ export type InitPromoManagerOptions = {
     timeout: number;
 };
 
+export type OnboardingIntegrationOptions = {
+    getInstance: () => OnboardingController<any, any, any>;
+
+    groupSlug: string;
+};
+
 export type PromoOptions = {
     config: {
         promoGroups: PromoGroup[];
@@ -34,6 +41,7 @@ export type PromoOptions = {
         init?: InitPromoManagerOptions;
     };
     conditionHelpers?: Record<string, ConditionHelper>;
+    onboarding?: OnboardingIntegrationOptions;
     progressState: Partial<PromoProgressState> | undefined;
     getProgressState: () => Promise<Partial<PromoProgressState>>;
     onSave: {

@@ -22,6 +22,7 @@ import {getHelpers} from './utils/getHelpers';
 import {checkCondition} from './condition/condition-checker';
 
 import * as defaultConditionHelpers from './condition/condition-helpers';
+import {EventsMap} from '../../types';
 
 type Listener = () => void;
 
@@ -89,10 +90,6 @@ export class Controller {
             });
         }
 
-        this.conditions = getConditions(options.config.promoGroups);
-
-        this.helpers = getHelpers(options.config.promoGroups);
-
         this.conditionHelpers = {
             ...defaultConditionHelpers,
             ...this.options.conditionHelpers,
@@ -118,7 +115,75 @@ export class Controller {
             this.initPromise = delay(this.options.config.init.timeout);
             this.ensureInit();
         }
+
+        this.conditions = getConditions(options.config.promoGroups);
+        this.helpers = getHelpers(options.config.promoGroups);
+
+        if (this.options.onboarding) {
+            this.initOnboardingIntegration();
+        }
     }
+
+    initOnboardingIntegration = async () => {
+        if (!this.options.onboarding) {
+            return;
+        }
+
+        const {getInstance, groupSlug} = this.options.onboarding;
+
+        const promoGroupToIntegrate = this.options.config.promoGroups.find(
+            (group) => group.slug === groupSlug,
+        );
+
+        if (!promoGroupToIntegrate) {
+            this.logger.error("Can't find group for onboarding integration", promoGroupToIntegrate);
+            return;
+        }
+
+        const instance = getInstance();
+
+        const promoPresetSet = new Set();
+        for (const [presetKey, preset] of Object.entries(instance.options.config.presets)) {
+            const shouldInjectPreset =
+                preset?.type !== 'internal' && preset?.visibility === 'alwaysHidden';
+
+            if (shouldInjectPreset) {
+                promoPresetSet.add(presetKey);
+                const hasPromo = promoGroupToIntegrate.promos.some(
+                    (promo) => promo.slug === presetKey,
+                );
+
+                if (!hasPromo) {
+                    promoGroupToIntegrate.promos.push({
+                        slug: presetKey,
+                        conditions: [],
+                    });
+                }
+            }
+        }
+
+        this.conditions = getConditions(this.options.config.promoGroups);
+        this.helpers = getHelpers(this.options.config.promoGroups);
+
+        instance.events.subscribe(
+            'beforeShowHint',
+            async ({stepData}: EventsMap['beforeShowHint']) => {
+                return this.requestStart(stepData.preset);
+            },
+        );
+
+        instance.events.subscribe('finishPreset', async ({preset}: EventsMap['finishPreset']) => {
+            if (promoPresetSet.has(preset)) {
+                this.finishPromo(preset);
+            }
+        });
+
+        instance.events.subscribe('closeHint', async ({hint}: EventsMap['closeHint']) => {
+            if (promoPresetSet.has(hint.preset)) {
+                this.cancelStart(hint.preset);
+            }
+        });
+    };
 
     ensureInit = async () => {
         if (this.status === 'initialized') {
