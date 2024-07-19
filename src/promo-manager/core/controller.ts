@@ -134,7 +134,7 @@ export class Controller {
 
     requestStart = async (slug: Nullable<PromoSlug>) => {
         if (!slug) {
-            return;
+            return false;
         }
 
         if (!this.state.progress) {
@@ -142,7 +142,7 @@ export class Controller {
         }
 
         if (!this.isAbleToRun(slug)) {
-            return;
+            return false;
         }
 
         this.addPromoToActiveQueue(slug);
@@ -150,6 +150,8 @@ export class Controller {
         await this.ensureInit();
 
         await this.triggerNextPromo();
+
+        return this.state.base.activePromo === slug;
     };
 
     finishPromo = (slug: Nullable<PromoSlug>, closeActiveTimeout = 0) => {
