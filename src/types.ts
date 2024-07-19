@@ -152,7 +152,7 @@ export type EventsMap<
     beforeShowHint: {stepData: ReachElementParams<Presets, Steps>};
     stateChange: {state: Controller<any, any, any>['state']};
     hintDataChanged: {state: HintState<HintParams, Presets, Steps>};
-    closeHint: {step: Steps};
+    closeHint: {hint: Pick<ShowHintParams<HintParams, Presets, Steps>, 'preset' | 'step'>};
     init: {};
     wizardStateChanged: {wizardState: BaseState['wizardState']};
 };

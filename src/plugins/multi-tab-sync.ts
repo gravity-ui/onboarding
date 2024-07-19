@@ -1,4 +1,4 @@
-import {OnboardingPlugin} from '../types';
+import {EventsMap, OnboardingPlugin} from '../types';
 import type {Controller} from '../controller';
 
 type PluginOptions = {
@@ -74,8 +74,8 @@ export class MultiTabSyncPlugin implements OnboardingPlugin {
         }
     };
 
-    closeHint = ({step}: {step: string}) => {
-        window.localStorage.setItem(this.options.closeHintLSKey, step);
+    closeHint = ({hint}: EventsMap['closeHint']) => {
+        window.localStorage.setItem(this.options.closeHintLSKey, hint.step.slug);
     };
 
     changeState = (newValue: any) => {
