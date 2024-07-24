@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.19.0](https://github.com/gravity-ui/onboarding/compare/v0.18.1...v0.19.0) (2024-07-24)
+
+
+### Features
+
+* **onboarding:** pass step to closeHint event ([51c81b9](https://github.com/gravity-ui/onboarding/commit/51c81b94119d09caffe21e57c9206d57a65ce205))
+* **promo-manager:** onboarding integration ([f5255f4](https://github.com/gravity-ui/onboarding/commit/f5255f41e7ea4f66c6d330a4218020515e5c5c8c))
+* **promo-manager:** return result from requestStart method ([d305111](https://github.com/gravity-ui/onboarding/commit/d30511159b40ee13f3d46121fb0d08f135bbca1f))
+
 ## [0.18.1](https://github.com/gravity-ui/onboarding/compare/v0.18.0...v0.18.1) (2024-07-17)
 
 
