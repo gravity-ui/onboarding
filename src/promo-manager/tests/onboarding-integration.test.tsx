@@ -123,7 +123,7 @@ it('reach element -> activate promo', async function () {
     await expect(controller.state.base.activePromo).toBe('coolNewFeature');
 });
 
-it('forbiden -> no hint, no activePromo', async function () {
+it('false in promo condition -> no hint, no activePromo', async function () {
     const onboardingController = new OnboardingController(
         getOptionsWithPromo({wizardState: 'hidden'}),
     );
