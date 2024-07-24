@@ -11,23 +11,44 @@ describe('active promo', () => {
         controller = new Controller(testOptions);
     });
 
-    test('run one promo', async () => {
-        await controller.requestStart('boardPoll');
+    describe('requestStart', function () {
+        test('run one promo', async () => {
+            await controller.requestStart('boardPoll');
 
-        expect(controller.state.base.activePromo).toBe('boardPoll');
-    });
+            expect(controller.state.base.activePromo).toBe('boardPoll');
+        });
 
-    test('run one promo not from the config', async () => {
-        await controller.requestStart('boardPollFake');
+        test('run one promo not from the config', async () => {
+            await controller.requestStart('boardPollFake');
 
-        expect(controller.state.base.activePromo).toBe(null);
-    });
+            expect(controller.state.base.activePromo).toBe(null);
+        });
 
-    it('wait init, then start', async function () {
-        await controller.ensureInit();
-        await controller.requestStart('boardPoll');
+        it('wait init, then start', async function () {
+            controller.requestStart('boardPoll');
+            await controller.ensureInit();
 
-        expect(controller.state.base.activePromo).toBe('boardPoll');
+            expect(controller.state.base.activePromo).toBe('boardPoll');
+        });
+
+        it('can start now -> return true', async function () {
+            const result = await controller.requestStart('boardPoll');
+
+            expect(result).toBe(true);
+        });
+
+        it('undefined promo -> return false', async function () {
+            const result = await controller.requestStart('boardPollFake');
+
+            expect(result).toBe(false);
+        });
+
+        it("can't start now -> return false", async function () {
+            await controller.requestStart('boardPoll');
+            const result = await controller.requestStart('ganttPoll');
+
+            expect(result).toBe(false);
+        });
     });
 
     it('finish promo -> trigger next', async () => {

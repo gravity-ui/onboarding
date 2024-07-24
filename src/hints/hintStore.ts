@@ -47,7 +47,7 @@ export class HintStore<HintParams, Preset extends string, Steps extends string> 
 
     closeHint = () => {
         if (this.state.hint) {
-            this.emitter.emit('closeHint', {step: this.state.hint.step.slug});
+            this.emitter.emit('closeHint', {hint: this.state.hint});
         }
 
         this.state = {
