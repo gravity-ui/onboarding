@@ -111,13 +111,6 @@ export class Controller {
         this.conditions = getConditions(options.config.promoGroups);
         this.helpers = getHelpers(options.config.promoGroups);
 
-        if (this.options.plugins) {
-            for (const plugin of this.options.plugins) {
-                plugin.apply({promoManager: this});
-                this.logger.debug('Init promoManager plugin', plugin.name);
-            }
-        }
-
         if (this.options.config.init.initType === 'timeout') {
             this.initPromise = delay(this.options.config.init.timeout);
             this.ensureInit();
@@ -129,6 +122,13 @@ export class Controller {
         }
 
         this.initEventMap();
+
+        if (this.options.plugins) {
+            for (const plugin of this.options.plugins) {
+                plugin.apply({promoManager: this});
+                this.logger.debug('Init promoManager plugin', plugin.name);
+            }
+        }
 
         if (this.options.onboarding) {
             this.initOnboardingIntegration();
