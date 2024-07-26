@@ -10,12 +10,13 @@ export type PromoMeta = Record<string, any>;
 export type PromoSlug = string;
 export type PromoGroupSlug = string;
 
+export type Trigger = {on: string; timeout?: number};
 export type Promo<T = PromoMeta> = {
     slug: PromoSlug;
     conditions?: Condition[];
     priority?: Priority;
     meta?: T;
-    trigger?: string;
+    trigger?: Trigger;
 };
 
 export type PromoGroup<Config = PromoMeta> = {
@@ -111,6 +112,7 @@ export type Helpers = {
         [slug: PromoSlug]: number;
     };
     metaBySlug: {[slug: PromoSlug]: PromoMeta};
+    promoBySlug: {[slug: PromoSlug]: Promo};
 };
 
 export type Nullable<T> = T | null;

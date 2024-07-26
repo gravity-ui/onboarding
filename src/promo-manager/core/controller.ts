@@ -346,8 +346,18 @@ export class Controller {
             return;
         }
 
-        for (const promo of this.eventMap[eventName]) {
-            await this.requestStart(promo);
+        for (const promoSlug of this.eventMap[eventName]) {
+            const promo = this.helpers.promoBySlug[promoSlug];
+
+            const timeout = promo.trigger?.timeout;
+            if (timeout) {
+                (async () => {
+                    await delay(timeout);
+                    await this.requestStart(promoSlug);
+                })();
+            } else {
+                await this.requestStart(promoSlug);
+            }
         }
     };
 
@@ -374,10 +384,12 @@ export class Controller {
         for (const group of this.options.config.promoGroups) {
             for (const promo of group.promos) {
                 if (promo.trigger) {
-                    if (!this.eventMap[promo.trigger]) {
-                        this.eventMap[promo.trigger] = [];
+                    const triggerEvent = promo.trigger.on;
+
+                    if (!this.eventMap[triggerEvent]) {
+                        this.eventMap[triggerEvent] = [];
                     }
-                    this.eventMap[promo.trigger].push(promo.slug);
+                    this.eventMap[triggerEvent].push(promo.slug);
                 }
             }
         }

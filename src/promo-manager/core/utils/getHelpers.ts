@@ -8,6 +8,7 @@ export const getHelpers = (promoGroups: PromoGroup[]): Helpers => {
     const typeBySlug: {[slug: string]: string} = {};
     const prioritiesBySlug: {[slug: string]: number} = {};
     const metaBySlug: {[slug: string]: PromoMeta} = {};
+    const promoBySlug: {[slug: string]: Promo} = {};
 
     let priority = 0;
 
@@ -16,6 +17,7 @@ export const getHelpers = (promoGroups: PromoGroup[]): Helpers => {
             typeBySlug[promo.slug] = promoGroup.slug;
             prioritiesBySlug[promo.slug] = getPriority(promo, priority++);
             metaBySlug[promo.slug] = promo.meta || {};
+            promoBySlug[promo.slug] = promo;
         }
     }
 
@@ -23,5 +25,6 @@ export const getHelpers = (promoGroups: PromoGroup[]): Helpers => {
         typeBySlug,
         prioritiesBySlug,
         metaBySlug,
+        promoBySlug,
     };
 };
