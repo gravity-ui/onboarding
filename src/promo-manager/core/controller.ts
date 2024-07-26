@@ -50,6 +50,8 @@ export class Controller {
     helpers: Helpers;
     stateListeners: Set<Listener>;
 
+    eventMap: Record<string, PromoSlug[]>;
+
     progressStatePromise?: Promise<Partial<ProgressState>>;
     initPromise: Promise<void> | undefined;
     saveProgress: () => void;
@@ -96,6 +98,7 @@ export class Controller {
         };
 
         this.stateListeners = new Set();
+        this.eventMap = {};
 
         this.saveProgress = createDebounceHandler(async () => {
             try {
@@ -119,71 +122,12 @@ export class Controller {
         this.conditions = getConditions(options.config.promoGroups);
         this.helpers = getHelpers(options.config.promoGroups);
 
+        this.initEventMap();
+
         if (this.options.onboarding) {
             this.initOnboardingIntegration();
         }
     }
-
-    initOnboardingIntegration = async () => {
-        if (!this.options.onboarding) {
-            return;
-        }
-
-        const {getInstance, groupSlug} = this.options.onboarding;
-
-        const promoGroupToIntegrate = this.options.config.promoGroups.find(
-            (group) => group.slug === groupSlug,
-        );
-
-        if (!promoGroupToIntegrate) {
-            this.logger.error("Can't find group for onboarding integration", promoGroupToIntegrate);
-            return;
-        }
-
-        const instance = getInstance();
-
-        const promoPresetSet = new Set();
-        for (const [presetKey, preset] of Object.entries(instance.options.config.presets)) {
-            const shouldInjectPreset =
-                preset?.type !== 'internal' && preset?.visibility === 'alwaysHidden';
-
-            if (shouldInjectPreset) {
-                promoPresetSet.add(presetKey);
-                const hasPromo = promoGroupToIntegrate.promos.some(
-                    (promo) => promo.slug === presetKey,
-                );
-
-                if (!hasPromo) {
-                    promoGroupToIntegrate.promos.push({
-                        slug: presetKey,
-                        conditions: [],
-                    });
-                }
-            }
-        }
-
-        this.conditions = getConditions(this.options.config.promoGroups);
-        this.helpers = getHelpers(this.options.config.promoGroups);
-
-        instance.events.subscribe(
-            'beforeShowHint',
-            async ({stepData}: EventsMap['beforeShowHint']) => {
-                return this.requestStart(stepData.preset);
-            },
-        );
-
-        instance.events.subscribe('finishPreset', async ({preset}: EventsMap['finishPreset']) => {
-            if (promoPresetSet.has(preset)) {
-                this.finishPromo(preset);
-            }
-        });
-
-        instance.events.subscribe('closeHint', async ({hint}: EventsMap['closeHint']) => {
-            if (promoPresetSet.has(hint.preset)) {
-                this.cancelStart(hint.preset);
-            }
-        });
-    };
 
     ensureInit = async () => {
         if (this.status === 'initialized') {
@@ -397,7 +341,17 @@ export class Controller {
         return this.helpers.typeBySlug[slug];
     };
 
-    async fetchProgressState() {
+    sendEvent = async (eventName: string) => {
+        if (!this.eventMap[eventName]) {
+            return;
+        }
+
+        for (const promo of this.eventMap[eventName]) {
+            await this.requestStart(promo);
+        }
+    };
+
+    private async fetchProgressState() {
         if (!this.progressStatePromise) {
             this.progressStatePromise = this.options.getProgressState();
         }
@@ -415,6 +369,80 @@ export class Controller {
             throw new Error('Progress data loading error');
         }
     }
+
+    private initEventMap = () => {
+        for (const group of this.options.config.promoGroups) {
+            for (const promo of group.promos) {
+                if (promo.trigger) {
+                    if (!this.eventMap[promo.trigger]) {
+                        this.eventMap[promo.trigger] = [];
+                    }
+                    this.eventMap[promo.trigger].push(promo.slug);
+                }
+            }
+        }
+    };
+
+    private initOnboardingIntegration = async () => {
+        if (!this.options.onboarding) {
+            return;
+        }
+
+        const {getInstance, groupSlug} = this.options.onboarding;
+
+        const promoGroupToIntegrate = this.options.config.promoGroups.find(
+            (group) => group.slug === groupSlug,
+        );
+
+        if (!promoGroupToIntegrate) {
+            this.logger.error("Can't find group for onboarding integration", promoGroupToIntegrate);
+            return;
+        }
+
+        const instance = getInstance();
+
+        const promoPresetSet = new Set();
+        for (const [presetKey, preset] of Object.entries(instance.options.config.presets)) {
+            const shouldInjectPreset =
+                preset?.type !== 'internal' && preset?.visibility === 'alwaysHidden';
+
+            if (shouldInjectPreset) {
+                promoPresetSet.add(presetKey);
+                const hasPromo = promoGroupToIntegrate.promos.some(
+                    (promo) => promo.slug === presetKey,
+                );
+
+                if (!hasPromo) {
+                    promoGroupToIntegrate.promos.push({
+                        slug: presetKey,
+                        conditions: [],
+                    });
+                }
+            }
+        }
+
+        this.conditions = getConditions(this.options.config.promoGroups);
+        this.helpers = getHelpers(this.options.config.promoGroups);
+
+        instance.events.subscribe(
+            'beforeShowHint',
+            async ({stepData}: EventsMap['beforeShowHint']) => {
+                return this.requestStart(stepData.preset);
+            },
+        );
+
+        instance.events.subscribe('finishPreset', async ({preset}: EventsMap['finishPreset']) => {
+            if (promoPresetSet.has(preset)) {
+                this.finishPromo(preset);
+            }
+        });
+
+        instance.events.subscribe('closeHint', async ({hint}: EventsMap['closeHint']) => {
+            if (promoPresetSet.has(hint.preset)) {
+                this.cancelStart(hint.preset);
+            }
+        });
+    };
 
     private checkConstraints() {
         if (!this.options.config.constraints) {

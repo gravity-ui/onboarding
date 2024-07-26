@@ -15,6 +15,7 @@ export type Promo<T = PromoMeta> = {
     conditions?: Condition[];
     priority?: Priority;
     meta?: T;
+    trigger?: string;
 };
 
 export type PromoGroup<Config = PromoMeta> = {
