@@ -15,14 +15,19 @@ import type {
     PromoState,
     PromoStatus,
     PromoGroup,
+    ConditionHelper,
+    InitPromoManagerOptions,
+    EventsMap,
+    EventTypes,
 } from './types';
-import {ConditionHelper, InitPromoManagerOptions} from './types';
 import {getConditions} from './utils/getConditions';
 import {getHelpers} from './utils/getHelpers';
 import {checkCondition} from './condition/condition-checker';
 
 import * as defaultConditionHelpers from './condition/condition-helpers';
-import {EventsMap} from '../../types';
+
+import {EventEmitter} from '../../event-emitter';
+import {EventsMap as OnboardingEventsMap} from '../../types';
 
 type Listener = () => void;
 
@@ -50,7 +55,9 @@ export class Controller {
     helpers: Helpers;
     stateListeners: Set<Listener>;
 
-    eventMap: Record<string, PromoSlug[]>;
+    events: EventEmitter<EventTypes, EventsMap, any>;
+
+    triggersMap: Record<string, PromoSlug[]>;
 
     progressStatePromise?: Promise<Partial<ProgressState>>;
     initPromise: Promise<void> | undefined;
@@ -98,7 +105,34 @@ export class Controller {
         };
 
         this.stateListeners = new Set();
-        this.eventMap = {};
+        this.triggersMap = {};
+        this.events = new EventEmitter<EventTypes, EventsMap, any>();
+
+        this.conditions = getConditions(options.config.promoGroups);
+        this.helpers = getHelpers(options.config.promoGroups);
+
+        if (this.options.plugins) {
+            for (const plugin of this.options.plugins) {
+                plugin.apply({promoManager: this});
+                this.logger.debug('Init promoManager plugin', plugin.name);
+            }
+        }
+
+        if (this.options.config.init.initType === 'timeout') {
+            this.initPromise = delay(this.options.config.init.timeout);
+            this.ensureInit();
+        }
+
+        if (options.debugMode) {
+            // @ts-ignore
+            window.promoManager = this;
+        }
+
+        this.initEventMap();
+
+        if (this.options.onboarding) {
+            this.initOnboardingIntegration();
+        }
 
         this.saveProgress = createDebounceHandler(async () => {
             try {
@@ -108,25 +142,6 @@ export class Controller {
                 this.logger.error(error);
             }
         }, 100);
-
-        if (options.debugMode) {
-            // @ts-ignore
-            window.promoManager = this;
-        }
-
-        if (this.options.config.init.initType === 'timeout') {
-            this.initPromise = delay(this.options.config.init.timeout);
-            this.ensureInit();
-        }
-
-        this.conditions = getConditions(options.config.promoGroups);
-        this.helpers = getHelpers(options.config.promoGroups);
-
-        this.initEventMap();
-
-        if (this.options.onboarding) {
-            this.initOnboardingIntegration();
-        }
     }
 
     ensureInit = async () => {
@@ -136,6 +151,8 @@ export class Controller {
 
         await this.initPromise;
         this.status = 'initialized';
+        this.events.emit('init', {});
+
         await this.triggerNextPromo();
     };
 
@@ -342,11 +359,11 @@ export class Controller {
     };
 
     sendEvent = async (eventName: string) => {
-        if (!this.eventMap[eventName]) {
+        if (!this.triggersMap[eventName]) {
             return;
         }
 
-        for (const promoSlug of this.eventMap[eventName]) {
+        for (const promoSlug of this.triggersMap[eventName]) {
             const promo = this.helpers.promoBySlug[promoSlug];
 
             const timeout = promo.trigger?.timeout;
@@ -386,10 +403,10 @@ export class Controller {
                 if (promo.trigger) {
                     const triggerEvent = promo.trigger.on;
 
-                    if (!this.eventMap[triggerEvent]) {
-                        this.eventMap[triggerEvent] = [];
+                    if (!this.triggersMap[triggerEvent]) {
+                        this.triggersMap[triggerEvent] = [];
                     }
-                    this.eventMap[triggerEvent].push(promo.slug);
+                    this.triggersMap[triggerEvent].push(promo.slug);
                 }
             }
         }
@@ -438,18 +455,21 @@ export class Controller {
 
         instance.events.subscribe(
             'beforeShowHint',
-            async ({stepData}: EventsMap['beforeShowHint']) => {
+            async ({stepData}: OnboardingEventsMap['beforeShowHint']) => {
                 return this.requestStart(stepData.preset);
             },
         );
 
-        instance.events.subscribe('finishPreset', async ({preset}: EventsMap['finishPreset']) => {
-            if (promoPresetSet.has(preset)) {
-                this.finishPromo(preset);
-            }
-        });
+        instance.events.subscribe(
+            'finishPreset',
+            async ({preset}: OnboardingEventsMap['finishPreset']) => {
+                if (promoPresetSet.has(preset)) {
+                    this.finishPromo(preset);
+                }
+            },
+        );
 
-        instance.events.subscribe('closeHint', async ({hint}: EventsMap['closeHint']) => {
+        instance.events.subscribe('closeHint', async ({hint}: OnboardingEventsMap['closeHint']) => {
             if (promoPresetSet.has(hint.preset)) {
                 this.cancelStart(hint.preset);
             }

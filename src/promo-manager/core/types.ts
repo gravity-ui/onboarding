@@ -1,5 +1,6 @@
 import {LoggerOptions} from '../../logger';
 import {Controller as OnboardingController} from '../../controller';
+import {Controller} from './controller';
 
 export type PromoStatus = 'forbidden' | 'canRun' | 'active' | 'finished' | 'pending';
 export type Priority = 'high';
@@ -36,6 +37,11 @@ export type OnboardingIntegrationOptions = {
     groupSlug: string;
 };
 
+export type PromoManagerPlugin = {
+    name: string;
+    apply: (pluginInterface: {promoManager: Controller}) => void;
+};
+
 export type PromoOptions = {
     config: {
         promoGroups: PromoGroup[];
@@ -49,6 +55,7 @@ export type PromoOptions = {
     onSave: {
         progress: (state: PromoProgressState) => Promise<any>;
     };
+    plugins?: PromoManagerPlugin[];
     debugMode?: boolean;
     logger?: LoggerOptions;
 };
@@ -116,3 +123,9 @@ export type Helpers = {
 };
 
 export type Nullable<T> = T | null;
+
+export type EventsMap = {
+    init: {};
+};
+
+export type EventTypes = keyof EventsMap;
