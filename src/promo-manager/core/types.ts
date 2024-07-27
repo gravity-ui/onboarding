@@ -99,7 +99,7 @@ export type PromoBaseState = {
 
 export type PromoProgressState = {
     finishedPromos: PromoSlug[];
-    progressInfoByType: ProgressInfo;
+    progressInfoByPromoGroup: ProgressInfo;
     progressInfoByPromo: ProgressInfo;
 };
 

@@ -33,7 +33,7 @@ type Listener = () => void;
 
 const defaultProgressState: ProgressState = {
     finishedPromos: [],
-    progressInfoByType: {},
+    progressInfoByPromoGroup: {},
     progressInfoByPromo: {},
 };
 
@@ -292,7 +292,7 @@ export class Controller {
             lastCallTime: Date.now(),
         };
 
-        this.stateActions.updateProgressInfoByType(type, info);
+        this.stateActions.updateProgressInfoByPromoGroup(type, info);
         this.stateActions.updateProgressInfoByPromo(slug, info);
 
         this.emitChange();
@@ -602,11 +602,11 @@ export class Controller {
 
             this.state.progress.finishedPromos.push(slug);
         },
-        updateProgressInfoByType: (type: PromoGroupSlug, info: ProgressInfoConfig) => {
+        updateProgressInfoByPromoGroup: (type: PromoGroupSlug, info: ProgressInfoConfig) => {
             this.assertProgressLoaded();
 
-            this.state.progress.progressInfoByType[type] = {
-                ...this.state.progress.progressInfoByType[type],
+            this.state.progress.progressInfoByPromoGroup[type] = {
+                ...this.state.progress.progressInfoByPromoGroup[type],
                 ...info,
             };
         },

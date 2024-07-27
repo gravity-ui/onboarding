@@ -14,7 +14,7 @@ const getLastTimeCall = (state: PromoState, slug?: string) => {
     }
 
     const timeForPromo = state.progress?.progressInfoByPromo[slug]?.lastCallTime;
-    const timeForType = state.progress?.progressInfoByType[slug]?.lastCallTime;
+    const timeForType = state.progress?.progressInfoByPromoGroup[slug]?.lastCallTime;
 
     return timeForPromo || timeForType;
 };

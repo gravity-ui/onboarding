@@ -13,7 +13,7 @@ describe('ShowOnceForPeriod', function () {
             },
             progress: {
                 finishedPromos: [],
-                progressInfoByType: {},
+                progressInfoByPromoGroup: {},
                 progressInfoByPromo: {},
             },
         };
@@ -32,7 +32,7 @@ describe('ShowOnceForPeriod', function () {
                 },
                 progress: {
                     finishedPromos: ['somePromo1'],
-                    progressInfoByType: {},
+                    progressInfoByPromoGroup: {},
                     progressInfoByPromo: {
                         somePromo1: {
                             lastCallTime: new Date('07-14-2024').valueOf(),
@@ -54,7 +54,7 @@ describe('ShowOnceForPeriod', function () {
                 },
                 progress: {
                     finishedPromos: ['somePromo1'],
-                    progressInfoByType: {},
+                    progressInfoByPromoGroup: {},
                     progressInfoByPromo: {
                         somePromo1: {
                             lastCallTime: new Date('07-01-2024').valueOf(),
@@ -78,7 +78,7 @@ describe('ShowOnceForPeriod', function () {
                 },
                 progress: {
                     finishedPromos: ['somePromo1'],
-                    progressInfoByType: {
+                    progressInfoByPromoGroup: {
                         promoGroup1: {
                             lastCallTime: new Date('07-14-2024').valueOf(),
                         },
@@ -104,7 +104,7 @@ describe('ShowOnceForPeriod', function () {
                 },
                 progress: {
                     finishedPromos: ['somePromo1'],
-                    progressInfoByType: {
+                    progressInfoByPromoGroup: {
                         promoGroup1: {
                             lastCallTime: new Date('07-01-2024').valueOf(),
                         },
@@ -134,7 +134,7 @@ describe('ShowOnceForSession', function () {
             },
             progress: {
                 finishedPromos: [],
-                progressInfoByType: {},
+                progressInfoByPromoGroup: {},
                 progressInfoByPromo: {},
             },
         };
@@ -150,7 +150,7 @@ describe('ShowOnceForSession', function () {
             },
             progress: {
                 finishedPromos: ['somePromo1'],
-                progressInfoByType: {},
+                progressInfoByPromoGroup: {},
                 progressInfoByPromo: {
                     somePromo1: {
                         lastCallTime: currentDate,
@@ -180,7 +180,7 @@ describe('LimitFrequency', function () {
             },
             progress: {
                 finishedPromos: [],
-                progressInfoByType: {},
+                progressInfoByPromoGroup: {},
                 progressInfoByPromo: {},
             },
         };
@@ -202,7 +202,7 @@ describe('LimitFrequency', function () {
                 },
                 progress: {
                     finishedPromos: ['somePromo1'],
-                    progressInfoByType: {},
+                    progressInfoByPromoGroup: {},
                     progressInfoByPromo: {
                         somePromo1: {
                             lastCallTime: new Date('07-15-2024').valueOf(),
@@ -227,7 +227,7 @@ describe('LimitFrequency', function () {
                 },
                 progress: {
                     finishedPromos: ['somePromo1'],
-                    progressInfoByType: {},
+                    progressInfoByPromoGroup: {},
                     progressInfoByPromo: {
                         somePromo1: {
                             lastCallTime: new Date('07-01-2024').valueOf(),
@@ -254,7 +254,7 @@ describe('LimitFrequency', function () {
                 },
                 progress: {
                     finishedPromos: ['somePromo1'],
-                    progressInfoByType: {
+                    progressInfoByPromoGroup: {
                         someType1: {
                             lastCallTime: new Date('07-15-2024').valueOf(),
                         },
@@ -279,7 +279,7 @@ describe('LimitFrequency', function () {
                 },
                 progress: {
                     finishedPromos: ['somePromo1'],
-                    progressInfoByType: {
+                    progressInfoByPromoGroup: {
                         someType1: {
                             lastCallTime: new Date('07-01-2024').valueOf(),
                         },
@@ -305,7 +305,7 @@ describe('LimitFrequency', function () {
             },
             progress: {
                 finishedPromos: ['somePromo1'],
-                progressInfoByType: {
+                progressInfoByPromoGroup: {
                     someType1: {
                         lastCallTime: new Date('07-15-2024').valueOf(),
                     },
@@ -326,7 +326,7 @@ describe('matchUrl', function () {
         },
         progress: {
             finishedPromos: ['somePromo1'],
-            progressInfoByType: {
+            progressInfoByPromoGroup: {
                 someType1: {
                     lastCallTime: new Date('07-15-2024').valueOf(),
                 },

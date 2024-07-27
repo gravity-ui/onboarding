@@ -187,7 +187,7 @@ describe('update last call info', () => {
         controller.finishPromo(promo);
 
         expect(
-            controller.state.progress?.progressInfoByType[promoType]?.lastCallTime,
+            controller.state.progress?.progressInfoByPromoGroup[promoType]?.lastCallTime,
         ).toBeDefined();
         expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeDefined();
     });
@@ -196,7 +196,7 @@ describe('update last call info', () => {
         controller.cancelPromo(promo);
 
         expect(
-            controller.state.progress?.progressInfoByType[promoType]?.lastCallTime,
+            controller.state.progress?.progressInfoByPromoGroup[promoType]?.lastCallTime,
         ).toBeDefined();
         expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeDefined();
     });
@@ -217,7 +217,7 @@ describe('close with timeout', () => {
         controller.finishPromo(promo, clearActiveTimeout);
 
         expect(
-            controller.state.progress?.progressInfoByType[promoType]?.lastCallTime,
+            controller.state.progress?.progressInfoByPromoGroup[promoType]?.lastCallTime,
         ).toBeDefined();
         expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeDefined();
         expect(controller.state.base.activePromo).toBe(promo);
@@ -232,7 +232,7 @@ describe('close with timeout', () => {
         controller.cancelPromo(promo, clearActiveTimeout);
 
         expect(
-            controller.state.progress?.progressInfoByType[promoType]?.lastCallTime,
+            controller.state.progress?.progressInfoByPromoGroup[promoType]?.lastCallTime,
         ).toBeDefined();
         expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeDefined();
         expect(controller.state.base.activePromo).toBe(promo);

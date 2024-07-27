@@ -58,7 +58,7 @@ describe('periodic runs', function () {
 it('LimitFrequency', async function () {
     const progressState = {
         finishedPromos: ['boardPoll2'],
-        progressInfoByType: {},
+        progressInfoByPromoGroup: {},
         progressInfoByPromo: {
             boardPoll2: {
                 lastCallTime: new Date('07-15-2024').valueOf(),
