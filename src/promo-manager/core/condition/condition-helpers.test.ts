@@ -1,5 +1,48 @@
-import {LimitFrequency, MatchUrl} from './condition-helpers';
+import {LimitFrequency, MatchUrl, ShowOnceForSession} from './condition-helpers';
 
+describe('ShowOnceForSession', function () {
+    const currentDate = new Date('07-15-2024').valueOf();
+
+    it('empty state -> true ', function () {
+        const helper = ShowOnceForSession();
+
+        const state = {
+            base: {
+                activePromo: null,
+                activeQueue: [],
+            },
+            progress: {
+                finishedPromos: [],
+                progressInfoByType: {},
+                progressInfoByPromo: {},
+            },
+        };
+
+        expect(helper(state, {currentDate, promoSlug: 'somePromo'})).toBe(true);
+    });
+
+    it('has run -> false ', function () {
+        const state = {
+            base: {
+                activePromo: null,
+                activeQueue: [],
+            },
+            progress: {
+                finishedPromos: ['somePromo1'],
+                progressInfoByType: {},
+                progressInfoByPromo: {
+                    somePromo1: {
+                        lastCallTime: currentDate.valueOf(),
+                    },
+                },
+            },
+        };
+
+        const helper = ShowOnceForSession();
+
+        expect(helper(state, {currentDate, promoSlug: 'somePromo1'})).toBe(false);
+    });
+});
 describe('LimitFrequency', function () {
     const currentDate = new Date('07-15-2024').valueOf();
 

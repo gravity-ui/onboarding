@@ -19,6 +19,19 @@ const getLastTimeCall = (state: PromoState, slug?: string) => {
     return timeForPromo || timeForType;
 };
 
+const getTimeFromLastCallInMs = (state: PromoState, ctx: ConditionContext) => {
+    const nowDate = dayjs(ctx.currentDate);
+
+    const lastTimeCall = getLastTimeCall(state, ctx.promoSlug || ctx.promoType);
+
+    if (!lastTimeCall) {
+        return Infinity;
+    }
+    const timeFromLastCall = dayjs.duration(nowDate.diff(dayjs(lastTimeCall)));
+
+    return timeFromLastCall.asMilliseconds();
+};
+
 export const PromoInCurrentDay: ConditionHelper = (date: Date) => {
     return () => date.toDateString() === new Date().toDateString();
 };
@@ -29,16 +42,15 @@ export const ShowOnceForPeriod: ConditionHelper = (
     return (state, ctx) => {
         const targetInterval = dayjs.duration(...params);
 
-        const nowDate = dayjs(ctx.currentDate);
+        return getTimeFromLastCallInMs(state, ctx) > targetInterval.asMilliseconds();
+    };
+};
 
-        const lastTimeCall = dayjs(getLastTimeCall(state, ctx.promoSlug || ctx.promoType));
-        const timeFromLastCall = dayjs.duration(nowDate.diff(lastTimeCall));
+export const ShowOnceForSession: ConditionHelper = () => {
+    return (state, ctx) => {
+        const targetInterval = dayjs.duration(performance.now());
 
-        if (!lastTimeCall) {
-            return true;
-        }
-
-        return timeFromLastCall.asMilliseconds() > targetInterval.asMilliseconds();
+        return getTimeFromLastCallInMs(state, ctx) > targetInterval.asMilliseconds();
     };
 };
 
@@ -53,16 +65,11 @@ export const LimitFrequency: ConditionHelper = ({
         // @ts-ignore
         const targetInterval = dayjs.duration(interval);
 
-        const nowDate = dayjs(ctx.currentDate);
         for (const slug of slugs) {
-            const lastTimeCall = getLastTimeCall(state, slug);
-            if (!lastTimeCall) {
-                continue;
-            }
-
-            const timeFromLastCall = dayjs.duration(nowDate.diff(dayjs(lastTimeCall)));
-
-            if (timeFromLastCall.asMilliseconds() < targetInterval.asMilliseconds()) {
+            if (
+                getTimeFromLastCallInMs(state, {...ctx, promoSlug: slug}) <
+                targetInterval.asMilliseconds()
+            ) {
                 return false;
             }
         }
