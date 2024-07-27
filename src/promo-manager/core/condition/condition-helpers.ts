@@ -3,34 +3,11 @@ import {ConditionContext, ConditionHelper} from '../types';
 
 import dayjs from 'dayjs';
 import duration, {DurationUnitsObjectType} from 'dayjs/plugin/duration';
+import {getTimeFromLastCallInMs} from './condition-utils';
 
 dayjs.extend(duration);
 
 export type DurationParam = DurationUnitsObjectType | string;
-
-const getLastTimeCall = (state: PromoState, slug?: string) => {
-    if (!slug) {
-        return undefined;
-    }
-
-    const timeForPromo = state.progress?.progressInfoByPromo[slug]?.lastCallTime;
-    const timeForType = state.progress?.progressInfoByPromoGroup[slug]?.lastCallTime;
-
-    return timeForPromo || timeForType;
-};
-
-const getTimeFromLastCallInMs = (state: PromoState, ctx: ConditionContext) => {
-    const nowDate = dayjs(ctx.currentDate);
-
-    const lastTimeCall = getLastTimeCall(state, ctx.promoSlug || ctx.promoType);
-
-    if (!lastTimeCall) {
-        return Infinity;
-    }
-    const timeFromLastCall = dayjs.duration(nowDate.diff(dayjs(lastTimeCall)));
-
-    return timeFromLastCall.asMilliseconds();
-};
 
 export const PromoInCurrentDay: ConditionHelper = (date: Date) => {
     return () => date.toDateString() === new Date().toDateString();
