@@ -1,5 +1,126 @@
-import {LimitFrequency, MatchUrl, ShowOnceForSession} from './condition-helpers';
+import {LimitFrequency, MatchUrl, ShowOnceForPeriod, ShowOnceForSession} from './condition-helpers';
 
+describe('ShowOnceForPeriod', function () {
+    const currentDate = new Date('07-15-2024').valueOf();
+
+    it('empty state -> true', function () {
+        const helper = ShowOnceForPeriod({weeks: 1});
+
+        const state = {
+            base: {
+                activePromo: null,
+                activeQueue: [],
+            },
+            progress: {
+                finishedPromos: [],
+                progressInfoByType: {},
+                progressInfoByPromo: {},
+            },
+        };
+
+        expect(helper(state, {currentDate, promoSlug: 'somePromo1'})).toBe(true);
+    });
+
+    describe('pick by promo', function () {
+        it('not enough time has passed to start -> false', function () {
+            const helper = ShowOnceForPeriod({weeks: 1});
+
+            const state = {
+                base: {
+                    activePromo: null,
+                    activeQueue: [],
+                },
+                progress: {
+                    finishedPromos: ['somePromo1'],
+                    progressInfoByType: {},
+                    progressInfoByPromo: {
+                        somePromo1: {
+                            lastCallTime: new Date('07-14-2024').valueOf(),
+                        },
+                    },
+                },
+            };
+
+            expect(helper(state, {currentDate, promoSlug: 'somePromo1'})).toBe(false);
+        });
+
+        it('enough time has passed to start -> false', function () {
+            const helper = ShowOnceForPeriod({weeks: 1});
+
+            const state = {
+                base: {
+                    activePromo: null,
+                    activeQueue: [],
+                },
+                progress: {
+                    finishedPromos: ['somePromo1'],
+                    progressInfoByType: {},
+                    progressInfoByPromo: {
+                        somePromo1: {
+                            lastCallTime: new Date('07-01-2024').valueOf(),
+                        },
+                    },
+                },
+            };
+
+            expect(helper(state, {currentDate, promoSlug: 'somePromo1'})).toBe(true);
+        });
+    });
+
+    describe('pick by group', function () {
+        it('not enough time has passed to start -> false', function () {
+            const helper = ShowOnceForPeriod({weeks: 1});
+
+            const state = {
+                base: {
+                    activePromo: null,
+                    activeQueue: [],
+                },
+                progress: {
+                    finishedPromos: ['somePromo1'],
+                    progressInfoByType: {
+                        promoGroup1: {
+                            lastCallTime: new Date('07-14-2024').valueOf(),
+                        },
+                    },
+                    progressInfoByPromo: {
+                        somePromo1: {
+                            lastCallTime: new Date('07-14-2024').valueOf(),
+                        },
+                    },
+                },
+            };
+
+            expect(helper(state, {currentDate, promoType: 'promoGroup1'})).toBe(false);
+        });
+
+        it('enough time has passed to start -> true', function () {
+            const helper = ShowOnceForPeriod({weeks: 1});
+
+            const state = {
+                base: {
+                    activePromo: null,
+                    activeQueue: [],
+                },
+                progress: {
+                    finishedPromos: ['somePromo1'],
+                    progressInfoByType: {
+                        promoGroup1: {
+                            lastCallTime: new Date('07-01-2024').valueOf(),
+                        },
+                    },
+                    progressInfoByPromo: {
+                        somePromo1: {
+                            lastCallTime: new Date('07-01-2024').valueOf(),
+                        },
+                    },
+                },
+            };
+
+            expect(helper(state, {currentDate, promoType: 'promoGroup1'})).toBe(true);
+        });
+    });
+});
 describe('ShowOnceForSession', function () {
     const currentDate = new Date('07-15-2024').valueOf();
 
@@ -32,7 +153,7 @@ describe('ShowOnceForSession', function () {
                 progressInfoByType: {},
                 progressInfoByPromo: {
                     somePromo1: {
-                        lastCallTime: currentDate.valueOf(),
+                        lastCallTime: currentDate,
                     },
                 },
             },
@@ -68,7 +189,7 @@ describe('LimitFrequency', function () {
     });
 
     describe('pick by slug', function () {
-        it('not enough time for next activity', function () {
+        it('not enough time has passed -> false', function () {
             const helper = LimitFrequency({
                 slugs: ['somePromo1', 'somePromo2'],
                 interval: {weeks: 1},
@@ -93,7 +214,7 @@ describe('LimitFrequency', function () {
             expect(helper(state, {currentDate})).toBe(false);
         });
 
-        it('enough time for next activity', function () {
+        it('enough time has passed to start -> true', function () {
             const helper = LimitFrequency({
                 slugs: ['somePromo1', 'somePromo2'],
                 interval: {weeks: 1},
@@ -120,7 +241,7 @@ describe('LimitFrequency', function () {
     });
 
     describe('pick by type', function () {
-        it('not enough time for next activity', function () {
+        it('not enough time has passed to start -> false', function () {
             const helper = LimitFrequency({
                 slugs: ['someType1', 'someType2'],
                 interval: {weeks: 1},
@@ -145,7 +266,7 @@ describe('LimitFrequency', function () {
             expect(helper(state, {currentDate})).toBe(false);
         });
 
-        it('enough time for next activity', function () {
+        it('enough time has passed to start -> true', function () {
             const helper = LimitFrequency({
                 slugs: ['someType1', 'someType2'],
                 interval: {weeks: 1},
@@ -171,7 +292,7 @@ describe('LimitFrequency', function () {
         });
     });
 
-    it('not enough time for next activity. Type and slug', function () {
+    it('not enough time has passed to start. Type and slug', function () {
         const helper = LimitFrequency({
             slugs: ['someType1', 'somePromo1'],
             interval: {weeks: 1},

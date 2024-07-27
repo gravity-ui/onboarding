@@ -3,6 +3,8 @@ import {testOptions} from '../tests/options';
 import {UrlEventsPlugin} from './url-event-plugin';
 import {waitForNextTick} from '../tests/utils';
 
+const EVENT_NAME = 'specificEventName';
+
 it('trigger event on init', async () => {
     const controller = new Controller({
         ...testOptions,
@@ -14,13 +16,13 @@ it('trigger event on init', async () => {
                         {
                             slug: 'promo1',
                             conditions: [],
-                            trigger: {on: 'someEvent'},
+                            trigger: {on: EVENT_NAME},
                         },
                     ],
                 },
             ],
         },
-        plugins: [new UrlEventsPlugin({eventName: 'someEvent'})],
+        plugins: [new UrlEventsPlugin({eventName: EVENT_NAME})],
     });
     await controller.ensureInit();
 
@@ -39,13 +41,13 @@ it('change url -> trigger', async () => {
                         {
                             slug: 'promo1',
                             conditions: [() => location.href === SPECIFIC_URL],
-                            trigger: {on: 'someEvent'},
+                            trigger: {on: EVENT_NAME},
                         },
                     ],
                 },
             ],
         },
-        plugins: [new UrlEventsPlugin({eventName: 'someEvent'})],
+        plugins: [new UrlEventsPlugin({eventName: EVENT_NAME})],
     });
 
     await controller.ensureInit();
