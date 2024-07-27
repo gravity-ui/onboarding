@@ -42,7 +42,13 @@ export const ShowOnceForPeriod: ConditionHelper = (
     };
 };
 
-export const LimitFrequency = ({slugs, interval}: {slugs: string[]; interval: DurationParam}) => {
+export const LimitFrequency: ConditionHelper = ({
+    slugs,
+    interval,
+}: {
+    slugs: string[];
+    interval: DurationParam;
+}) => {
     return (state: PromoState, ctx: ConditionContext) => {
         // @ts-ignore
         const targetInterval = dayjs.duration(interval);
@@ -63,4 +69,9 @@ export const LimitFrequency = ({slugs, interval}: {slugs: string[]; interval: Du
 
         return true;
     };
+};
+
+export const MatchUrl: ConditionHelper = (regExp: string) => () => {
+    const currentUrl = window.location.href;
+    return new RegExp(regExp).test(currentUrl);
 };

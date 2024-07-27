@@ -1,4 +1,4 @@
-import {LimitFrequency} from './condition-helpers';
+import {LimitFrequency, MatchUrl} from './condition-helpers';
 
 describe('LimitFrequency', function () {
     const currentDate = new Date('07-15-2024').valueOf();
@@ -151,5 +151,76 @@ describe('LimitFrequency', function () {
         };
 
         expect(helper(state, {currentDate})).toBe(false);
+    });
+});
+
+describe('matchUrl', function () {
+    const state = {
+        base: {
+            activePromo: null,
+            activeQueue: [],
+        },
+        progress: {
+            finishedPromos: ['somePromo1'],
+            progressInfoByType: {
+                someType1: {
+                    lastCallTime: new Date('07-15-2024').valueOf(),
+                },
+            },
+            progressInfoByPromo: {},
+        },
+    };
+
+    const setCurrentUrl = (url: string) => window.history.pushState({}, '', new URL(url));
+
+    const currentDate = new Date('07-15-2024').valueOf();
+
+    it('math host', function () {
+        const helper = MatchUrl('localhost');
+
+        setCurrentUrl('http://localhost/');
+
+        expect(helper(state, {currentDate})).toBe(true);
+    });
+
+    it('match query', function () {
+        const helper = MatchUrl('param=value');
+
+        setCurrentUrl('http://localhost/page/?param=value');
+
+        expect(helper(state, {currentDate})).toBe(true);
+    });
+
+    it('match query', function () {
+        const helper = MatchUrl('param=value');
+
+        setCurrentUrl('http://localhost/page/?param=value');
+
+        expect(helper(state, {currentDate})).toBe(true);
+    });
+
+    it('match hash', function () {
+        const helper = MatchUrl('#somehash');
+
+        setCurrentUrl('http://localhost/#somehash');
+
+        expect(helper(state, {currentDate})).toBe(true);
+    });
+
+    it('multiple calls', function () {
+        const helper = MatchUrl('localhost');
+
+        setCurrentUrl('http://localhost/#somehash');
+
+        expect(helper(state, {currentDate})).toBe(true);
+        expect(helper(state, {currentDate})).toBe(true);
+    });
+
+    it('math host with complex regex', function () {
+        const helper = MatchUrl('/folder/\\w{5}/page$');
+
+        setCurrentUrl('http://localhost/folder/12354/page');
+
+        expect(helper(state, {currentDate})).toBe(true);
     });
 });
