@@ -15,20 +15,25 @@ import type {
     PromoState,
     PromoStatus,
     PromoGroup,
+    ConditionHelper,
+    InitPromoManagerOptions,
+    EventsMap,
+    EventTypes,
 } from './types';
-import {ConditionHelper, InitPromoManagerOptions} from './types';
 import {getConditions} from './utils/getConditions';
 import {getHelpers} from './utils/getHelpers';
 import {checkCondition} from './condition/condition-checker';
 
 import * as defaultConditionHelpers from './condition/condition-helpers';
-import {EventsMap} from '../../types';
+
+import {EventEmitter} from '../../event-emitter';
+import {EventsMap as OnboardingEventsMap} from '../../types';
 
 type Listener = () => void;
 
 const defaultProgressState: ProgressState = {
     finishedPromos: [],
-    progressInfoByType: {},
+    progressInfoByPromoGroup: {},
     progressInfoByPromo: {},
 };
 
@@ -49,6 +54,10 @@ export class Controller {
     conditionHelpers: Record<string, ConditionHelper>;
     helpers: Helpers;
     stateListeners: Set<Listener>;
+
+    events: EventEmitter<EventTypes, EventsMap, any>;
+
+    triggersMap: Record<string, PromoSlug[]>;
 
     progressStatePromise?: Promise<Partial<ProgressState>>;
     initPromise: Promise<void> | undefined;
@@ -96,6 +105,34 @@ export class Controller {
         };
 
         this.stateListeners = new Set();
+        this.triggersMap = {};
+        this.events = new EventEmitter<EventTypes, EventsMap, any>();
+
+        this.conditions = getConditions(options.config.promoGroups);
+        this.helpers = getHelpers(options.config.promoGroups);
+
+        if (this.options.config.init.initType === 'timeout') {
+            this.initPromise = delay(this.options.config.init.timeout);
+            this.ensureInit();
+        }
+
+        if (options.debugMode) {
+            // @ts-ignore
+            window.promoManager = this;
+        }
+
+        this.initEventMap();
+
+        if (this.options.plugins) {
+            for (const plugin of this.options.plugins) {
+                plugin.apply({promoManager: this});
+                this.logger.debug('Init promoManager plugin', plugin.name);
+            }
+        }
+
+        if (this.options.onboarding) {
+            this.initOnboardingIntegration();
+        }
 
         this.saveProgress = createDebounceHandler(async () => {
             try {
@@ -105,85 +142,7 @@ export class Controller {
                 this.logger.error(error);
             }
         }, 100);
-
-        if (options.debugMode) {
-            // @ts-ignore
-            window.promoManager = this;
-        }
-
-        if (this.options.config.init.initType === 'timeout') {
-            this.initPromise = delay(this.options.config.init.timeout);
-            this.ensureInit();
-        }
-
-        this.conditions = getConditions(options.config.promoGroups);
-        this.helpers = getHelpers(options.config.promoGroups);
-
-        if (this.options.onboarding) {
-            this.initOnboardingIntegration();
-        }
     }
-
-    initOnboardingIntegration = async () => {
-        if (!this.options.onboarding) {
-            return;
-        }
-
-        const {getInstance, groupSlug} = this.options.onboarding;
-
-        const promoGroupToIntegrate = this.options.config.promoGroups.find(
-            (group) => group.slug === groupSlug,
-        );
-
-        if (!promoGroupToIntegrate) {
-            this.logger.error("Can't find group for onboarding integration", promoGroupToIntegrate);
-            return;
-        }
-
-        const instance = getInstance();
-
-        const promoPresetSet = new Set();
-        for (const [presetKey, preset] of Object.entries(instance.options.config.presets)) {
-            const shouldInjectPreset =
-                preset?.type !== 'internal' && preset?.visibility === 'alwaysHidden';
-
-            if (shouldInjectPreset) {
-                promoPresetSet.add(presetKey);
-                const hasPromo = promoGroupToIntegrate.promos.some(
-                    (promo) => promo.slug === presetKey,
-                );
-
-                if (!hasPromo) {
-                    promoGroupToIntegrate.promos.push({
-                        slug: presetKey,
-                        conditions: [],
-                    });
-                }
-            }
-        }
-
-        this.conditions = getConditions(this.options.config.promoGroups);
-        this.helpers = getHelpers(this.options.config.promoGroups);
-
-        instance.events.subscribe(
-            'beforeShowHint',
-            async ({stepData}: EventsMap['beforeShowHint']) => {
-                return this.requestStart(stepData.preset);
-            },
-        );
-
-        instance.events.subscribe('finishPreset', async ({preset}: EventsMap['finishPreset']) => {
-            if (promoPresetSet.has(preset)) {
-                this.finishPromo(preset);
-            }
-        });
-
-        instance.events.subscribe('closeHint', async ({hint}: EventsMap['closeHint']) => {
-            if (promoPresetSet.has(hint.preset)) {
-                this.cancelStart(hint.preset);
-            }
-        });
-    };
 
     ensureInit = async () => {
         if (this.status === 'initialized') {
@@ -192,6 +151,8 @@ export class Controller {
 
         await this.initPromise;
         this.status = 'initialized';
+        this.events.emit('init', {});
+
         await this.triggerNextPromo();
     };
 
@@ -331,7 +292,7 @@ export class Controller {
             lastCallTime: Date.now(),
         };
 
-        this.stateActions.updateProgressInfoByType(type, info);
+        this.stateActions.updateProgressInfoByPromoGroup(type, info);
         this.stateActions.updateProgressInfoByPromo(slug, info);
 
         this.emitChange();
@@ -397,7 +358,27 @@ export class Controller {
         return this.helpers.typeBySlug[slug];
     };
 
-    async fetchProgressState() {
+    sendEvent = async (eventName: string) => {
+        if (!this.triggersMap[eventName]) {
+            return;
+        }
+
+        for (const promoSlug of this.triggersMap[eventName]) {
+            const promo = this.helpers.promoBySlug[promoSlug];
+
+            const timeout = promo.trigger?.timeout;
+            if (timeout) {
+                (async () => {
+                    await delay(timeout);
+                    await this.requestStart(promoSlug);
+                })();
+            } else {
+                await this.requestStart(promoSlug);
+            }
+        }
+    };
+
+    private async fetchProgressState() {
         if (!this.progressStatePromise) {
             this.progressStatePromise = this.options.getProgressState();
         }
@@ -415,6 +396,85 @@ export class Controller {
             throw new Error('Progress data loading error');
         }
     }
+
+    private initEventMap = () => {
+        for (const group of this.options.config.promoGroups) {
+            for (const promo of group.promos) {
+                if (promo.trigger) {
+                    const triggerEvent = promo.trigger.on;
+
+                    if (!this.triggersMap[triggerEvent]) {
+                        this.triggersMap[triggerEvent] = [];
+                    }
+                    this.triggersMap[triggerEvent].push(promo.slug);
+                }
+            }
+        }
+    };
+
+    private initOnboardingIntegration = async () => {
+        if (!this.options.onboarding) {
+            return;
+        }
+
+        const {getInstance, groupSlug} = this.options.onboarding;
+
+        const promoGroupToIntegrate = this.options.config.promoGroups.find(
+            (group) => group.slug === groupSlug,
+        );
+
+        if (!promoGroupToIntegrate) {
+            this.logger.error("Can't find group for onboarding integration", promoGroupToIntegrate);
+            return;
+        }
+
+        const instance = getInstance();
+
+        const promoPresetSet = new Set();
+        for (const [presetKey, preset] of Object.entries(instance.options.config.presets)) {
+            const shouldInjectPreset =
+                preset?.type !== 'internal' && preset?.visibility === 'alwaysHidden';
+
+            if (shouldInjectPreset) {
+                promoPresetSet.add(presetKey);
+                const hasPromo = promoGroupToIntegrate.promos.some(
+                    (promo) => promo.slug === presetKey,
+                );
+
+                if (!hasPromo) {
+                    promoGroupToIntegrate.promos.push({
+                        slug: presetKey,
+                        conditions: [],
+                    });
+                }
+            }
+        }
+
+        this.conditions = getConditions(this.options.config.promoGroups);
+        this.helpers = getHelpers(this.options.config.promoGroups);
+
+        instance.events.subscribe(
+            'beforeShowHint',
+            async ({stepData}: OnboardingEventsMap['beforeShowHint']) => {
+                return this.requestStart(stepData.preset);
+            },
+        );
+
+        instance.events.subscribe(
+            'finishPreset',
+            async ({preset}: OnboardingEventsMap['finishPreset']) => {
+                if (promoPresetSet.has(preset)) {
+                    this.finishPromo(preset);
+                }
+            },
+        );
+
+        instance.events.subscribe('closeHint', async ({hint}: OnboardingEventsMap['closeHint']) => {
+            if (promoPresetSet.has(hint.preset)) {
+                this.cancelStart(hint.preset);
+            }
+        });
+    };
 
     private checkConstraints() {
         if (!this.options.config.constraints) {
@@ -542,11 +602,11 @@ export class Controller {
 
             this.state.progress.finishedPromos.push(slug);
         },
-        updateProgressInfoByType: (type: PromoGroupSlug, info: ProgressInfoConfig) => {
+        updateProgressInfoByPromoGroup: (type: PromoGroupSlug, info: ProgressInfoConfig) => {
             this.assertProgressLoaded();
 
-            this.state.progress.progressInfoByType[type] = {
-                ...this.state.progress.progressInfoByType[type],
+            this.state.progress.progressInfoByPromoGroup[type] = {
+                ...this.state.progress.progressInfoByPromoGroup[type],
                 ...info,
             };
         },

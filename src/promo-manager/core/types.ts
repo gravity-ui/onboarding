@@ -1,5 +1,6 @@
 import {LoggerOptions} from '../../logger';
 import {Controller as OnboardingController} from '../../controller';
+import {Controller} from './controller';
 
 export type PromoStatus = 'forbidden' | 'canRun' | 'active' | 'finished' | 'pending';
 export type Priority = 'high';
@@ -10,11 +11,13 @@ export type PromoMeta = Record<string, any>;
 export type PromoSlug = string;
 export type PromoGroupSlug = string;
 
+export type Trigger = {on: string; timeout?: number};
 export type Promo<T = PromoMeta> = {
     slug: PromoSlug;
     conditions?: Condition[];
     priority?: Priority;
     meta?: T;
+    trigger?: Trigger;
 };
 
 export type PromoGroup<Config = PromoMeta> = {
@@ -34,6 +37,11 @@ export type OnboardingIntegrationOptions = {
     groupSlug: string;
 };
 
+export type PromoManagerPlugin = {
+    name: string;
+    apply: (pluginInterface: {promoManager: Controller}) => void;
+};
+
 export type PromoOptions = {
     config: {
         promoGroups: PromoGroup[];
@@ -47,6 +55,7 @@ export type PromoOptions = {
     onSave: {
         progress: (state: PromoProgressState) => Promise<any>;
     };
+    plugins?: PromoManagerPlugin[];
     debugMode?: boolean;
     logger?: LoggerOptions;
 };
@@ -90,7 +99,7 @@ export type PromoBaseState = {
 
 export type PromoProgressState = {
     finishedPromos: PromoSlug[];
-    progressInfoByType: ProgressInfo;
+    progressInfoByPromoGroup: ProgressInfo;
     progressInfoByPromo: ProgressInfo;
 };
 
@@ -110,6 +119,13 @@ export type Helpers = {
         [slug: PromoSlug]: number;
     };
     metaBySlug: {[slug: PromoSlug]: PromoMeta};
+    promoBySlug: {[slug: PromoSlug]: Promo};
 };
 
 export type Nullable<T> = T | null;
+
+export type EventsMap = {
+    init: {};
+};
+
+export type EventTypes = keyof EventsMap;

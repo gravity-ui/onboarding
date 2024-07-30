@@ -12,13 +12,13 @@ export const testOptions = {
     },
     progressState: {
         finishedPromos: [],
-        progressInfoByType: {},
+        progressInfoByPromoGroup: {},
         progressInfoByPromo: {},
     },
     getProgressState: () =>
         new Promise<PromoProgressState>(() => ({
             finishedPromos: [],
-            progressInfoByType: {},
+            progressInfoByPromoGroup: {},
             progressInfoByPromo: {},
         })),
     onSave: {
