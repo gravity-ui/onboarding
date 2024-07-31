@@ -11,15 +11,16 @@ Use with React, any other frameworks or vanilla JS.
 
 # Table of Contents
 
-- Tools
-- Onboarding guide
-  - how to use
-  - deep dive
-  - plugins
-  - promo presets
-- Promo manager
-  - how to use
-  - onboarding integration
+- [Package contents](#package-contents)
+- [Onboarding guide](#onboarding-guide)
+  - [How to use onboarding](#how-to-use-onboarding)
+  - [Onboarding configuration](#onboarding-configuration)
+  - [Plugins and events](#plugins-and-event)
+- [Promo manager](#promo-manager)
+  - [How to use promo manager](#how-to-use-promo-manager)
+  - [Condition and constraints](#condition-and-constraints)
+  - [JSON config](#json-config)
+  - [Onboarding integration](#onboarding-integration)
 
 ## Install
 
@@ -33,11 +34,11 @@ This package contains 2 tools:
 
 - Onboarding - tool for creating hint based onboarding for service users. Create presets with steps, bind to elements and call methods. Onboarding will keep user progress and calculate next hint to show.
 
-- Promo manager - tool for managing any promo activities tou push into user: banners, informers, UX surveys, educational popup. Put all promos in config and specify the conditions. Promo manager will keep user progress and calculate next promo to show.
+- Promo manager - tool for managing any promo activities tou push into user: banners, informers, advertisements of new features, UX surveys, educational popup. Put all promos in config and specify the conditions. Promo manager will keep user progress and calculate next promo to show.
 
-# Onboarding
+# Onboarding guide
 
-## How to use
+## How to use onboarding
 
 <details>
   <summary>Basic react example</summary>
@@ -118,7 +119,7 @@ return (
 
 </details>
 
-## Onboarding deep dive
+## Onboarding configuration
 
 You can configure onboarding
 
@@ -212,7 +213,7 @@ const onboardingOptions = {
 
 Also, there are combined preset. It is group presets, but it acts like one. When combined preset runs, it resolves to one of internal preset. You can find example in [test data](https://github.com/gravity-ui/onboarding/blob/main/src/tests/utils.ts#L71)
 
----
+## Plugins and event
 
 You can use event system. Available events: `showHint`, `stepPass`, `addPreset`, `beforeRunPreset`, `runPreset`, `finishPreset`, `beforeSuggestPreset`, `beforeShowHint`, `stateChange`, `hintDataChanged`, `closeHint`, `init`, `wizardStateChange`
 
@@ -239,7 +240,7 @@ import {
 const {controller} = createOnboarding({
   /**/
   plugins: [
-    new MultiTabSyncPlugin({enableStateSync: false}), //
+    new MultiTabSyncPlugin({enableStateSync: false}),
     new PromoPresetsPlugin(),
     new WizardPlugin(),
   ],
@@ -271,3 +272,260 @@ const {controller} = createOnboarding({
 ```
 
 # Promo manager
+
+## How to use promo-manager
+### 1. Init promo manager and setup the progress update
+
+```typescript jsx
+// promo-manager.ts
+
+import { createPromoManager } from '@gravity-ui/onboarding/dist/promo-manager';
+import { ShowOnceForPeriod } from '@gravity-ui/onboarding/dist/promo-manager/helpers';
+
+export const { controller, usePromoManager, useActivePromo } = createPromoManager({
+    config: {
+        promoGroups: [{
+            slug: 'poll',
+            conditions: [ShowOnceForPeriod({month: 1})],
+            promos: [
+                {
+                    slug: 'issuePoll',
+                    conditions: [ShowOncePerMonths(6)],
+                    meta: {...}
+                },
+            ],
+        }],
+    },
+    progressState: () => {/* ... */},
+    getProgressState: () => {/* ... */},
+    onSave: {
+        progress: (state) => () => {/* ... */},
+    },
+});
+```
+
+### 2. Trigger promo in your component
+
+```typescript jsx
+// TriggerExample.tsx
+
+import { usePromoManager } from './promo-manager';
+
+const { status, requestStart, cancelStart } = usePromoManager('issuePoll');
+
+useMount(() => {
+    requestStart();
+});
+
+useUnmount(() => {
+    cancelStart();
+});
+
+if(status === 'active') {
+    // allowed to run. Do something
+}
+```
+
+## Condition and constraints
+You can use conditions for each promo. Or use constraints to set limitations between promos.
+```typescript jsx
+import {
+    ShowOnceForSession,
+    ShowOnceForPeriod,
+    MatchUrl,
+    LimitFrequency
+} from '@gravity-ui/onboarding/dist/promo-manager/helpers';
+
+const groupOfPolls = {
+    slug: 'groupOfPolls',
+    promos: [
+        {slug: 'somePoll', conditions: [ShowOnceForPeriod({month: 1})]},
+        {slug: 'pollForPageWithparam', conditions: [
+            MatchUrl('param=value'),
+            ShowOnceForPeriod({month: 5})
+        ]}
+    ],
+}
+
+const groupOfHints = {
+    slug: 'groupOfHints',
+    conditions: [ShowOnceForSession()],
+    promos: [
+        {slug: 'someHint'},
+        {slug: 'hintForSpecificPage', conditions: [
+            MatchUrl('/folder/\\w{5}/page$'),
+        ]},
+    ],
+}
+
+const {controller} = createPromoManager({
+    config: {
+        constraints: [
+            LimitFrequency({
+                slugs: ['somePoll', 'groupOfHints'], // can use promos slugs and group slugs
+                interval: {days: 1},
+            })
+        ],
+        promoGroups: [groupOfHints, groupOfPolls]
+    },
+});
+
+```
+---
+You can write your own conditions.
+```typescript jsx
+
+const user = {/**/} // get user from state
+const usersWithLanguage = (language) => user.language = language;
+
+const promo = {slug: 'somePoll', conditions: [usersWithLanguage('english')]};
+```
+---
+## Promo manager events
+
+Promo manager can run promo on events.
+
+```typescript
+const promo = {
+    slug: 'promo1',
+    conditions: [],
+    trigger: {on: 'someCustomEvent', timeout: 1000}
+}
+
+const {controller} = createPromoManager({
+    config: {
+        promoGroups: [{
+            slug: 'group',
+            conditions: [],
+            promos: [promo],
+        }]
+    },
+});
+
+controller.sendEvent('someCustomEvent')
+```
+
+You can also use `UrlEventPlugin` to run promos on specific url. Promo will run when user opens page.
+
+```typescript
+const {controller} = createPromoManager({
+    config: {
+        promoGroups: [
+            {
+                slug: '1',
+                promos: [
+                    {
+                        slug: 'promo1',
+                        conditions: [MatchUrl('/folder/\\w{5}/page$'),],
+                        trigger: {on: 'pageOpened', timeout: 2000},
+                    },
+                ],
+            },
+        ],
+    },
+    plugins: [new UrlEventsPlugin({eventName: 'pageOpened'})],
+})
+```
+
+## JSON config
+
+You can define conditions, constraints as JSON serializable objects. So you can take congig from json, parse it and use. It can be useful for editing config without rebuild project and release.
+
+
+```typescript
+
+const usersWithLanguage = (language) => user.language = language;
+
+const {controller} = createPromoManager({
+    config: { // config section now can be parsed from json
+        constraints: [
+            {
+                helper: 'LimitFrequency',
+                args: [{
+                    slugs: ['somePoll', 'groupOfHints'], // can use promos slugs and group slugs
+                    interval: {days: 1},
+                }],
+            },
+        ],
+        promoGroups: [{
+            slug: 'groupOfPolls',
+            promos: [
+                {
+                    slug: 'somePoll',
+                    conditions: [{
+                        helper: 'ShowOnceForPeriod',
+                        args: [{month: 1}]
+                    }]
+                },
+                {
+                    slug: 'pollForPageWithparam',
+                    conditions: [
+                        {
+                            helper: 'MatchUrl',
+                            args: ['param=value']
+                        },
+                        {
+                            helper: 'usersWithLanguage',
+                            args: ['English']
+                        },
+                    ]
+                }
+            ],
+        }]
+    },
+    conditionHelpers: {
+        usersWithLanguage,
+    },
+});
+```
+
+## Onboarding integration
+
+You can use onboarding with `PromoPresetsPlugin` to show advertising and educational hints. You can use promo manager to limit frequency and set constraint with other promo in service.
+
+```typescript
+import {
+    createOnboarding
+} from "./index";
+
+const {controller: onboardingController} = createOnboarding({
+    config: {
+        presets: {
+            coolNewFeature: {
+                name: 'Cool feature',
+                visibility: 'alwaysHidden',
+                steps: [/**/]
+            },
+            coolNewFeature2: {
+                name: 'Cool feature2',
+                visibility: 'alwaysHidden',
+                steps: [/**/],
+            }
+        }
+    },
+    plugins: [new PromoPresetsPlugin(),]
+   /**/ 
+})
+
+const {controller} = createPromoManager({
+    ...testOptions,
+    config: {
+        promoGroups: [
+            {
+                slug: 'hintPromos',
+                conditions: [ShowOnceForSession()], // only 1 promo hint for session
+                promos: [
+                    {
+                        slug: 'coolNewFeature', // slug = onboarding preset name 
+                        conditions: [/**/], //  you can add additional conditions
+                    },
+                ],
+            },
+        ],
+    },
+    onboarding: {
+        getInstance: () => onboardingController,
+        groupSlug: 'hintPromos',
+    },
+});
+```
