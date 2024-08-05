@@ -34,7 +34,7 @@ This package contains 2 tools:
 
 - Onboarding - tool for creating hint based onboarding for service users. Create presets with steps, bind to elements and call methods. Onboarding will keep user progress and calculate next hint to show.
 
-- Promo manager - tool for managing any promo activities tou push into user: banners, informers, advertisements of new features, UX surveys, educational popup. Put all promos in config and specify the conditions. Promo manager will keep user progress and calculate next promo to show.
+- Promo manager - tool for managing any promo activities you push into user: banners, informers, advertisements of new features, UX surveys, educational popup. Put all promos in config and specify the conditions. Promo manager will keep user progress and calculate next promo to show.
 
 # Onboarding guide
 
@@ -45,7 +45,7 @@ This package contains 2 tools:
 
 ```typescript jsx
 // todo-list-onboarding.ts
-import {createOnboarding} from '@gravity-ui/onboarding';
+import {createOnboarding, createPreset} from '@gravity-ui/onboarding';
 
 export const {
   useOnboardingStep,
@@ -56,7 +56,8 @@ export const {
 } = createOnboarding({
   config: {
     presets: {
-      todoListFirstUsage: {
+    // createPreset - wrapper for better type inference
+      todoListFirstUsage: createPreset({
         name: '',
         steps: [
           createStep({
@@ -66,7 +67,7 @@ export const {
           }),
           /* other scanario steps */
         ],
-      },
+      }),
     },
   },
   // onboarding state from backend
@@ -136,7 +137,7 @@ const onboardingOptions = {
     },
     showHint: (state) => {
       /**/
-    }, // optional. function to shoe hint. Only for vanilla js usage
+    }, // optional. function to show hint. Only for vanilla js usage
     logger: {
       // optional. you can specify custom logger
       level: 'error' as const,
@@ -175,6 +176,7 @@ For default preset you can specify properties:
 const onboardingOptions = {
   config: {
     presets: {
+      // you can also use createPreset helper
       createProject: {
         // preset name should be unique
         name: 'Creating project', // text for user
@@ -225,12 +227,27 @@ controller.events.subscribe('beforeShowHint', callback);
 
 You can use plugins
 
-- MultiTabSyncPlugin - closes hint in all browser tabs
+- MultiTabSyncPlugin - closes hint in all browser tabs.
+```typescript jsx
+new MultiTabSyncPlugin({
+    enableStateSync: false, // Experimantal. Default - false(recommended). Sync all onboarding state.
+    enableCloseHintSync: true, // closes hont in all browser tabs,
+    changeStateLSKey: 'onboarding.plugin-sync.changeState', // localStorage key for state sync
+    closeHintLSKey: 'onboarding.plugin-sync.closeHint', // localStorage key for close hint in all tabs
+});
+```
 - PromoPresetsPlugin - all 'always hidden presets' becomes 'promo presets'. They can turn on onboarding, can only show hint only if user not interact with common onboarding presets. Perfect for educational hints
+```typescript jsx
+new PromoPresetsPlugin({
+    turnOnWhenShowHint: true, // Default - true. Force to turn on onboarding, when promo hint should be shown
+    turnOnWhenSuggestPromoPreset: true, // Default - true. Force to turn on onboarding, when promo preset suggested
+});
+```
 - WizardPlugin - highly recommended, if wizard is used. hide wizard on run preset, show on finish, erase progress for not finished presets on wizard close.
 
+Example:
 ```typescript jsx
-import {createOnboardin} from '@gravity-ui/onboarding';
+import {createOnboarding} from '@gravity-ui/onboarding';
 import {
   MultiTabSyncPlugin,
   PromoPresetsPlugin,
@@ -252,7 +269,7 @@ const {controller} = createOnboarding({
 You can write your own plugin
 
 ```typescript jsx
-import {createOnboardin} from '@gravity-ui/onboarding';
+import {createOnboarding} from '@gravity-ui/onboarding';
 import {WizardPlugin} from '@gravity-ui/onboarding/dist/plugins';
 
 const myPlugin = {
@@ -328,6 +345,12 @@ if(status === 'active') {
 
 ## Condition and constraints
 You can use conditions for each promo. Or use constraints to set limitations between promos.
+
+Promo could be started only if
+- All promo conditions returns true
+- All promo group condition returns true
+- All constraints passed
+
 ```typescript jsx
 import {
     ShowOnceForSession,
@@ -429,7 +452,7 @@ const {controller} = createPromoManager({
 
 ## JSON config
 
-You can define conditions, constraints as JSON serializable objects. So you can take congig from json, parse it and use. It can be useful for editing config without rebuild project and release.
+You can define conditions, constraints as JSON serializable objects. So you can take config from json, parse it and use. It can be useful for editing config without rebuild project and release.
 
 
 ```typescript
