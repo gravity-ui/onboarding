@@ -319,32 +319,14 @@ describe('LimitFrequency', function () {
 });
 
 describe('matchUrl', function () {
-    const state = {
-        base: {
-            activePromo: null,
-            activeQueue: [],
-        },
-        progress: {
-            finishedPromos: ['somePromo1'],
-            progressInfoByPromoGroup: {
-                someType1: {
-                    lastCallTime: new Date('07-15-2024').valueOf(),
-                },
-            },
-            progressInfoByPromo: {},
-        },
-    };
-
     const setCurrentUrl = (url: string) => window.history.pushState({}, '', new URL(url));
-
-    const currentDate = new Date('07-15-2024').valueOf();
 
     it('math host', function () {
         const helper = MatchUrl('localhost');
 
         setCurrentUrl('http://localhost/');
 
-        expect(helper(state, {currentDate})).toBe(true);
+        expect(helper()).toBe(true);
     });
 
     it('match query', function () {
@@ -352,7 +334,7 @@ describe('matchUrl', function () {
 
         setCurrentUrl('http://localhost/page/?param=value');
 
-        expect(helper(state, {currentDate})).toBe(true);
+        expect(helper()).toBe(true);
     });
 
     it('match query', function () {
@@ -360,7 +342,7 @@ describe('matchUrl', function () {
 
         setCurrentUrl('http://localhost/page/?param=value');
 
-        expect(helper(state, {currentDate})).toBe(true);
+        expect(helper()).toBe(true);
     });
 
     it('match hash', function () {
@@ -368,7 +350,7 @@ describe('matchUrl', function () {
 
         setCurrentUrl('http://localhost/#somehash');
 
-        expect(helper(state, {currentDate})).toBe(true);
+        expect(helper()).toBe(true);
     });
 
     it('multiple calls', function () {
@@ -376,8 +358,8 @@ describe('matchUrl', function () {
 
         setCurrentUrl('http://localhost/#somehash');
 
-        expect(helper(state, {currentDate})).toBe(true);
-        expect(helper(state, {currentDate})).toBe(true);
+        expect(helper()).toBe(true);
+        expect(helper()).toBe(true);
     });
 
     it('math host with complex regex', function () {
@@ -385,6 +367,6 @@ describe('matchUrl', function () {
 
         setCurrentUrl('http://localhost/folder/12354/page');
 
-        expect(helper(state, {currentDate})).toBe(true);
+        expect(helper()).toBe(true);
     });
 });

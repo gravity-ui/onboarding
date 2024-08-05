@@ -1,5 +1,5 @@
 import type {PromoState} from '../types';
-import {ConditionContext, ConditionHelper} from '../types';
+import {ConditionContext} from '../types';
 
 import dayjs from 'dayjs';
 import duration, {DurationUnitsObjectType} from 'dayjs/plugin/duration';
@@ -9,35 +9,27 @@ dayjs.extend(duration);
 
 export type DurationParam = DurationUnitsObjectType | string;
 
-export const PromoInCurrentDay: ConditionHelper = (date: Date) => {
+export const PromoInCurrentDay = (date: Date) => {
     return () => date.toDateString() === new Date().toDateString();
 };
-
-export const ShowOnceForPeriod: ConditionHelper = (
-    ...params: Parameters<typeof dayjs.duration>
-) => {
-    return (state, ctx) => {
-        const targetInterval = dayjs.duration(...params);
+export const ShowOnceForPeriod = (interval: DurationParam) => {
+    return (state: PromoState, ctx: ConditionContext) => {
+        // @ts-ignore
+        const targetInterval = dayjs.duration(interval);
 
         return getTimeFromLastCallInMs(state, ctx) > targetInterval.asMilliseconds();
     };
 };
 
-export const ShowOnceForSession: ConditionHelper = () => {
-    return (state, ctx) => {
+export const ShowOnceForSession = () => {
+    return (state: PromoState, ctx: ConditionContext) => {
         const targetInterval = dayjs.duration(performance.now());
 
         return getTimeFromLastCallInMs(state, ctx) > targetInterval.asMilliseconds();
     };
 };
 
-export const LimitFrequency: ConditionHelper = ({
-    slugs,
-    interval,
-}: {
-    slugs: string[];
-    interval: DurationParam;
-}) => {
+export const LimitFrequency = ({slugs, interval}: {slugs: string[]; interval: DurationParam}) => {
     return (state: PromoState, ctx: ConditionContext) => {
         // @ts-ignore
         const targetInterval = dayjs.duration(interval);
@@ -55,7 +47,7 @@ export const LimitFrequency: ConditionHelper = ({
     };
 };
 
-export const MatchUrl: ConditionHelper = (regExp: string) => () => {
+export const MatchUrl = (regExp: string) => () => {
     const currentUrl = window.location.href;
     return new RegExp(regExp).test(currentUrl);
 };
