@@ -59,11 +59,11 @@ export const pollGroup2: PromoGroup = {
 
 export const pollWithConditions: PromoGroup = {
     slug: 'ask',
-    conditions: [ShowOnceForPeriod({month: 1})],
+    conditions: [ShowOnceForPeriod({months: 1})],
     promos: [
         {
             slug: 'every2Months',
-            conditions: [ShowOnceForPeriod({month: 2})],
+            conditions: [ShowOnceForPeriod({months: 2})],
         },
         {
             slug: 'free',
@@ -71,14 +71,14 @@ export const pollWithConditions: PromoGroup = {
         },
         {
             slug: 'every2Months2',
-            conditions: [ShowOnceForPeriod({month: 2})],
+            conditions: [ShowOnceForPeriod({months: 2})],
         },
     ],
 };
 
 export const pollWitJsonConditions: PromoGroup = {
     slug: 'ask',
-    conditions: [ShowOnceForPeriod({month: 1})],
+    conditions: [ShowOnceForPeriod({months: 1})],
     promos: [
         {
             slug: 'every2Months',
@@ -95,7 +95,7 @@ export const pollWitJsonConditions: PromoGroup = {
         },
         {
             slug: 'every2Months2',
-            conditions: [ShowOnceForPeriod({month: 2})],
+            conditions: [ShowOnceForPeriod({months: 2})],
         },
     ],
 };
