@@ -56,7 +56,7 @@ export class WizardPlugin implements OnboardingPlugin {
             'visibility' in currentPreset ? currentPreset.visibility : undefined;
 
         if (presetVisibility !== 'alwaysHidden') {
-            await this.eraseCommonPresetsProgress();
+            await this.eraseCommonPresetsProgress([preset]);
         }
     };
 
@@ -76,7 +76,7 @@ export class WizardPlugin implements OnboardingPlugin {
         }
     };
 
-    private eraseCommonPresetsProgress = async () => {
+    private eraseCommonPresetsProgress = async (extraPresetsToReset: string[] = []) => {
         if (!this.onboardingInstance) {
             return;
         }
@@ -91,6 +91,9 @@ export class WizardPlugin implements OnboardingPlugin {
             },
         );
 
-        await this.onboardingInstance.resetPresetProgress(presetToEraseProgress);
+        await this.onboardingInstance.resetPresetProgress([
+            ...presetToEraseProgress,
+            ...extraPresetsToReset,
+        ]);
     };
 }
