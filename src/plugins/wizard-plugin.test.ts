@@ -162,6 +162,39 @@ describe('run preset', function () {
         expect(controller.state.progress?.presetPassedSteps.createProject).toBe(undefined);
     });
 
+    it('rerun common preset -> reset progress', async function () {
+        const options = getOptions(
+            {activePresets: []},
+            {
+                finishedPresets: ['createProject'],
+            },
+        );
+        options.plugins = [new WizardPlugin()];
+        const controller = new Controller(options);
+        await controller.ensureRunning();
+
+        await controller.runPreset('createProject');
+
+        expect(controller.state.progress?.presetPassedSteps.createProject).toBe(undefined);
+    });
+
+    it('rerun combined preset -> reset progress', async function () {
+        const options = getOptionsWithCombined(
+            {activePresets: []},
+            {
+                presetPassedSteps: {internal1: ['someStepInternal11']},
+                finishedPresets: ['internal1'],
+            },
+        );
+        options.plugins = [new WizardPlugin()];
+        const controller = new Controller(options);
+        await controller.ensureRunning();
+
+        await controller.runPreset('combinedPreset');
+
+        expect(controller.state.progress?.presetPassedSteps.internal1).toBe(undefined);
+    });
+
     it('run always hidden preset -> NOT reset progress', async function () {
         const options = getOptions();
         options.plugins = [new WizardPlugin()];
