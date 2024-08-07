@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.20.0](https://github.com/gravity-ui/onboarding/compare/v0.19.0...v0.20.0) (2024-08-07)
+
+
+### Features
+
+* **promo manager:** add matchUrl condition ([86f3579](https://github.com/gravity-ui/onboarding/commit/86f3579944e76c58d6280bafd0ea4516c7da9a61))
+* **promo manager:** add ShowOnceForSession condition ([6e4ffcc](https://github.com/gravity-ui/onboarding/commit/6e4ffcc3c9cdc96d071d9b377ff777a3b59e1819))
+* **promo manager:** hooks and plugin system ([969131a](https://github.com/gravity-ui/onboarding/commit/969131a39759313525c9b2b12abfad6391b149f1))
+* **promo manager:** run promo on custom event ([786ec85](https://github.com/gravity-ui/onboarding/commit/786ec854e2730c0789137f709285372ac97102f0))
+* **promo manager:** timeout in events ([b883399](https://github.com/gravity-ui/onboarding/commit/b883399da02cb1607ffb7f93dafc9a14dd5565c5))
+* **promo manager:** url-change plugin ([92277be](https://github.com/gravity-ui/onboarding/commit/92277be0bc84e4be9b17d091943936af35e4500f))
+
+
+### Bug Fixes
+
+* **onboarding:** erase progress for finished preset ([73a9bd7](https://github.com/gravity-ui/onboarding/commit/73a9bd7c4b68d38dca7ad9c15ac8d33062b3afe7))
+* **promo-manager:** fix condition function typing ([b15d8c2](https://github.com/gravity-ui/onboarding/commit/b15d8c230c1da004ab1a126b27793e645be1af40))
+
 ## [0.19.0](https://github.com/gravity-ui/onboarding/compare/v0.18.1...v0.19.0) (2024-07-24)
 
 
