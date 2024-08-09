@@ -1,24 +1,24 @@
 import {createDebounceHandler} from '../../debounce';
 import {createLogger, Logger} from '../../logger';
 import type {
+    ConditionHelper,
     Conditions,
+    EventsMap,
+    EventTypes,
     Helpers,
+    InitPromoManagerOptions,
     Nullable,
-    PromoGroupSlug,
     ProgressInfoConfig,
     Promo,
     PromoBaseState as BaseState,
+    PromoGroup,
+    PromoGroupSlug,
     PromoManagerStatus,
     PromoOptions,
     PromoProgressState as ProgressState,
     PromoSlug,
     PromoState,
     PromoStatus,
-    PromoGroup,
-    ConditionHelper,
-    InitPromoManagerOptions,
-    EventsMap,
-    EventTypes,
 } from './types';
 import {getConditions} from './utils/getConditions';
 import {getHelpers} from './utils/getHelpers';
@@ -33,7 +33,6 @@ type Listener = () => void;
 
 const defaultProgressState: ProgressState = {
     finishedPromos: [],
-    progressInfoByPromoGroup: {},
     progressInfoByPromo: {},
 };
 
@@ -292,7 +291,6 @@ export class Controller {
             lastCallTime: Date.now(),
         };
 
-        this.stateActions.updateProgressInfoByPromoGroup(type, info);
         this.stateActions.updateProgressInfoByPromo(slug, info);
 
         this.emitChange();
@@ -322,7 +320,11 @@ export class Controller {
 
         const resultForType = checkCondition(
             this.state,
-            {promoType: type, currentDate: this.dateNow()},
+            {
+                promoType: type,
+                currentDate: this.dateNow(),
+                config: this.options.config,
+            },
             conditionsForType,
             this.logger,
         );
@@ -334,6 +336,7 @@ export class Controller {
                 promoSlug: slug,
                 currentDate: this.dateNow(),
                 helpers: this.conditionHelpers,
+                config: this.options.config,
             },
             conditionsForSlug,
             this.logger,
@@ -483,7 +486,11 @@ export class Controller {
 
         return checkCondition(
             this.state,
-            {currentDate: this.dateNow(), helpers: this.conditionHelpers},
+            {
+                currentDate: this.dateNow(),
+                helpers: this.conditionHelpers,
+                config: this.options.config,
+            },
             this.options.config.constraints,
             this.logger,
         );
@@ -601,14 +608,6 @@ export class Controller {
             this.assertProgressLoaded();
 
             this.state.progress.finishedPromos.push(slug);
-        },
-        updateProgressInfoByPromoGroup: (type: PromoGroupSlug, info: ProgressInfoConfig) => {
-            this.assertProgressLoaded();
-
-            this.state.progress.progressInfoByPromoGroup[type] = {
-                ...this.state.progress.progressInfoByPromoGroup[type],
-                ...info,
-            };
         },
         updateProgressInfoByPromo: (slug: PromoSlug, info: ProgressInfoConfig) => {
             this.assertProgressLoaded();

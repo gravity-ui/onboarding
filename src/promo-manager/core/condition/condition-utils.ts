@@ -1,13 +1,14 @@
 import {ConditionContext, PromoState} from '../types';
 import dayjs from 'dayjs';
+import {getProgressForGroup} from '../utils/getProgressForGroup';
 
-export const getLastTimeCall = (state: PromoState, slug?: string) => {
-    if (!slug) {
+export const getLastTimeCall = (state: PromoState, ctx: ConditionContext, slug?: string) => {
+    if (!slug || !state.progress) {
         return undefined;
     }
 
     const timeForPromo = state.progress?.progressInfoByPromo[slug]?.lastCallTime;
-    const timeForType = state.progress?.progressInfoByPromoGroup[slug]?.lastCallTime;
+    const timeForType = getProgressForGroup(state.progress, ctx.config, slug)?.lastCallTime;
 
     return timeForPromo || timeForType;
 };
@@ -15,7 +16,7 @@ export const getLastTimeCall = (state: PromoState, slug?: string) => {
 export const getTimeFromLastCallInMs = (state: PromoState, ctx: ConditionContext) => {
     const nowDate = dayjs(ctx.currentDate);
 
-    const lastTimeCall = getLastTimeCall(state, ctx.promoSlug || ctx.promoType);
+    const lastTimeCall = getLastTimeCall(state, ctx, ctx.promoSlug || ctx.promoType);
 
     if (!lastTimeCall) {
         return Infinity;
