@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.0](https://github.com/gravity-ui/onboarding/compare/v0.20.0...v0.21.0) (2024-08-16)
+
+
+### chore
+
+* bump version to 0.21.0 ([0e7806e](https://github.com/gravity-ui/onboarding/commit/0e7806e25dbe580d67b397310b7288075f7f731c))
+
 ## [0.20.0](https://github.com/gravity-ui/onboarding/compare/v0.19.0...v0.20.0) (2024-08-07)
 
 
