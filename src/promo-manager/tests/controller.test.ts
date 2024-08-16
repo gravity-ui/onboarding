@@ -176,7 +176,6 @@ describe('trigger subscribe', () => {
 describe('update last call info', () => {
     let controller: Controller;
     const promo = 'boardPoll';
-    const promoType = 'poll';
 
     beforeEach(async () => {
         controller = new Controller(testOptions);
@@ -186,18 +185,12 @@ describe('update last call info', () => {
     it('finish and save time', () => {
         controller.finishPromo(promo);
 
-        expect(
-            controller.state.progress?.progressInfoByPromoGroup[promoType]?.lastCallTime,
-        ).toBeDefined();
         expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeDefined();
     });
 
     it('cancel and save time', () => {
         controller.cancelPromo(promo);
 
-        expect(
-            controller.state.progress?.progressInfoByPromoGroup[promoType]?.lastCallTime,
-        ).toBeDefined();
         expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeDefined();
     });
 });
@@ -205,7 +198,6 @@ describe('update last call info', () => {
 describe('close with timeout', () => {
     let controller: Controller;
     const promo = 'boardPoll';
-    const promoType = 'poll';
     const clearActiveTimeout = 1000;
 
     beforeEach(async () => {
@@ -216,9 +208,6 @@ describe('close with timeout', () => {
     it('finish and save time', async () => {
         controller.finishPromo(promo, clearActiveTimeout);
 
-        expect(
-            controller.state.progress?.progressInfoByPromoGroup[promoType]?.lastCallTime,
-        ).toBeDefined();
         expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeDefined();
         expect(controller.state.base.activePromo).toBe(promo);
 
@@ -231,9 +220,6 @@ describe('close with timeout', () => {
         jest.useFakeTimers();
         controller.cancelPromo(promo, clearActiveTimeout);
 
-        expect(
-            controller.state.progress?.progressInfoByPromoGroup[promoType]?.lastCallTime,
-        ).toBeDefined();
         expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeDefined();
         expect(controller.state.base.activePromo).toBe(promo);
 

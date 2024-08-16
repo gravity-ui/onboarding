@@ -1,5 +1,18 @@
 import {LimitFrequency, MatchUrl, ShowOnceForPeriod, ShowOnceForSession} from './condition-helpers';
+import {PromoOptions} from '../types';
 
+const config: PromoOptions['config'] = {
+    promoGroups: [
+        {
+            slug: 'promoGroup1',
+            promos: [
+                {
+                    slug: 'somePromo1',
+                },
+            ],
+        },
+    ],
+};
 describe('ShowOnceForPeriod', function () {
     const currentDate = new Date('07-15-2024').valueOf();
 
@@ -13,12 +26,11 @@ describe('ShowOnceForPeriod', function () {
             },
             progress: {
                 finishedPromos: [],
-                progressInfoByPromoGroup: {},
                 progressInfoByPromo: {},
             },
         };
 
-        expect(helper(state, {currentDate, promoSlug: 'somePromo1'})).toBe(true);
+        expect(helper(state, {currentDate, promoSlug: 'somePromo1', config})).toBe(true);
     });
 
     describe('pick by promo', function () {
@@ -32,7 +44,6 @@ describe('ShowOnceForPeriod', function () {
                 },
                 progress: {
                     finishedPromos: ['somePromo1'],
-                    progressInfoByPromoGroup: {},
                     progressInfoByPromo: {
                         somePromo1: {
                             lastCallTime: new Date('07-14-2024').valueOf(),
@@ -41,7 +52,7 @@ describe('ShowOnceForPeriod', function () {
                 },
             };
 
-            expect(helper(state, {currentDate, promoSlug: 'somePromo1'})).toBe(false);
+            expect(helper(state, {currentDate, promoSlug: 'somePromo1', config})).toBe(false);
         });
 
         it('enough time has passed to start -> false', function () {
@@ -54,7 +65,6 @@ describe('ShowOnceForPeriod', function () {
                 },
                 progress: {
                     finishedPromos: ['somePromo1'],
-                    progressInfoByPromoGroup: {},
                     progressInfoByPromo: {
                         somePromo1: {
                             lastCallTime: new Date('07-01-2024').valueOf(),
@@ -63,7 +73,7 @@ describe('ShowOnceForPeriod', function () {
                 },
             };
 
-            expect(helper(state, {currentDate, promoSlug: 'somePromo1'})).toBe(true);
+            expect(helper(state, {currentDate, promoSlug: 'somePromo1', config})).toBe(true);
         });
     });
 
@@ -78,11 +88,6 @@ describe('ShowOnceForPeriod', function () {
                 },
                 progress: {
                     finishedPromos: ['somePromo1'],
-                    progressInfoByPromoGroup: {
-                        promoGroup1: {
-                            lastCallTime: new Date('07-14-2024').valueOf(),
-                        },
-                    },
                     progressInfoByPromo: {
                         somePromo1: {
                             lastCallTime: new Date('07-14-2024').valueOf(),
@@ -91,7 +96,7 @@ describe('ShowOnceForPeriod', function () {
                 },
             };
 
-            expect(helper(state, {currentDate, promoType: 'promoGroup1'})).toBe(false);
+            expect(helper(state, {currentDate, promoType: 'promoGroup1', config})).toBe(false);
         });
 
         it('enough time has passed to start -> true', function () {
@@ -104,11 +109,6 @@ describe('ShowOnceForPeriod', function () {
                 },
                 progress: {
                     finishedPromos: ['somePromo1'],
-                    progressInfoByPromoGroup: {
-                        promoGroup1: {
-                            lastCallTime: new Date('07-01-2024').valueOf(),
-                        },
-                    },
                     progressInfoByPromo: {
                         somePromo1: {
                             lastCallTime: new Date('07-01-2024').valueOf(),
@@ -117,7 +117,7 @@ describe('ShowOnceForPeriod', function () {
                 },
             };
 
-            expect(helper(state, {currentDate, promoType: 'promoGroup1'})).toBe(true);
+            expect(helper(state, {currentDate, promoType: 'promoGroup1', config})).toBe(true);
         });
     });
 });
@@ -134,12 +134,11 @@ describe('ShowOnceForSession', function () {
             },
             progress: {
                 finishedPromos: [],
-                progressInfoByPromoGroup: {},
                 progressInfoByPromo: {},
             },
         };
 
-        expect(helper(state, {currentDate, promoSlug: 'somePromo'})).toBe(true);
+        expect(helper(state, {currentDate, promoSlug: 'somePromo', config})).toBe(true);
     });
 
     it('has run -> false ', function () {
@@ -150,7 +149,6 @@ describe('ShowOnceForSession', function () {
             },
             progress: {
                 finishedPromos: ['somePromo1'],
-                progressInfoByPromoGroup: {},
                 progressInfoByPromo: {
                     somePromo1: {
                         lastCallTime: currentDate,
@@ -161,7 +159,7 @@ describe('ShowOnceForSession', function () {
 
         const helper = ShowOnceForSession();
 
-        expect(helper(state, {currentDate, promoSlug: 'somePromo1'})).toBe(false);
+        expect(helper(state, {currentDate, promoSlug: 'somePromo1', config})).toBe(false);
     });
 });
 describe('LimitFrequency', function () {
@@ -180,12 +178,11 @@ describe('LimitFrequency', function () {
             },
             progress: {
                 finishedPromos: [],
-                progressInfoByPromoGroup: {},
                 progressInfoByPromo: {},
             },
         };
 
-        expect(helper(state, {currentDate})).toBe(true);
+        expect(helper(state, {currentDate, config})).toBe(true);
     });
 
     describe('pick by slug', function () {
@@ -202,7 +199,6 @@ describe('LimitFrequency', function () {
                 },
                 progress: {
                     finishedPromos: ['somePromo1'],
-                    progressInfoByPromoGroup: {},
                     progressInfoByPromo: {
                         somePromo1: {
                             lastCallTime: new Date('07-15-2024').valueOf(),
@@ -211,7 +207,7 @@ describe('LimitFrequency', function () {
                 },
             };
 
-            expect(helper(state, {currentDate})).toBe(false);
+            expect(helper(state, {currentDate, config})).toBe(false);
         });
 
         it('enough time has passed to start -> true', function () {
@@ -227,7 +223,6 @@ describe('LimitFrequency', function () {
                 },
                 progress: {
                     finishedPromos: ['somePromo1'],
-                    progressInfoByPromoGroup: {},
                     progressInfoByPromo: {
                         somePromo1: {
                             lastCallTime: new Date('07-01-2024').valueOf(),
@@ -236,14 +231,14 @@ describe('LimitFrequency', function () {
                 },
             };
 
-            expect(helper(state, {currentDate})).toBe(true);
+            expect(helper(state, {currentDate, config})).toBe(true);
         });
     });
 
-    describe('pick by type', function () {
+    describe('pick by promoGroup', function () {
         it('not enough time has passed to start -> false', function () {
             const helper = LimitFrequency({
-                slugs: ['someType1', 'someType2'],
+                slugs: ['promoGroup1', 'promoGroup2'],
                 interval: {weeks: 1},
             });
 
@@ -254,16 +249,15 @@ describe('LimitFrequency', function () {
                 },
                 progress: {
                     finishedPromos: ['somePromo1'],
-                    progressInfoByPromoGroup: {
-                        someType1: {
+                    progressInfoByPromo: {
+                        somePromo1: {
                             lastCallTime: new Date('07-15-2024').valueOf(),
                         },
                     },
-                    progressInfoByPromo: {},
                 },
             };
 
-            expect(helper(state, {currentDate})).toBe(false);
+            expect(helper(state, {currentDate, config})).toBe(false);
         });
 
         it('enough time has passed to start -> true', function () {
@@ -279,16 +273,15 @@ describe('LimitFrequency', function () {
                 },
                 progress: {
                     finishedPromos: ['somePromo1'],
-                    progressInfoByPromoGroup: {
-                        someType1: {
+                    progressInfoByPromo: {
+                        somePromo1: {
                             lastCallTime: new Date('07-01-2024').valueOf(),
                         },
                     },
-                    progressInfoByPromo: {},
                 },
             };
 
-            expect(helper(state, {currentDate})).toBe(true);
+            expect(helper(state, {currentDate, config})).toBe(true);
         });
     });
 
@@ -305,16 +298,15 @@ describe('LimitFrequency', function () {
             },
             progress: {
                 finishedPromos: ['somePromo1'],
-                progressInfoByPromoGroup: {
-                    someType1: {
+                progressInfoByPromo: {
+                    somePromo1: {
                         lastCallTime: new Date('07-15-2024').valueOf(),
                     },
                 },
-                progressInfoByPromo: {},
             },
         };
 
-        expect(helper(state, {currentDate})).toBe(false);
+        expect(helper(state, {currentDate, config})).toBe(false);
     });
 });
 

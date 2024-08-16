@@ -65,6 +65,7 @@ export type ConditionContext = {
     promoSlug?: PromoSlug;
     currentDate: number;
     helpers?: Record<string, ConditionHelper>;
+    config: PromoOptions['config'];
 };
 export type ConditionParams = [PromoState, ConditionContext];
 
@@ -99,7 +100,6 @@ export type PromoBaseState = {
 
 export type PromoProgressState = {
     finishedPromos: PromoSlug[];
-    progressInfoByPromoGroup: ProgressInfo;
     progressInfoByPromo: ProgressInfo;
 };
 
