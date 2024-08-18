@@ -9,9 +9,7 @@ import type {
     InitPromoManagerOptions,
     Nullable,
     ProgressInfoConfig,
-    Promo,
     PromoBaseState as BaseState,
-    PromoGroup,
     PromoGroupSlug,
     PromoManagerStatus,
     PromoOptions,
@@ -258,22 +256,6 @@ export class Controller {
         }
 
         return 'canRun';
-    };
-
-    getFirstAvailablePromoFromGroup = (slug: PromoGroupSlug): Nullable<PromoSlug> => {
-        const promoGroup = Object.values(this.options.config.promoGroups).find(
-            (currentPromoGroup: PromoGroup<unknown>) => currentPromoGroup.slug === slug,
-        );
-
-        if (!promoGroup) {
-            return null;
-        }
-
-        return (
-            promoGroup.promos.find(
-                (promo: Promo) => this.isAbleToRun(promo.slug) || this.isPending(promo.slug),
-            )?.slug ?? null
-        );
     };
 
     getActivePromo = (promoGroup?: PromoGroupSlug): Nullable<PromoSlug> => {
