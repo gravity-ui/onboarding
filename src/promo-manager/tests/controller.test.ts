@@ -116,13 +116,13 @@ describe('trigger subscribe', () => {
         expect(callback).toHaveBeenCalledTimes(1);
     });
 
-    it('cancelStart -> 1 update', async () => {
+    it('skipPromo -> 1 update', async () => {
         await controller.requestStart('boardPoll');
 
         const callback = jest.fn();
         controller.subscribe(callback);
 
-        await controller.cancelStart('boardPoll');
+        await controller.skipPromo('boardPoll');
 
         expect(callback).toHaveBeenCalledTimes(1);
     });

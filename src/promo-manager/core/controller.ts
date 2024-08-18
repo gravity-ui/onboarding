@@ -219,7 +219,7 @@ export class Controller {
         this.updateProgressInfo(slug);
     };
 
-    cancelStart = (slug: Nullable<PromoSlug>) => {
+    skipPromo = (slug: Nullable<PromoSlug>) => {
         this.logger.debug('Skip promo run', slug);
         if (!slug) {
             return;
@@ -260,7 +260,7 @@ export class Controller {
         return 'canRun';
     };
 
-    getFirstAvailablePromoByType = (slug: PromoGroupSlug): Nullable<PromoSlug> => {
+    getFirstAvailablePromoFromGroup = (slug: PromoGroupSlug): Nullable<PromoSlug> => {
         const promoGroup = Object.values(this.options.config.promoGroups).find(
             (currentPromoGroup: PromoGroup<unknown>) => currentPromoGroup.slug === slug,
         );
@@ -276,12 +276,12 @@ export class Controller {
         );
     };
 
-    getActivePromo = (promoType?: PromoGroupSlug): Nullable<PromoSlug> => {
+    getActivePromo = (promoGroup?: PromoGroupSlug): Nullable<PromoSlug> => {
         const activePromo = this.state.base.activePromo;
 
-        if (!promoType) return activePromo;
+        if (!promoGroup) return activePromo;
 
-        return this.getGroupBySlug(activePromo) === promoType ? activePromo : null;
+        return this.getGroupBySlug(activePromo) === promoGroup ? activePromo : null;
     };
 
     subscribe = (listener: Listener) => {
@@ -490,7 +490,7 @@ export class Controller {
 
                 const result = await this.requestStart(stepData.preset);
                 if (!result) {
-                    this.cancelStart(stepData.preset);
+                    this.skipPromo(stepData.preset);
                 }
                 return result;
             },
@@ -507,7 +507,7 @@ export class Controller {
 
         instance.events.subscribe('closeHint', async ({hint}: OnboardingEventsMap['closeHint']) => {
             if (this.promoPresets.has(hint.preset)) {
-                this.cancelStart(hint.preset);
+                this.skipPromo(hint.preset);
             }
         });
 

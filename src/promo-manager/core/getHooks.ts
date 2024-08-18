@@ -21,7 +21,7 @@ export function getHooks(controller: Controller) {
                     controller.finishPromo(promo, closeActiveTimeout),
                 cancel: (closeActiveTimeout?: number) =>
                     controller.cancelPromo(promo, closeActiveTimeout),
-                cancelStart: () => controller.cancelStart(promo),
+                skipPromo: () => controller.skipPromo(promo),
                 updateProgressInfo: () => controller.updateProgressInfo(promo),
             }),
             [promo, status],
@@ -42,16 +42,16 @@ export function getHooks(controller: Controller) {
                     controller.finishPromo(promo, closeActiveTimeout),
                 cancel: (closeActiveTimeout?: number) =>
                     controller.cancelPromo(promo, closeActiveTimeout),
-                cancelStart: () => controller.cancelStart(promo),
+                skipPromo: () => controller.skipPromo(promo),
                 updateProgressInfo: () => controller.updateProgressInfo(promo),
             }),
             [promo],
         );
     };
 
-    const useAvailablePromo = (type: PromoGroupSlug) => {
+    const useAvailablePromo = (group: PromoGroupSlug) => {
         const promo = useSyncExternalStore(controller.subscribe, () =>
-            controller.getFirstAvailablePromoByType(type),
+            controller.getFirstAvailablePromoFromGroup(group),
         );
 
         return useMemo(

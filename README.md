@@ -328,14 +328,14 @@ export const { controller, usePromoManager, useActivePromo } = createPromoManage
 
 import { usePromoManager } from './promo-manager';
 
-const { status, requestStart, cancelStart } = usePromoManager('issuePoll');
+const { status, requestStart, skipPromo } = usePromoManager('issuePoll');
 
 useMount(() => {
     requestStart();
 });
 
 useUnmount(() => {
-    cancelStart();
+    skipPromo();
 });
 
 if(status === 'active') {

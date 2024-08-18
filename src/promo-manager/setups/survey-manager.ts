@@ -26,7 +26,7 @@ export const createSurveyManager = ({
     const surveySlug = surveyGroup?.slug;
 
     const useActiveSurvey = () => {
-        const {promo, promoGroup, metaInfo, finish, cancel, cancelStart, updateProgressInfo} =
+        const {promo, promoGroup, metaInfo, finish, cancel, skipPromo, updateProgressInfo} =
             useActivePromo();
 
         return {
@@ -34,7 +34,7 @@ export const createSurveyManager = ({
             config: metaInfo,
             finish,
             cancel,
-            cancelStart,
+            skipPromo,
             updateProgressInfo,
         };
     };
