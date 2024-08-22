@@ -3,7 +3,8 @@ import {ConditionContext} from '../types';
 
 import dayjs from 'dayjs';
 import duration, {DurationUnitsObjectType} from 'dayjs/plugin/duration';
-import {getTimeFromLastCallInMs} from './condition-utils';
+import {getTimeFromLastCallInMs, isFinishedPromo} from './condition-utils';
+import {Logger} from '../../../logger';
 
 dayjs.extend(duration);
 
@@ -12,12 +13,29 @@ export type DurationParam = DurationUnitsObjectType | string;
 export const PromoInCurrentDay = (date: Date) => {
     return () => date.toDateString() === new Date().toDateString();
 };
+
 export const ShowOnceForPeriod = (interval: DurationParam) => {
     return (state: PromoState, ctx: ConditionContext) => {
         // @ts-ignore
         const targetInterval = dayjs.duration(interval);
 
         return getTimeFromLastCallInMs(state, ctx) > targetInterval.asMilliseconds();
+    };
+};
+
+export const ShowFinishedOnceForPeriod = (interval: DurationParam) => {
+    return (state: PromoState, ctx: ConditionContext, logger: Logger) => {
+        if (!isFinishedPromo(state, ctx, logger)) {
+            return true;
+        }
+
+        return ShowOnceForPeriod(interval)(state, ctx);
+    };
+};
+
+export const SkipFinished = () => {
+    return (state: PromoState, ctx: ConditionContext, logger: Logger) => {
+        return !isFinishedPromo(state, ctx, logger);
     };
 };
 

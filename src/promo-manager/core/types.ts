@@ -1,4 +1,4 @@
-import {LoggerOptions} from '../../logger';
+import {Logger, LoggerOptions} from '../../logger';
 import {Controller as OnboardingController} from '../../controller';
 import {Controller} from './controller';
 
@@ -67,7 +67,7 @@ export type ConditionContext = {
     helpers?: Record<string, ConditionHelper>;
     config: PromoOptions['config'];
 };
-export type ConditionParams = [PromoState, ConditionContext];
+export type ConditionParams = [PromoState, ConditionContext, Logger];
 
 export type ConditionFn = (...params: ConditionParams) => boolean;
 export type ConditionHelper = (...args: any[]) => ConditionFn;

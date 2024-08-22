@@ -1,17 +1,9 @@
 import {Controller} from '../core/controller';
 import {testOptions} from './options';
 import {pollGroup2, pollWithConditions} from './promoGroups';
-import dayjs from 'dayjs';
 import {LimitFrequency} from '../core/condition/condition-helpers';
 import {PromoProgressState} from '../core/types';
-
-const datePlusMonthsCallback = (monthsCount: number) => {
-    return () => {
-        const date = dayjs();
-
-        return date.add(monthsCount, 'month').add(1, 'second').valueOf();
-    };
-};
+import {datePlusMonthsCallback} from './utils';
 
 describe('periodic runs', function () {
     const options = {

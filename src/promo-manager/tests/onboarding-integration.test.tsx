@@ -2,6 +2,7 @@ import {Controller as OnboardingController} from '../../controller';
 import {Controller} from '../core/controller';
 import {testOptions} from './options';
 import {getAnchorElement, getOptionsWithPromo} from '../../tests/utils';
+import {SkipFinished} from '../core/condition/condition-helpers';
 
 it('no group -> error', async function () {
     const onboardingController = new OnboardingController(getOptionsWithPromo());
@@ -167,7 +168,7 @@ it('pass preset -> finish promo', async function () {
             promoGroups: [
                 {
                     slug: 'hintPromos',
-                    conditions: [],
+                    conditions: [SkipFinished()],
                     promos: [],
                 },
             ],

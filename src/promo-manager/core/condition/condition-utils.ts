@@ -1,3 +1,4 @@
+import {Logger} from '../../../logger';
 import {ConditionContext, PromoState} from '../types';
 import dayjs from 'dayjs';
 import {getProgressForGroup} from '../utils/getProgressForGroup';
@@ -24,4 +25,14 @@ export const getTimeFromLastCallInMs = (state: PromoState, ctx: ConditionContext
     const timeFromLastCall = dayjs.duration(nowDate.diff(dayjs(lastTimeCall)));
 
     return timeFromLastCall.asMilliseconds();
+};
+
+export const isFinishedPromo = (state: PromoState, ctx: ConditionContext, logger: Logger) => {
+    if (!ctx.promoSlug) {
+        logger.error('Promo is not provided');
+
+        return false;
+    }
+
+    return state.progress?.finishedPromos.includes(ctx.promoSlug) ?? false;
 };

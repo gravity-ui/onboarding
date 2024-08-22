@@ -227,10 +227,6 @@ export class Controller {
             return 'active';
         }
 
-        if (this.isFinished(slug)) {
-            return 'finished';
-        }
-
         if (this.isPending(slug)) {
             return 'pending';
         }
@@ -322,6 +318,7 @@ export class Controller {
             this.state,
             {
                 promoType: type,
+                promoSlug: slug,
                 currentDate: this.dateNow(),
                 config: this.options.config,
             },
@@ -512,12 +509,6 @@ export class Controller {
         return this.state.base.activePromo === slug;
     };
 
-    private isFinished = (slug: PromoSlug) => {
-        this.assertProgressLoaded();
-
-        return this.state.progress.finishedPromos.includes(slug);
-    };
-
     private isPending = (slug: PromoSlug) => {
         return this.state.base.activeQueue.includes(slug);
     };
@@ -548,11 +539,7 @@ export class Controller {
     private addPromoToActiveQueue = (slug: PromoSlug) => {
         this.assertProgressLoaded();
 
-        if (
-            this.state.progress.finishedPromos.includes(slug) ||
-            this.state.base.activeQueue.includes(slug) ||
-            !this.checkPromoConditions(slug)
-        ) {
+        if (this.state.base.activeQueue.includes(slug) || !this.checkPromoConditions(slug)) {
             return;
         }
 

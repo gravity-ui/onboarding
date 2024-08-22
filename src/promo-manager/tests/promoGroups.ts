@@ -1,4 +1,9 @@
-import {PromoInCurrentDay, ShowOnceForPeriod} from '../core/condition/condition-helpers';
+import {
+    PromoInCurrentDay,
+    ShowFinishedOnceForPeriod,
+    ShowOnceForPeriod,
+    SkipFinished,
+} from '../core/condition/condition-helpers';
 import type {PromoGroup} from '../core/types';
 
 export const testMetaInfo = {
@@ -7,7 +12,7 @@ export const testMetaInfo = {
 
 export const pollGroup: PromoGroup = {
     slug: 'poll',
-    conditions: [],
+    conditions: [SkipFinished()],
     promos: [
         {
             slug: 'boardPoll',
@@ -59,7 +64,7 @@ export const pollGroup2: PromoGroup = {
 
 export const pollWithConditions: PromoGroup = {
     slug: 'ask',
-    conditions: [ShowOnceForPeriod({months: 1})],
+    conditions: [ShowOnceForPeriod({months: 1}), SkipFinished()],
     promos: [
         {
             slug: 'every2Months',
@@ -72,6 +77,21 @@ export const pollWithConditions: PromoGroup = {
         {
             slug: 'every2Months2',
             conditions: [ShowOnceForPeriod({months: 2})],
+        },
+    ],
+};
+
+export const pollWithFinishConditions: PromoGroup = {
+    slug: 'finish',
+    conditions: [],
+    promos: [
+        {
+            slug: 'skipFinished',
+            conditions: [SkipFinished()],
+        },
+        {
+            slug: 'repeatFinished',
+            conditions: [ShowFinishedOnceForPeriod({months: 2})],
         },
     ],
 };

@@ -16,7 +16,7 @@ const resolveConditionObject = (
 
     const args = condition.args ?? [];
 
-    return conditionHelper(...args)(state, ctx);
+    return conditionHelper(...args)(state, ctx, logger);
 };
 
 export const checkCondition = (
@@ -28,7 +28,7 @@ export const checkCondition = (
     for (const condition of conditions) {
         let result = false;
         if (typeof condition === 'function') {
-            result = condition(state, ctx);
+            result = condition(state, ctx, logger);
         } else {
             result = resolveConditionObject(condition, state, ctx, logger);
         }

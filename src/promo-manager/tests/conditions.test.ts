@@ -1,6 +1,8 @@
 import {Controller} from '../core/controller';
 
 import {testOptions} from './options';
+import {pollWithFinishConditions} from './promoGroups';
+import {datePlusMonthsCallback} from './utils';
 
 it('promo with NO condition -> runs', async function () {
     const groupWithNoCondition = {
@@ -133,5 +135,73 @@ describe('json conditions', function () {
         await controller.requestStart('someSlug');
 
         expect(controller.state.base.activePromo).toBe(null);
+    });
+});
+
+describe('ShowFinishedOnceForPeriod', function () {
+    const options = {
+        ...testOptions,
+        config: {
+            promoGroups: [pollWithFinishConditions],
+        },
+    };
+
+    let controller: Controller;
+
+    beforeEach(() => {
+        controller = new Controller(options);
+    });
+
+    it('repeat finished promo => not show', async function () {
+        controller.finishPromo('repeatFinished');
+
+        await controller.requestStart('repeatFinished');
+        expect(controller.state.base.activePromo).toBe(null);
+
+        controller.dateNow = datePlusMonthsCallback(1);
+        await controller.requestStart('repeatFinished');
+
+        expect(controller.state.base.activePromo).toBe(null);
+    });
+
+    it('repeat finished promo after 2 months => show', async function () {
+        controller.finishPromo('repeatFinished');
+
+        await controller.requestStart('repeatFinished');
+        expect(controller.state.base.activePromo).toBe(null);
+
+        controller.dateNow = datePlusMonthsCallback(2);
+        await controller.requestStart('repeatFinished');
+
+        expect(controller.state.base.activePromo).toBe('repeatFinished');
+    });
+});
+
+describe('SkipFinished', function () {
+    const options = {
+        ...testOptions,
+        config: {
+            promoGroups: [pollWithFinishConditions],
+        },
+    };
+
+    let controller: Controller;
+
+    beforeEach(() => {
+        controller = new Controller(options);
+    });
+
+    it('request finished => not show', async function () {
+        controller.finishPromo('skipFinished');
+
+        await controller.requestStart('skipFinished');
+
+        expect(controller.state.base.activePromo).toBe(null);
+    });
+
+    it('request not finished => show', async function () {
+        await controller.requestStart('skipFinished');
+
+        expect(controller.state.base.activePromo).toBe('skipFinished');
     });
 });
