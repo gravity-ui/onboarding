@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.1](https://github.com/gravity-ui/onboarding/compare/v0.21.0...v0.21.1) (2024-08-28)
+
+
+### Bug Fixes
+
+* **promo-manager:** not save progress on start promo ([0202e04](https://github.com/gravity-ui/onboarding/commit/0202e045d6cb301ade17a4e17bafb38c8dce3357))
+
 ## [0.21.0](https://github.com/gravity-ui/onboarding/compare/v0.20.0...v0.21.0) (2024-08-16)
 
 
