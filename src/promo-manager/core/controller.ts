@@ -526,7 +526,7 @@ export class Controller {
         this.stateActions.setActivePromo(slug);
         this.stateActions.removeFromQueue(slug);
 
-        this.updateProgressInfo(slug);
+        this.emitChange();
     };
 
     private triggerNextPromo = () => {

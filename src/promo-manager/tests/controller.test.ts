@@ -182,6 +182,12 @@ describe('update last call info', () => {
         await controller.requestStart(promo);
     });
 
+    it.only('start promo -> not save progress', () => {
+        expect(controller.state.base.activePromo).toBe(promo);
+
+        expect(controller.state.progress?.progressInfoByPromo[promo]).not.toBeDefined();
+    });
+
     it('finish and save time', () => {
         controller.finishPromo(promo);
 
