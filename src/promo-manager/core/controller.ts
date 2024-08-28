@@ -41,6 +41,10 @@ const defaultInitOptions: InitPromoManagerOptions = {
     timeout: 0,
 };
 
+const defaultLoggerOptions = {
+    context: 'Promo manager',
+};
+
 const delay = (timeout: number) =>
     new Promise<void>((resolve) => {
         setTimeout(resolve, timeout);
@@ -72,11 +76,10 @@ export class Controller {
 
         this.status = 'idle';
 
-        this.logger = createLogger(
-            this.options.logger ?? {
-                context: 'Promo manager',
-            },
-        );
+        this.logger = createLogger({
+            ...defaultLoggerOptions,
+            ...this.options.logger,
+        });
         this.logger.debug('Initialization started');
 
         this.state = JSON.parse(
@@ -543,7 +546,7 @@ export class Controller {
     };
 
     private activatePromo = (slug: PromoSlug) => {
-        this.logger.debug('Actibate promo', slug);
+        this.logger.debug('Activate promo', slug);
         this.stateActions.setActivePromo(slug);
         this.stateActions.removeFromQueue(slug);
 

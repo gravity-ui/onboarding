@@ -9,6 +9,9 @@ type Listener = () => void;
 
 let instanceCounter = 0;
 
+const defaultLoggerOptions = {
+    context: 'Onboarding',
+};
 const getDefaultBaseState = (): BaseState => ({
     availablePresets: [],
     activePresets: [],
@@ -88,7 +91,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.events = new EventEmitter(this);
         this.hintStore = hintStore || new HintStore(this.events);
         this.passStepListeners = new Set();
-        this.logger = createLogger(options.logger ?? {});
+        this.logger = createLogger({
+            ...defaultLoggerOptions,
+            ...this.options.logger,
+        });
 
         if (this.options.debugMode) {
             // @ts-ignore

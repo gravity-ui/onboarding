@@ -11,11 +11,7 @@ export type LoggerOptions = {
     context?: string;
 };
 const noop = () => {};
-export const createLogger = ({
-    level = 'error',
-    logger = console,
-    context = 'Onboarding',
-}: LoggerOptions) => {
+export const createLogger = ({level = 'error', logger = console, context}: LoggerOptions) => {
     return {
         debug:
             level === 'debug'
