@@ -176,6 +176,10 @@ export class Controller {
             await this.fetchProgressState();
         }
 
+        if (this.state.base.activePromo === slug) {
+            return true;
+        }
+
         if (!this.isAbleToRun(slug)) {
             this.logger.debug('Not able to run promo', slug);
             return false;

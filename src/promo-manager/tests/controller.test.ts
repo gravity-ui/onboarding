@@ -43,6 +43,13 @@ describe('active promo', () => {
             expect(result).toBe(false);
         });
 
+        it('already started -> return true', async function () {
+            await controller.requestStart('boardPoll');
+            const result2 = await controller.requestStart('boardPoll');
+
+            expect(result2).toBe(true);
+        });
+
         it("can't start now -> return false", async function () {
             await controller.requestStart('boardPoll');
             const result = await controller.requestStart('ganttPoll');
