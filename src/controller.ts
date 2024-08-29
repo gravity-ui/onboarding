@@ -98,7 +98,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         this.logger.debug('Initialized');
 
-        if (instanceCounter > 0) {
+        if (instanceCounter > 0 && typeof jest === 'undefined') {
             this.logger.error(
                 'Should be only one Controller instance for page. Multiple instances can cause inconsistent state and race conditions',
             );
@@ -718,6 +718,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     private ensurePresetExists(preset: string): asserts preset is Presets {
         // @ts-ignore
         if (!this.options.config.presets[preset]) {
+            this.logger.error('No preset in config');
+
             throw new Error('No preset in config');
         }
     }
