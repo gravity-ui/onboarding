@@ -61,7 +61,7 @@ export const getOptions = (
             level: 'error' as const,
             logger: {
                 debug: () => {},
-                error: () => {},
+                error: jest.fn(),
             },
         },
         plugins: [] as OnboardingPlugin[],

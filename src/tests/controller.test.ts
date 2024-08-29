@@ -205,6 +205,67 @@ describe('store api', function () {
     });
 });
 
+describe('wrong data', function () {
+    it('add not existed preset', async function () {
+        const options = getOptions();
+        const controller = new Controller(options);
+
+        await controller.addPreset('unknownPreset');
+
+        expect(options.logger.logger.error).not.toHaveBeenCalled();
+    });
+
+    it('suggest not existed preset -> error', async function () {
+        expect.assertions(2);
+
+        const options = getOptions();
+        const controller = new Controller(options);
+
+        try {
+            await controller.suggestPresetOnce('unknownPreset');
+        } catch (e: unknown) {
+            // @ts-ignore
+            expect(e.message).toBe('No preset in config');
+
+            expect(options.logger.logger.error).toHaveBeenCalled();
+        }
+    });
+
+    it('run not existed preset -> throw error', async function () {
+        expect.assertions(1);
+
+        const options = getOptions();
+        const controller = new Controller(options);
+
+        try {
+            await controller.runPreset('unknownPreset');
+        } catch (e) {
+            expect(options.logger.logger.error).toHaveBeenCalled();
+        }
+    });
+
+    it('reach not existed step', async function () {
+        const options = getOptions();
+        const controller = new Controller(options);
+
+        await controller.stepElementReached({
+            element: getAnchorElement(),
+            stepSlug: 'unknownStep',
+        });
+
+        expect(options.logger.logger.error).not.toHaveBeenCalled();
+    });
+
+    it('pass not existed step', async function () {
+        const options = getOptions();
+        const controller = new Controller(options);
+
+        await controller.passStep('unknownStep');
+
+        expect(options.logger.logger.error).not.toHaveBeenCalled();
+    });
+});
+
 it('resetToDefaultState -> hidden and empty ', async function () {
     const options = getOptions();
 
