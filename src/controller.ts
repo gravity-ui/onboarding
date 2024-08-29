@@ -552,6 +552,20 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.events.emit('stateChange', {state: this.state});
     };
 
+    checkReachedHints() {
+        this.reachedElements.forEach((element, stepSlug) => {
+            if (!element.isConnected) {
+                this.reachedElements.delete(stepSlug);
+            }
+        });
+
+        this.logger.debug(`Check reached hints. Found ${this.reachedElements.size}`);
+
+        for (const [stepSlug, element] of this.reachedElements) {
+            this.stepElementReached({stepSlug, element});
+        }
+    }
+
     private resolvePresetSlug = (presetSlug: Presets) => {
         const preset = this.options.config.presets[presetSlug];
 
@@ -731,20 +745,6 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             this.logger.error('No preset in config');
 
             throw new Error('No preset in config');
-        }
-    }
-
-    private checkReachedHints() {
-        this.reachedElements.forEach((element, stepSlug) => {
-            if (!element.isConnected) {
-                this.reachedElements.delete(stepSlug);
-            }
-        });
-
-        this.logger.debug(`Check reached hints. Found ${this.reachedElements.size}`);
-
-        for (const [stepSlug, element] of this.reachedElements) {
-            this.stepElementReached({stepSlug, element});
         }
     }
 

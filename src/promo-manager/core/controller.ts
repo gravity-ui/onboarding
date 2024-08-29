@@ -484,7 +484,15 @@ export class Controller {
         instance.events.subscribe(
             'beforeShowHint',
             async ({stepData}: OnboardingEventsMap['beforeShowHint']) => {
-                return this.requestStart(stepData.preset);
+                if (!this.promoPresets.has(stepData.preset)) {
+                    return true;
+                }
+
+                const result = await this.requestStart(stepData.preset);
+                if (!result) {
+                    this.cancelStart(stepData.preset);
+                }
+                return result;
             },
         );
 
@@ -553,6 +561,12 @@ export class Controller {
         this.logger.debug('Activate promo', slug);
         this.stateActions.setActivePromo(slug);
         this.stateActions.removeFromQueue(slug);
+
+        const groupSlug = this.getGroupBySlug(slug);
+
+        if (groupSlug === this.options.onboarding?.groupSlug) {
+            this.options.onboarding.getInstance().checkReachedHints();
+        }
 
         this.emitChange();
     };
