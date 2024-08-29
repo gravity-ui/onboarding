@@ -327,8 +327,9 @@ describe('preset management', function () {
             expect(newProgressState.presetPassedSteps.createProject).toBeUndefined();
 
             const newBaseState = options.onSave.state.mock.calls[0][0];
-            // remove createProject from suggested presets
+            // remove createProject from active and suggested presets
             expect(newBaseState.activePresets).toEqual([]);
+            expect(newBaseState.suggestedPresets).toEqual([]);
         });
     });
 });
