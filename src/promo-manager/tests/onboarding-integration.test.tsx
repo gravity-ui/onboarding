@@ -223,3 +223,36 @@ it('element disappears -> cancel start promo', async function () {
     expect(controller.state.base.activePromo).toBe(null);
     expect(controller.state.progress?.finishedPromos).not.toContain('coolNewFeature');
 });
+
+it('reset progress -> erase onboarding presets', async function () {
+    const onboardingController = new OnboardingController(
+        getOptionsWithPromo({wizardState: 'hidden'}),
+    );
+
+    const controller = new Controller({
+        ...testOptions,
+        config: {
+            promoGroups: [
+                {
+                    slug: 'hintPromos',
+                    conditions: [],
+                    promos: [],
+                },
+            ],
+        },
+        onboarding: {
+            getInstance: () => onboardingController,
+            groupSlug: 'hintPromos',
+        },
+    });
+
+    await controller.resetToDefaultState();
+
+    expect(onboardingController.state.base.activePresets).toEqual(['createProject']);
+    expect(onboardingController.state.base.suggestedPresets).toEqual(['createProject']);
+
+    expect(onboardingController.state.progress).toEqual({
+        finishedPresets: [],
+        presetPassedSteps: {},
+    });
+});
