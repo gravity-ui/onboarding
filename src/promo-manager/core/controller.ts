@@ -41,6 +41,10 @@ const defaultInitOptions: InitPromoManagerOptions = {
     timeout: 0,
 };
 
+const defaultLoggerOptions = {
+    context: 'Promo manager',
+};
+
 const delay = (timeout: number) =>
     new Promise<void>((resolve) => {
         setTimeout(resolve, timeout);
@@ -72,6 +76,12 @@ export class Controller {
 
         this.status = 'idle';
 
+        this.logger = createLogger({
+            ...defaultLoggerOptions,
+            ...this.options.logger,
+        });
+        this.logger.debug('Initialization started');
+
         this.state = JSON.parse(
             JSON.stringify({
                 base: {
@@ -86,12 +96,6 @@ export class Controller {
                     : undefined,
             }),
         ) as PromoState;
-
-        this.logger = createLogger(
-            this.options.logger ?? {
-                context: 'Promo manager',
-            },
-        );
 
         if (!options.progressState) {
             this.fetchProgressState().catch((error) => {
@@ -135,6 +139,7 @@ export class Controller {
         }
 
         this.saveProgress = createDebounceHandler(async () => {
+            this.logger.debug('Save progress');
             try {
                 this.assertProgressLoaded();
                 await this.options.onSave.progress(this.state.progress);
@@ -142,6 +147,8 @@ export class Controller {
                 this.logger.error(error);
             }
         }, 100);
+
+        this.logger.debug('Initialization started');
     }
 
     ensureInit = async () => {
@@ -152,6 +159,7 @@ export class Controller {
         await this.initPromise;
         this.status = 'initialized';
         this.events.emit('init', {});
+        this.logger.debug('Initialized');
 
         await this.triggerNextPromo();
     };
@@ -159,6 +167,7 @@ export class Controller {
     dateNow = () => Date.now();
 
     requestStart = async (slug: Nullable<PromoSlug>) => {
+        this.logger.debug('Request start preset', slug);
         if (!slug) {
             return false;
         }
@@ -168,6 +177,7 @@ export class Controller {
         }
 
         if (!this.isAbleToRun(slug)) {
+            this.logger.debug('Not able to run promo', slug);
             return false;
         }
 
@@ -181,6 +191,7 @@ export class Controller {
     };
 
     finishPromo = (slug: Nullable<PromoSlug>, closeActiveTimeout = 0) => {
+        this.logger.debug('Finish promo', slug);
         if (!slug) {
             return;
         }
@@ -195,6 +206,7 @@ export class Controller {
     };
 
     cancelPromo = (slug: Nullable<PromoSlug>, closeActiveTimeout = 0) => {
+        this.logger.debug('Cancel promo', slug);
         if (!slug) {
             return;
         }
@@ -204,6 +216,7 @@ export class Controller {
     };
 
     cancelStart = (slug: Nullable<PromoSlug>) => {
+        this.logger.debug('Skip promo run', slug);
         if (!slug) {
             return;
         }
@@ -310,7 +323,9 @@ export class Controller {
     }
 
     checkPromoConditions = (slug: PromoSlug): boolean => {
+        this.logger.debug('Promo', slug, 'Check conditions');
         if (!this.checkConstraints()) {
+            this.logger.debug(`Not pass constraints`);
             return false;
         }
 
@@ -323,7 +338,7 @@ export class Controller {
         const conditionsForType = this.conditions.typeConditions[type] ?? [];
         const conditionsForSlug = this.conditions.promoConditions[slug] ?? [];
 
-        const resultForType = checkCondition(
+        const resultForGroup = checkCondition(
             this.state,
             {
                 promoType: type,
@@ -333,8 +348,9 @@ export class Controller {
             conditionsForType,
             this.logger,
         );
+        this.logger.debug('Result for group', resultForGroup);
 
-        const resultForSlug = checkCondition(
+        const resultForPromo = checkCondition(
             this.state,
             {
                 promoType: type,
@@ -346,8 +362,9 @@ export class Controller {
             conditionsForSlug,
             this.logger,
         );
+        this.logger.debug('Result for promo', resultForPromo);
 
-        return resultForType && resultForSlug;
+        return resultForGroup && resultForPromo;
     };
 
     getPromoMeta = (slug: Nullable<PromoSlug>) => {
@@ -481,6 +498,8 @@ export class Controller {
                 this.cancelStart(hint.preset);
             }
         });
+
+        this.logger.debug('Onboarding integration applied');
     };
 
     private checkConstraints() {
@@ -527,6 +546,7 @@ export class Controller {
     };
 
     private activatePromo = (slug: PromoSlug) => {
+        this.logger.debug('Activate promo', slug);
         this.stateActions.setActivePromo(slug);
         this.stateActions.removeFromQueue(slug);
 
@@ -550,6 +570,7 @@ export class Controller {
     };
 
     private addPromoToActiveQueue = (slug: PromoSlug) => {
+        this.logger.debug('Add promo to the queue', slug);
         this.assertProgressLoaded();
 
         if (
@@ -586,6 +607,7 @@ export class Controller {
     };
 
     private closePromo = (slug: PromoSlug) => {
+        this.logger.debug('Close promo', slug);
         if (!this.isActive(slug)) {
             return;
         }
