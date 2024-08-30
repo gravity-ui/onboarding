@@ -259,3 +259,13 @@ describe('meta info', () => {
         expect(metaInfo).toEqual({});
     });
 });
+
+it('reset progress -> default state', function () {
+    const controller = new Controller(testOptions);
+    controller.resetToDefaultState();
+
+    expect(controller.state.progress).toEqual({
+        finishedPromos: [],
+        progressInfoByPromo: {},
+    });
+});

@@ -479,6 +479,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             (preset) => !presets.includes(preset as Presets),
         );
 
+        this.state.base.suggestedPresets = this.state.base.activePresets.filter(
+            (preset) => !presets.includes(preset as Presets),
+        );
+
         await this.updateBaseState();
         await this.updateProgress();
         this.logger.debug('Progress reset finished', presetArg);

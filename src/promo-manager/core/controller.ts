@@ -53,6 +53,7 @@ export class Controller {
     conditionHelpers: Record<string, ConditionHelper>;
     helpers: Helpers;
     stateListeners: Set<Listener>;
+    promoPresets = new Set<string>();
 
     events: EventEmitter<EventTypes, EventsMap, any>;
 
@@ -297,8 +298,12 @@ export class Controller {
         this.saveProgress();
     }
 
-    clearProgressInfo() {
+    async resetToDefaultState() {
         this.state.progress = JSON.parse(JSON.stringify(defaultProgressState)) as ProgressState;
+
+        if (this.options.onboarding) {
+            await this.options.onboarding.getInstance().resetPresetProgress([...this.promoPresets]);
+        }
 
         this.emitChange();
         this.saveProgress();
@@ -433,13 +438,12 @@ export class Controller {
 
         const instance = getInstance();
 
-        const promoPresetSet = new Set();
         for (const [presetKey, preset] of Object.entries(instance.options.config.presets)) {
             const shouldInjectPreset =
                 preset?.type !== 'internal' && preset?.visibility === 'alwaysHidden';
 
             if (shouldInjectPreset) {
-                promoPresetSet.add(presetKey);
+                this.promoPresets.add(presetKey);
                 const hasPromo = promoGroupToIntegrate.promos.some(
                     (promo) => promo.slug === presetKey,
                 );
@@ -466,14 +470,14 @@ export class Controller {
         instance.events.subscribe(
             'finishPreset',
             async ({preset}: OnboardingEventsMap['finishPreset']) => {
-                if (promoPresetSet.has(preset)) {
+                if (this.promoPresets.has(preset)) {
                     this.finishPromo(preset);
                 }
             },
         );
 
         instance.events.subscribe('closeHint', async ({hint}: OnboardingEventsMap['closeHint']) => {
-            if (promoPresetSet.has(hint.preset)) {
+            if (this.promoPresets.has(hint.preset)) {
                 this.cancelStart(hint.preset);
             }
         });
