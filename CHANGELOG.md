@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.22.0](https://github.com/gravity-ui/onboarding/compare/v0.21.1...v0.22.0) (2024-09-02)
+
+
+### Features
+
+* **promo-manager:** add debug messages ([47df9d3](https://github.com/gravity-ui/onboarding/commit/47df9d3c93ebcdade10c856e3467aef47c3b8dba))
+* **promo-manager:** resetToDefaultState -&gt; erase onboarding promo preset progress ([d7c328e](https://github.com/gravity-ui/onboarding/commit/d7c328ed4bfce948c3c5c66841b6e92b1b79eb05))
+
+
+### Bug Fixes
+
+* add default logger options ([1c709f5](https://github.com/gravity-ui/onboarding/commit/1c709f5f73e35a6e6d37e490523bd2d90cca45db))
+* **onboarding:** reset preset progress -&gt; remove from suggested ([47b2abf](https://github.com/gravity-ui/onboarding/commit/47b2abf9217aea0db4fccb1fc42e621878672700))
+* **promo-manager:** improve onboarding integration ([22b0be2](https://github.com/gravity-ui/onboarding/commit/22b0be262e5b3ce3491971ba8f6679dab20f58c3))
+* **promo-manager:** repeated requestStart -&gt; return true ([4058e2e](https://github.com/gravity-ui/onboarding/commit/4058e2e6cd0863fa52715dc03b5bdac14e3077ad))
+
 ## [0.21.1](https://github.com/gravity-ui/onboarding/compare/v0.21.0...v0.21.1) (2024-08-28)
 
 
