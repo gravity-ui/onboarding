@@ -2,6 +2,34 @@ import {Controller as OnboardingController} from '../../controller';
 import {Controller} from '../core/controller';
 import {testOptions} from './options';
 import {getAnchorElement, getOptionsWithPromo} from '../../tests/utils';
+import {waitForNextTick} from './utils';
+
+const getData = () => {
+    const onboardingController = new OnboardingController(
+        getOptionsWithPromo({wizardState: 'hidden'}),
+    );
+    const options = {
+        ...testOptions,
+        config: {
+            promoGroups: [
+                {
+                    slug: 'hintPromos',
+                    conditions: [],
+                    promos: [],
+                },
+            ],
+        },
+        onboarding: {
+            getInstance: () => onboardingController,
+            groupSlug: 'hintPromos',
+        },
+    };
+
+    return {
+        onboardingController,
+        options,
+    };
+};
 
 it('no group -> error', async function () {
     const onboardingController = new OnboardingController(getOptionsWithPromo());
@@ -32,23 +60,8 @@ it('no group -> error', async function () {
 });
 
 it('adds promos for every "alwaysHidden" preset', async function () {
-    const onboardingController = new OnboardingController(getOptionsWithPromo());
-
-    const controller = new Controller({
-        ...testOptions,
-        config: {
-            promoGroups: [
-                {
-                    slug: 'hintPromos',
-                    promos: [],
-                },
-            ],
-        },
-        onboarding: {
-            getInstance: () => onboardingController,
-            groupSlug: 'hintPromos',
-        },
-    });
+    const {options} = getData();
+    const controller = new Controller(options);
 
     await controller.ensureInit();
 
@@ -93,25 +106,9 @@ it('not duplicate existing promos', async function () {
 });
 
 it('reach element -> activate promo', async function () {
-    const onboardingController = new OnboardingController(
-        getOptionsWithPromo({wizardState: 'hidden'}),
-    );
+    const {options, onboardingController} = getData();
 
-    const controller = new Controller({
-        ...testOptions,
-        config: {
-            promoGroups: [
-                {
-                    slug: 'hintPromos',
-                    promos: [],
-                },
-            ],
-        },
-        onboarding: {
-            getInstance: () => onboardingController,
-            groupSlug: 'hintPromos',
-        },
-    });
+    const controller = new Controller(options);
 
     await controller.ensureInit();
 
@@ -157,26 +154,9 @@ it('false in promo condition -> no hint, no activePromo', async function () {
 });
 
 it('pass preset -> finish promo', async function () {
-    const onboardingController = new OnboardingController(
-        getOptionsWithPromo({wizardState: 'hidden'}),
-    );
+    const {options, onboardingController} = getData();
 
-    const controller = new Controller({
-        ...testOptions,
-        config: {
-            promoGroups: [
-                {
-                    slug: 'hintPromos',
-                    conditions: [],
-                    promos: [],
-                },
-            ],
-        },
-        onboarding: {
-            getInstance: () => onboardingController,
-            groupSlug: 'hintPromos',
-        },
-    });
+    const controller = new Controller(options);
 
     await controller.ensureInit();
 
@@ -191,6 +171,23 @@ it('pass preset -> finish promo', async function () {
 });
 
 it('element disappears -> cancel start promo', async function () {
+    const {options, onboardingController} = getData();
+
+    const controller = new Controller(options);
+
+    await controller.ensureInit();
+
+    await onboardingController.stepElementReached({
+        stepSlug: 'showCoolFeature',
+        element: getAnchorElement(),
+    });
+    await onboardingController.stepElementDisappeared('showCoolFeature');
+
+    expect(controller.state.base.activePromo).toBe(null);
+    expect(controller.state.progress?.finishedPromos).not.toContain('coolNewFeature');
+});
+
+it('cant run promo preset now -> delete from queue', async function () {
     const onboardingController = new OnboardingController(
         getOptionsWithPromo({wizardState: 'hidden'}),
     );
@@ -199,6 +196,11 @@ it('element disappears -> cancel start promo', async function () {
         ...testOptions,
         config: {
             promoGroups: [
+                {
+                    slug: 'somePromoGroup',
+                    conditions: [],
+                    promos: [{slug: 'someOtherPromo'}],
+                },
                 {
                     slug: 'hintPromos',
                     conditions: [],
@@ -214,22 +216,56 @@ it('element disappears -> cancel start promo', async function () {
 
     await controller.ensureInit();
 
+    await controller.requestStart('someOtherPromo');
     await onboardingController.stepElementReached({
         stepSlug: 'showCoolFeature',
         element: getAnchorElement(),
     });
-    await onboardingController.stepElementDisappeared('showCoolFeature');
 
-    expect(controller.state.base.activePromo).toBe(null);
-    expect(controller.state.progress?.finishedPromos).not.toContain('coolNewFeature');
+    expect(controller.state.base.activeQueue).not.toContain('coolNewFeature');
+});
+
+it('return to onboarding promo -> show hint', async function () {
+    const {options, onboardingController} = getData();
+    const controller = new Controller(options);
+
+    await controller.ensureInit();
+
+    await controller.requestStart('someOtherPromo');
+    await onboardingController.stepElementReached({
+        stepSlug: 'showCoolFeature',
+        element: getAnchorElement(),
+    });
+
+    await controller.finishPromo('someOtherPromo');
+
+    await waitForNextTick();
+
+    expect(controller.state.base.activePromo).toBe('coolNewFeature');
+    expect(onboardingController.hintStore.state.open).toBe(true);
+    expect(onboardingController.hintStore.state.hint?.step.slug).toBe('showCoolFeature');
 });
 
 it('reset progress -> erase onboarding presets', async function () {
-    const onboardingController = new OnboardingController(
-        getOptionsWithPromo({wizardState: 'hidden'}),
-    );
+    const {options, onboardingController} = getData();
+    const controller = new Controller(options);
 
-    const controller = new Controller({
+    await controller.resetToDefaultState();
+
+    expect(onboardingController.state.base.activePresets).toEqual(['createProject']);
+    expect(onboardingController.state.base.suggestedPresets).toEqual(['createProject']);
+
+    expect(onboardingController.state.progress).toEqual({
+        finishedPresets: [],
+        presetPassedSteps: {},
+    });
+});
+
+it('should allow to show common preset', async function () {
+    const onboardingController = new OnboardingController(
+        getOptionsWithPromo({wizardState: 'visible'}),
+    );
+    const options = {
         ...testOptions,
         config: {
             promoGroups: [
@@ -244,15 +280,16 @@ it('reset progress -> erase onboarding presets', async function () {
             getInstance: () => onboardingController,
             groupSlug: 'hintPromos',
         },
+    };
+
+    const controller = new Controller(options);
+    await controller.ensureInit();
+
+    await onboardingController.stepElementReached({
+        stepSlug: 'openBoard',
+        element: getAnchorElement(),
     });
 
-    await controller.resetToDefaultState();
-
-    expect(onboardingController.state.base.activePresets).toEqual(['createProject']);
-    expect(onboardingController.state.base.suggestedPresets).toEqual(['createProject']);
-
-    expect(onboardingController.state.progress).toEqual({
-        finishedPresets: [],
-        presetPassedSteps: {},
-    });
+    expect(onboardingController.hintStore.state.open).toBe(true);
+    expect(onboardingController.hintStore.state.hint?.step.slug).toBe('openBoard');
 });
