@@ -15,11 +15,12 @@ const getDebug = () => {
 export function createPromoManager(options: PromoOptions) {
     const controller = new Controller({...options, debugMode: getDebug()});
 
-    const {usePromoManager, useActivePromo} = getHooks(controller);
+    const {usePromoManager, useActivePromo, usePromo} = getHooks(controller);
 
     return {
         usePromoManager,
         useActivePromo,
+        usePromo,
         controller,
     };
 }
