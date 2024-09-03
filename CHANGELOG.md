@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.1](https://github.com/gravity-ui/onboarding/compare/v0.22.0...v0.22.1) (2024-09-03)
+
+
+### Bug Fixes
+
+* **promo-manager:** add usePromo hook export ([9d2fd5f](https://github.com/gravity-ui/onboarding/commit/9d2fd5fab23dca251e963c7fdbc035d6dc0471ab))
+
 ## [0.22.0](https://github.com/gravity-ui/onboarding/compare/v0.21.1...v0.22.0) (2024-09-02)
 
 
