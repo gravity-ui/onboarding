@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.0](https://github.com/gravity-ui/onboarding/compare/v0.22.1...v0.23.0) (2024-09-05)
+
+
+### Features
+
+* **promo-manager:** add slug param for ShowOnceForSession ([36b829f](https://github.com/gravity-ui/onboarding/commit/36b829f2aca522e5df49174f7c20e1beedc62b19))
+
 ## [0.22.1](https://github.com/gravity-ui/onboarding/compare/v0.22.0...v0.22.1) (2024-09-03)
 
 
