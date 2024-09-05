@@ -315,19 +315,19 @@ export class Controller {
             return false;
         }
 
-        const type = this.getGroupBySlug(slug);
+        const group = this.getGroupBySlug(slug);
 
-        if (!type) {
+        if (!group) {
             return false;
         }
 
-        const conditionsForType = this.conditions.typeConditions[type] ?? [];
+        const conditionsForType = this.conditions.typeConditions[group] ?? [];
         const conditionsForSlug = this.conditions.promoConditions[slug] ?? [];
 
         const resultForGroup = checkCondition(
             this.state,
             {
-                promoType: type,
+                promoGroup: group,
                 currentDate: this.dateNow(),
                 config: this.options.config,
             },
@@ -339,7 +339,7 @@ export class Controller {
         const resultForPromo = checkCondition(
             this.state,
             {
-                promoType: type,
+                promoGroup: group,
                 promoSlug: slug,
                 currentDate: this.dateNow(),
                 helpers: this.conditionHelpers,

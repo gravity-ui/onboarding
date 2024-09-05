@@ -61,7 +61,7 @@ export type PromoOptions = {
 };
 
 export type ConditionContext = {
-    promoType?: PromoGroupSlug;
+    promoGroup?: PromoGroupSlug;
     promoSlug?: PromoSlug;
     currentDate: number;
     helpers?: Record<string, ConditionHelper>;

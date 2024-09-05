@@ -21,11 +21,24 @@ export const ShowOnceForPeriod = (interval: DurationParam) => {
     };
 };
 
-export const ShowOnceForSession = () => {
+type SlugsParam = {slugs?: string[]};
+export const ShowOnceForSession = ({slugs: slugsFromParams}: SlugsParam = {}) => {
     return (state: PromoState, ctx: ConditionContext) => {
         const targetInterval = dayjs.duration(performance.now());
 
-        return getTimeFromLastCallInMs(state, ctx) > targetInterval.asMilliseconds();
+        const slugFromContext = ctx.promoGroup || ctx.promoSlug;
+        const slugs = slugsFromParams ?? [slugFromContext];
+
+        for (const slug of slugs) {
+            if (
+                getTimeFromLastCallInMs(state, {...ctx, promoSlug: slug}) <
+                targetInterval.asMilliseconds()
+            ) {
+                return false;
+            }
+        }
+
+        return true;
     };
 };
 

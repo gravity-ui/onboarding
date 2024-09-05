@@ -16,7 +16,7 @@ export const getLastTimeCall = (state: PromoState, ctx: ConditionContext, slug?:
 export const getTimeFromLastCallInMs = (state: PromoState, ctx: ConditionContext) => {
     const nowDate = dayjs(ctx.currentDate);
 
-    const lastTimeCall = getLastTimeCall(state, ctx, ctx.promoSlug || ctx.promoType);
+    const lastTimeCall = getLastTimeCall(state, ctx, ctx.promoSlug || ctx.promoGroup);
 
     if (!lastTimeCall) {
         return Infinity;

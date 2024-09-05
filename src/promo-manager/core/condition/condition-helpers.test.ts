@@ -96,7 +96,7 @@ describe('ShowOnceForPeriod', function () {
                 },
             };
 
-            expect(helper(state, {currentDate, promoType: 'promoGroup1', config})).toBe(false);
+            expect(helper(state, {currentDate, promoGroup: 'promoGroup1', config})).toBe(false);
         });
 
         it('enough time has passed to start -> true', function () {
@@ -117,7 +117,7 @@ describe('ShowOnceForPeriod', function () {
                 },
             };
 
-            expect(helper(state, {currentDate, promoType: 'promoGroup1', config})).toBe(true);
+            expect(helper(state, {currentDate, promoGroup: 'promoGroup1', config})).toBe(true);
         });
     });
 });
@@ -160,6 +160,100 @@ describe('ShowOnceForSession', function () {
         const helper = ShowOnceForSession();
 
         expect(helper(state, {currentDate, promoSlug: 'somePromo1', config})).toBe(false);
+    });
+
+    it('has run, for group -> false ', function () {
+        const state = {
+            base: {
+                activePromo: null,
+                activeQueue: [],
+            },
+            progress: {
+                finishedPromos: ['somePromo1'],
+                progressInfoByPromo: {
+                    somePromo1: {
+                        lastCallTime: currentDate,
+                    },
+                },
+            },
+        };
+
+        const helper = ShowOnceForSession();
+
+        expect(helper(state, {currentDate, promoGroup: 'promoGroup1', config})).toBe(false);
+    });
+
+    describe('with slugs param', function () {
+        it('for slug without runs -> true ', function () {
+            const helper = ShowOnceForSession({
+                slugs: ['promoWithoutRuns'],
+            });
+
+            const state = {
+                base: {
+                    activePromo: null,
+                    activeQueue: [],
+                },
+                progress: {
+                    finishedPromos: ['somePromo1'],
+                    progressInfoByPromo: {
+                        somePromo1: {
+                            lastCallTime: currentDate,
+                        },
+                    },
+                },
+            };
+
+            expect(helper(state, {currentDate, config})).toBe(true);
+        });
+
+        it('for slug with runs -> false ', function () {
+            const helper = ShowOnceForSession({
+                slugs: ['somePromo1'],
+            });
+
+            const state = {
+                base: {
+                    activePromo: null,
+                    activeQueue: [],
+                },
+                progress: {
+                    finishedPromos: ['somePromo1'],
+                    progressInfoByPromo: {
+                        somePromo1: {
+                            lastCallTime: currentDate,
+                        },
+                    },
+                },
+            };
+
+            expect(helper(state, {currentDate, config})).toBe(false);
+        });
+    });
+
+    describe('with slugs param and context -> take slug from params', function () {
+        it('for slug without runs, ctx with runs -> true ', function () {
+            const helper = ShowOnceForSession({
+                slugs: ['promoWithoutRuns'],
+            });
+
+            const state = {
+                base: {
+                    activePromo: null,
+                    activeQueue: [],
+                },
+                progress: {
+                    finishedPromos: ['somePromo1'],
+                    progressInfoByPromo: {
+                        somePromo1: {
+                            lastCallTime: currentDate,
+                        },
+                    },
+                },
+            };
+
+            expect(helper(state, {currentDate, config, promoSlug: 'somePromo1'})).toBe(true);
+        });
     });
 });
 describe('LimitFrequency', function () {
