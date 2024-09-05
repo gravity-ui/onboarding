@@ -96,7 +96,7 @@ describe('ShowOnceForPeriod', function () {
                 },
             };
 
-            expect(helper(state, {currentDate, promoType: 'promoGroup1', config})).toBe(false);
+            expect(helper(state, {currentDate, promoGroup: 'promoGroup1', config})).toBe(false);
         });
 
         it('enough time has passed to start -> true', function () {
@@ -117,7 +117,7 @@ describe('ShowOnceForPeriod', function () {
                 },
             };
 
-            expect(helper(state, {currentDate, promoType: 'promoGroup1', config})).toBe(true);
+            expect(helper(state, {currentDate, promoGroup: 'promoGroup1', config})).toBe(true);
         });
     });
 });
@@ -180,7 +180,7 @@ describe('ShowOnceForSession', function () {
 
         const helper = ShowOnceForSession();
 
-        expect(helper(state, {currentDate, promoType: 'promoGroup1', config})).toBe(false);
+        expect(helper(state, {currentDate, promoGroup: 'promoGroup1', config})).toBe(false);
     });
 
     describe('with slugs param', function () {

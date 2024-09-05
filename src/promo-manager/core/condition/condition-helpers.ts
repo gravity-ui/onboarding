@@ -26,7 +26,7 @@ export const ShowOnceForSession = ({slugs: slugsFromParams}: SlugsParam = {}) =>
     return (state: PromoState, ctx: ConditionContext) => {
         const targetInterval = dayjs.duration(performance.now());
 
-        const slugFromContext = ctx.promoType || ctx.promoSlug;
+        const slugFromContext = ctx.promoGroup || ctx.promoSlug;
         const slugs = slugsFromParams ?? [slugFromContext];
 
         for (const slug of slugs) {
