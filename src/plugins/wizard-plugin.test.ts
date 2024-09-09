@@ -147,15 +147,20 @@ describe('run preset', function () {
         expect(controller.state.progress?.presetPassedSteps.createProject).toBe(undefined);
     });
 
-    it('run other preset -> reset progress', async function () {
-        const options = getOptions();
+    it('has deletedPreset in progress -> reset progress', async function () {
+        const options = getOptions(
+            {
+                activePresets: ['createProject', 'deletedPreset'],
+            },
+            {
+                presetPassedSteps: {
+                    createProject: ['openBoard'],
+                    deletedPreset: ['someStep'],
+                },
+            },
+        );
         options.plugins = [new WizardPlugin()];
         const controller = new Controller(options);
-
-        await controller.stepElementReached({
-            stepSlug: 'createSprint',
-            element: getAnchorElement(),
-        });
 
         await controller.runPreset('createQueue');
 
