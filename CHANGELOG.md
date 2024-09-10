@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.1](https://github.com/gravity-ui/onboarding/compare/v0.23.0...v0.23.1) (2024-09-10)
+
+
+### Bug Fixes
+
+* **onboarding:** erase progress for deleted preset ([9497909](https://github.com/gravity-ui/onboarding/commit/9497909281203f65be4325f0adf9bda837458bbe))
+
 ## [0.23.0](https://github.com/gravity-ui/onboarding/compare/v0.22.1...v0.23.0) (2024-09-05)
 
 
