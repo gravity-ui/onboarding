@@ -87,6 +87,10 @@ export class WizardPlugin implements OnboardingPlugin {
                     return false;
                 }
                 const preset = this.onboardingInstance.options.config.presets[presetSlug];
+                if (!preset) {
+                    return false;
+                }
+
                 return preset.type === 'internal' || preset.visibility !== 'alwaysHidden';
             },
         );
