@@ -218,7 +218,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         const allowRun = await this.events.emit('beforeShowHint', {stepData});
 
         if (!this.state.base.enabled) {
-            this.logger.debug('Wizard is not active', preset, stepSlug);
+            this.logger.debug('Onboarding is not enabled', preset, stepSlug);
             return;
         }
 
