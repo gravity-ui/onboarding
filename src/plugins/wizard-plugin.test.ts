@@ -41,6 +41,32 @@ describe('open wizard', function () {
         expect(options.getProgressState).toHaveBeenCalled();
     });
 
+    it('onboarding disabled, wizard hidden -> turn on onboarding', async function () {
+        const options = getOptions({enabled: false, wizardState: 'hidden'});
+        options.plugins = [new WizardPlugin()];
+
+        const controller = new Controller(options);
+
+        await controller.setWizardState('visible');
+
+        expect(controller.state.base.enabled).toBe(true);
+    });
+
+    it('onboarding disabled, wizard hidden -> can show hint', async function () {
+        const options = getOptions({enabled: false, wizardState: 'hidden'});
+        options.plugins = [new WizardPlugin()];
+
+        const controller = new Controller(options);
+
+        await controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: getAnchorElement(),
+        });
+        await controller.setWizardState('visible');
+
+        expect(controller.hintStore.state.open).toBe(true);
+    });
+
     it('onboarding enabled, wizard hidden -> load progress on open', async function () {
         const options = getOptions({wizardState: 'hidden'});
         options.plugins = [new WizardPlugin()];

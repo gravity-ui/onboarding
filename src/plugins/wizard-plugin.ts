@@ -32,7 +32,11 @@ export class WizardPlugin implements OnboardingPlugin {
         }
 
         if (wizardState === 'visible' || wizardState === 'collapsed') {
+            this.onboardingInstance.state.base.enabled = true;
+            this.onboardingInstance.emitStateChange();
+
             await this.onboardingInstance.ensureRunning();
+            this.onboardingInstance.checkReachedHints();
         }
 
         if (wizardState === 'hidden') {
