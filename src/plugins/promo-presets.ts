@@ -24,14 +24,14 @@ export class PromoPresetsPlugin implements OnboardingPlugin {
     apply: OnboardingPlugin['apply'] = ({onboarding}) => {
         this.onboardingInstance = onboarding;
 
-        onboarding.events.subscribe('beforeShowHint', this.onHintShow);
+        onboarding.events.subscribe('stepElementReached', this.onElementReach);
 
         onboarding.events.subscribe('beforeSuggestPreset', this.onSuggestPreset);
 
         onboarding.events.subscribe('wizardStateChanged', this.onWizardStateChanged);
     };
 
-    onHintShow = ({stepData}: EventsMap['beforeShowHint']) => {
+    onElementReach = ({stepData}: EventsMap['beforeShowHint']) => {
         if (!this.onboardingInstance) {
             return true;
         }
