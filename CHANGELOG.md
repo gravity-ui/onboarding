@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.23.2](https://github.com/gravity-ui/onboarding/compare/v0.23.1...v0.23.2) (2024-09-12)
+
+
+### Bug Fixes
+
+* **onboarding:** wizard-plugin fix turn on behavior ([73b727e](https://github.com/gravity-ui/onboarding/commit/73b727e069a2fad729bad7f6870d387e9574b28e))
+* **promo-manager:** onboarding hint cancelled -&gt; don't trigger promo ([43eb5dd](https://github.com/gravity-ui/onboarding/commit/43eb5dddbb9430893a9b3008917cd3d801564567))
+
 ## [0.23.1](https://github.com/gravity-ui/onboarding/compare/v0.23.0...v0.23.1) (2024-09-10)
 
 
