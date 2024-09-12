@@ -185,9 +185,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         await this.updateBaseState();
     };
 
-    stepElementReached = async (stepData: Omit<ReachElementParams<Presets, Steps>, 'preset'>) => {
-        const {stepSlug, element} = stepData;
-
+    stepElementReached = async ({
+        stepSlug,
+        element,
+    }: Omit<ReachElementParams<Presets, Steps>, 'preset'>) => {
         this.reachedElements.set(stepSlug, element);
 
         const preset = this.findActivePresetWithStep(stepSlug);
@@ -196,11 +197,17 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
-        await this.processElementAppearance({
+        const stepData = {
             preset,
             stepSlug,
             element,
-        });
+        };
+
+        const shouldProcessAppearance = await this.events.emit('stepElementReached', {stepData});
+
+        if (shouldProcessAppearance) {
+            await this.processElementAppearance(stepData);
+        }
     };
 
     processElementAppearance = async (stepData: ReachElementParams<Presets, Steps>) => {

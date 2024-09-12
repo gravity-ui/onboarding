@@ -293,3 +293,42 @@ it('should allow to show common preset', async function () {
     expect(onboardingController.hintStore.state.open).toBe(true);
     expect(onboardingController.hintStore.state.hint?.step.slug).toBe('openBoard');
 });
+
+it('cancelled hint -> not trigger promo run', async function () {
+    const onboardingController = new OnboardingController(
+        getOptionsWithPromo({wizardState: 'visible'}),
+    );
+
+    const options = {
+        ...testOptions,
+        config: {
+            promoGroups: [
+                {
+                    slug: 'hintPromos',
+                    conditions: [],
+                    promos: [],
+                },
+            ],
+        },
+        onboarding: {
+            getInstance: () => onboardingController,
+            groupSlug: 'hintPromos',
+        },
+        debugMode: true,
+        logger: {
+            level: 'debug' as const,
+            context: 'Promo manager',
+        },
+    };
+
+    const controller = new Controller(options);
+    await controller.ensureInit();
+
+    // show promo hint with visible guide
+    await onboardingController.stepElementReached({
+        stepSlug: 'showCoolFeature',
+        element: getAnchorElement(),
+    });
+
+    expect(controller.state.base.activePromo).toBe(null);
+});

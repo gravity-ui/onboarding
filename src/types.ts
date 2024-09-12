@@ -149,6 +149,7 @@ export type EventsMap<
     runPreset: {preset: Presets};
     finishPreset: {preset: Presets};
     beforeSuggestPreset: {preset: string};
+    stepElementReached: {stepData: ReachElementParams<Presets, Steps>};
     beforeShowHint: {stepData: ReachElementParams<Presets, Steps>};
     stateChange: {state: Controller<any, any, any>['state']};
     hintDataChanged: {state: HintState<HintParams, Presets, Steps>};
