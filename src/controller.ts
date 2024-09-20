@@ -189,11 +189,13 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         stepSlug,
         element,
     }: Omit<ReachElementParams<Presets, Steps>, 'preset'>) => {
+        this.logger.debug('Step element reached', stepSlug, element);
         this.reachedElements.set(stepSlug, element);
 
         const preset = this.findActivePresetWithStep(stepSlug);
 
         if (!preset) {
+            this.logger.debug('Not found preset for step', stepSlug);
             return;
         }
 
@@ -207,13 +209,13 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         if (shouldProcessAppearance) {
             await this.processElementAppearance(stepData);
+        } else {
+            this.logger.debug('Reject process appearance', stepSlug);
         }
     };
 
     processElementAppearance = async (stepData: ReachElementParams<Presets, Steps>) => {
         const {preset, element, stepSlug} = stepData;
-
-        this.logger.debug('Step element reached', preset, stepSlug, element);
 
         const allowRun = await this.events.emit('beforeShowHint', {stepData});
 
@@ -749,7 +751,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     private ensurePresetExists(preset: string): asserts preset is Presets {
         // @ts-ignore
         if (!this.options.config.presets[preset]) {
-            this.logger.error('No preset in config');
+            this.logger.error('No preset in config', preset);
 
             throw new Error('No preset in config');
         }
