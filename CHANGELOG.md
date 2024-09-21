@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.3](https://github.com/gravity-ui/onboarding/compare/v0.23.2...v0.23.3) (2024-09-21)
+
+
+### Bug Fixes
+
+* **onboarding:** fix debug messages ([8495ed9](https://github.com/gravity-ui/onboarding/commit/8495ed9283d691f28d5866a52b5b3375b42e9a57))
+
 ## [0.23.2](https://github.com/gravity-ui/onboarding/compare/v0.23.1...v0.23.2) (2024-09-12)
 
 
