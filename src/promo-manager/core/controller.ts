@@ -308,7 +308,43 @@ export class Controller {
         this.saveProgress();
     }
 
-    checkPromoConditions = (slug: PromoSlug): boolean => {
+    getPromoMeta = (slug: Nullable<PromoSlug>) => {
+        if (!slug) {
+            return {};
+        }
+
+        return this.helpers.metaBySlug[slug] || {};
+    };
+
+    getGroupBySlug = (slug: Nullable<PromoSlug>): Nullable<PromoGroupSlug> => {
+        if (!slug) {
+            return null;
+        }
+
+        return this.helpers.typeBySlug[slug];
+    };
+
+    sendEvent = async (eventName: string) => {
+        if (!this.triggersMap[eventName]) {
+            return;
+        }
+
+        for (const promoSlug of this.triggersMap[eventName]) {
+            const promo = this.helpers.promoBySlug[promoSlug];
+
+            const timeout = promo.trigger?.timeout;
+            if (timeout) {
+                (async () => {
+                    await delay(timeout);
+                    await this.requestStart(promoSlug);
+                })();
+            } else {
+                await this.requestStart(promoSlug);
+            }
+        }
+    };
+
+    private checkPromoConditions = (slug: PromoSlug): boolean => {
         this.logger.debug('Promo', slug, 'Check conditions');
         if (!this.checkConstraints()) {
             this.logger.debug(`Not pass constraints`);
@@ -351,42 +387,6 @@ export class Controller {
         this.logger.debug('Result for promo', resultForPromo);
 
         return resultForGroup && resultForPromo;
-    };
-
-    getPromoMeta = (slug: Nullable<PromoSlug>) => {
-        if (!slug) {
-            return {};
-        }
-
-        return this.helpers.metaBySlug[slug] || {};
-    };
-
-    getGroupBySlug = (slug: Nullable<PromoSlug>): Nullable<PromoGroupSlug> => {
-        if (!slug) {
-            return null;
-        }
-
-        return this.helpers.typeBySlug[slug];
-    };
-
-    sendEvent = async (eventName: string) => {
-        if (!this.triggersMap[eventName]) {
-            return;
-        }
-
-        for (const promoSlug of this.triggersMap[eventName]) {
-            const promo = this.helpers.promoBySlug[promoSlug];
-
-            const timeout = promo.trigger?.timeout;
-            if (timeout) {
-                (async () => {
-                    await delay(timeout);
-                    await this.requestStart(promoSlug);
-                })();
-            } else {
-                await this.requestStart(promoSlug);
-            }
-        }
     };
 
     private async fetchProgressState() {
