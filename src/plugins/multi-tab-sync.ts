@@ -5,14 +5,14 @@ type PluginOptions = {
     changeStateLSKey: string;
     closeHintLSKey: string;
     enableCloseHintSync: boolean;
-    enableStateSync: boolean;
+    __unstable_enableStateSync: boolean;
 };
 
 const DEFAULT_PLUGIN_OPTIONS = {
     changeStateLSKey: 'onboarding.plugin-sync.changeState',
     closeHintLSKey: 'onboarding.plugin-sync.closeHint',
     enableCloseHintSync: true,
-    enableStateSync: false,
+    __unstable_enableStateSync: false,
 };
 export class MultiTabSyncPlugin implements OnboardingPlugin {
     static isQuotaExceededError(err: unknown): boolean {
@@ -48,7 +48,7 @@ export class MultiTabSyncPlugin implements OnboardingPlugin {
 
         window.addEventListener('storage', this.handleLSEvent);
 
-        if (this.options.enableStateSync) {
+        if (this.options.__unstable_enableStateSync) {
             onboarding.events.subscribe('stateChange', () => this.changeState(onboarding.state));
         }
 
@@ -63,7 +63,7 @@ export class MultiTabSyncPlugin implements OnboardingPlugin {
         }
 
         const isChangeStateEvent = event.key === this.options.changeStateLSKey && event.newValue;
-        if (this.options.enableStateSync && isChangeStateEvent) {
+        if (this.options.__unstable_enableStateSync && isChangeStateEvent) {
             this.onboardingInstance.state = JSON.parse(event.newValue);
             this.onboardingInstance.emitStateChange();
         }
