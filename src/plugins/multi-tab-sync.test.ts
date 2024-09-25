@@ -142,7 +142,7 @@ describe('state sync', function () {
     describe('send event', function () {
         it('change ls on state change', async function () {
             const options = getOptions();
-            options.plugins = [new MultiTabSyncPlugin({enableStateSync: true})];
+            options.plugins = [new MultiTabSyncPlugin({__unstable_enableStateSync: true})];
 
             const controller = new Controller(options);
             await controller.runPreset('createQueue');
@@ -157,7 +157,7 @@ describe('state sync', function () {
             options.plugins = [
                 new MultiTabSyncPlugin({
                     changeStateLSKey: 'somekey3',
-                    enableStateSync: true,
+                    __unstable_enableStateSync: true,
                 }),
             ];
 
@@ -172,7 +172,7 @@ describe('state sync', function () {
             const options = getOptions();
             options.plugins = [
                 new MultiTabSyncPlugin({
-                    enableStateSync: false,
+                    __unstable_enableStateSync: false,
                 }),
             ];
 
@@ -187,7 +187,7 @@ describe('state sync', function () {
     describe('receive event', function () {
         it('get state LS event -> apply new state', async function () {
             const options = getOptions();
-            options.plugins = [new MultiTabSyncPlugin({enableStateSync: true})];
+            options.plugins = [new MultiTabSyncPlugin({__unstable_enableStateSync: true})];
 
             const controller = new Controller(options);
 
@@ -209,7 +209,7 @@ describe('state sync', function () {
             options.plugins = [
                 new MultiTabSyncPlugin({
                     changeStateLSKey: 'somekey4',
-                    enableStateSync: true,
+                    __unstable_enableStateSync: true,
                 }),
             ];
 
@@ -232,7 +232,7 @@ describe('state sync', function () {
             const options = getOptions();
             options.plugins = [
                 new MultiTabSyncPlugin({
-                    enableStateSync: false,
+                    __unstable_enableStateSync: false,
                 }),
             ];
 
@@ -265,7 +265,7 @@ describe('local storage errors', function () {
         });
 
         const options = getOptions();
-        options.plugins = [new MultiTabSyncPlugin({enableStateSync: true})];
+        options.plugins = [new MultiTabSyncPlugin({__unstable_enableStateSync: true})];
 
         const controller = new Controller(options);
         await controller.setWizardState('collapsed');
