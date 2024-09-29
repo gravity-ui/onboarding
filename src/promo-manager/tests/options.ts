@@ -1,10 +1,10 @@
 import type {PromoProgressState} from '../core/types';
 
-import {pollGroup, pollGroup2, pollWithConditions} from './promoGroups';
+import {pollGroup, pollGroup2, pollWithConditions, repeatedPoll} from './promoGroups';
 
 export const testOptions = {
     config: {
-        promoGroups: [pollGroup, pollGroup2, pollWithConditions],
+        promoGroups: [pollGroup, pollGroup2, pollWithConditions, repeatedPoll],
         init: {
             initType: 'timeout' as const,
             timeout: 0,

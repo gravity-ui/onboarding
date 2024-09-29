@@ -67,13 +67,37 @@ describe('active promo', () => {
         expect(controller.state.base.activePromo).toBe('ganttPoll');
     });
 
-    it('run 2 duplicates -> finish promo -> not trigger next', async () => {
+    it('2 request and finish promo -> not trigger next', async () => {
         await controller.requestStart('boardPoll');
         await controller.requestStart('boardPoll');
 
         controller.finishPromo('boardPoll');
 
         expect(controller.state.base.activePromo).toBe(null);
+    });
+});
+
+describe('repeatred runs', function () {
+    it('common promo -> cannot run', async function () {
+        const controller = new Controller(testOptions);
+
+        await controller.requestStart('boardPoll');
+        await controller.finishPromo('boardPoll');
+
+        await controller.requestStart('boardPoll');
+
+        expect(controller.state.base.activePromo).toBe(null);
+    });
+
+    it('repeated promo -> can rerun', async function () {
+        const controller = new Controller(testOptions);
+
+        await controller.requestStart('boardPollRepeat');
+        await controller.finishPromo('boardPollRepeat');
+
+        await controller.requestStart('boardPollRepeat');
+
+        expect(controller.state.base.activePromo).toBe('boardPollRepeat');
     });
 });
 

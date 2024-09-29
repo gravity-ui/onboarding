@@ -57,6 +57,23 @@ export const pollGroup2: PromoGroup = {
     ],
 };
 
+export const repeatedPoll: PromoGroup = {
+    slug: 'pollRepeat',
+    conditions: [],
+    promos: [
+        {
+            slug: 'boardPollRepeat',
+            repeatable: true,
+            conditions: [],
+        },
+        {
+            slug: 'ganttPollRepeat',
+            repeatable: true,
+            conditions: [],
+        },
+    ],
+};
+
 export const pollWithConditions: PromoGroup = {
     slug: 'ask',
     conditions: [ShowOnceForPeriod({months: 1})],
