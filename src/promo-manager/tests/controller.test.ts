@@ -3,6 +3,7 @@ import {Controller} from '../core/controller';
 import {testOptions} from './options';
 import {testMetaInfo} from './promoGroups';
 import {waitForNextTick} from './utils';
+import {PromoGroup} from '../core/types';
 
 describe('active promo', () => {
     let controller: Controller;
@@ -77,7 +78,111 @@ describe('active promo', () => {
     });
 });
 
-describe('repeatred runs', function () {
+describe('promo status', function () {
+    it('no progress -> forbidden', function () {
+        const controller = new Controller({...testOptions, progressState: undefined});
+
+        const status = controller.getPromoStatus('boardPoll');
+
+        expect(status).toBe('forbidden');
+    });
+
+    it('active promo -> active', async function () {
+        const controller = new Controller(testOptions);
+        await controller.requestStart('boardPoll');
+
+        const status = controller.getPromoStatus('boardPoll');
+
+        expect(status).toBe('active');
+    });
+
+    it('common finished promo -> finished', async function () {
+        const controller = new Controller(testOptions);
+        await controller.requestStart('boardPoll');
+        await controller.finishPromo('boardPoll');
+
+        const status = controller.getPromoStatus('boardPoll');
+
+        expect(status).toBe('finished');
+    });
+
+    it('promo in queue -> pending', async function () {
+        const controller = new Controller(testOptions);
+        await controller.requestStart('ganttPoll');
+        await controller.requestStart('boardPoll');
+
+        const status = controller.getPromoStatus('boardPoll');
+
+        expect(status).toBe('pending');
+    });
+
+    it('pass conditions -> canRun', async function () {
+        const controller = new Controller(testOptions);
+
+        const status = controller.getPromoStatus('boardPoll');
+
+        expect(status).toBe('canRun');
+    });
+
+    it('not pass conditions -> forbidden', async function () {
+        const controller = new Controller(testOptions);
+
+        const status = controller.getPromoStatus('pastDayPoll');
+
+        expect(status).toBe('forbidden');
+    });
+
+    describe('repeatable promos', function () {
+        it('repeatable finished promo -> canReRun', async function () {
+            const controller = new Controller(testOptions);
+            await controller.requestStart('boardPollRepeatable');
+            await controller.finishPromo('boardPollRepeatable');
+
+            const status = controller.getPromoStatus('boardPollRepeatable');
+
+            expect(status).toBe('canReRun');
+        });
+
+        it('repeatable promo not pass conditions  -> forbidden', async function () {
+            const controller = new Controller(testOptions);
+            await controller.requestStart('forbiddenRepeatablePoll');
+            await controller.finishPromo('forbiddenRepeatablePoll');
+
+            const status = controller.getPromoStatus('forbiddenRepeatablePoll');
+
+            expect(status).toBe('forbidden');
+        });
+
+        it('finished promo in repeatable group', async function () {
+            const repeatableGroup: PromoGroup = {
+                slug: 'pollRepeat',
+                repeatable: true,
+                conditions: [],
+                promos: [
+                    {
+                        slug: 'boardPollRepeatable',
+                        conditions: [],
+                    },
+                ],
+            };
+
+            const controller = new Controller({
+                ...testOptions,
+                config: {
+                    promoGroups: [repeatableGroup],
+                },
+            });
+            await controller.requestStart('boardPollRepeatable');
+            await controller.finishPromo('boardPollRepeatable');
+
+            const status = controller.getPromoStatus('boardPollRepeatable');
+
+            expect(status).toBe('canReRun');
+        });
+    });
+});
+
+describe('repeated runs', function () {
     it('common promo -> cannot run', async function () {
         const controller = new Controller(testOptions);
 
@@ -92,12 +197,12 @@ describe('repeatred runs', function () {
     it('repeated promo -> can rerun', async function () {
         const controller = new Controller(testOptions);
 
-        await controller.requestStart('boardPollRepeat');
-        await controller.finishPromo('boardPollRepeat');
+        await controller.requestStart('boardPollRepeatable');
+        await controller.finishPromo('boardPollRepeatable');
 
-        await controller.requestStart('boardPollRepeat');
+        await controller.requestStart('boardPollRepeatable');
 
-        expect(controller.state.base.activePromo).toBe('boardPollRepeat');
+        expect(controller.state.base.activePromo).toBe('boardPollRepeatable');
     });
 });
 

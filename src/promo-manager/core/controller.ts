@@ -244,7 +244,7 @@ export class Controller {
         }
 
         if (this.isFinished(slug)) {
-            if (!this.helpers.promoBySlug[slug].repeatable) {
+            if (!this.isPromoRepeatable(slug)) {
                 return 'finished';
             }
 
@@ -549,6 +549,18 @@ export class Controller {
 
     private isPending = (slug: PromoSlug) => {
         return this.state.base.activeQueue.includes(slug);
+    };
+
+    private isPromoRepeatable = (slug: PromoSlug) => {
+        const isPromoRepeatable = this.helpers.promoBySlug[slug].repeatable;
+
+        const groupSlug = this.getGroupBySlug(slug);
+        const group = this.options.config.promoGroups.find(
+            (currentGroup) => currentGroup.slug === groupSlug,
+        );
+        const isGroupRepeatable = Boolean(group?.repeatable);
+
+        return isPromoRepeatable || isGroupRepeatable;
     };
 
     private activatePromo = (slug: PromoSlug) => {

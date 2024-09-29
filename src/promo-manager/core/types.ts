@@ -18,11 +18,12 @@ export type Promo<T = PromoMeta> = {
     priority?: Priority;
     meta?: T;
     trigger?: Trigger;
-    repeatable?: true;
+    repeatable?: boolean;
 };
 
 export type PromoGroup<Config = PromoMeta> = {
     slug: PromoGroupSlug;
+    repeatable?: boolean;
     conditions?: Condition[];
     promos: Promo<Config>[];
 };

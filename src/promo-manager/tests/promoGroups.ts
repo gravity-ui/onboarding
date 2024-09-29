@@ -62,14 +62,19 @@ export const repeatedPoll: PromoGroup = {
     conditions: [],
     promos: [
         {
-            slug: 'boardPollRepeat',
+            slug: 'boardPollRepeatable',
             repeatable: true,
             conditions: [],
         },
         {
-            slug: 'ganttPollRepeat',
+            slug: 'ganttPollRepeatable',
             repeatable: true,
             conditions: [],
+        },
+        {
+            slug: 'forbiddenRepeatablePoll',
+            repeatable: true,
+            conditions: [() => false],
         },
     ],
 };
