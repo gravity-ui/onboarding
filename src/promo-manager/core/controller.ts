@@ -301,7 +301,9 @@ export class Controller {
         this.state.progress = JSON.parse(JSON.stringify(defaultProgressState)) as ProgressState;
 
         if (this.options.onboarding) {
-            await this.options.onboarding.getInstance().resetPresetProgress([...this.promoPresets]);
+            await this.options.onboarding
+                .getInstance()
+                .resetPresetProgress([...this.promoPresets], {removeFromSuggested: true});
         }
 
         this.emitChange();
