@@ -318,18 +318,25 @@ describe('preset management', function () {
             const controller = new Controller(options);
             await controller.resetPresetProgress(['createProject', 'createQueue']);
 
-            const newProgressState = options.onSave.progress.mock.calls[0][0];
-
             // remove createQueue from finished
-            expect(newProgressState.finishedPresets).toEqual([]);
+            expect(controller.state.progress?.finishedPresets).toEqual([]);
 
             // remove createProject passed steps
-            expect(newProgressState.presetPassedSteps.createProject).toBeUndefined();
+            expect(controller.state.progress?.presetPassedSteps.createProject).toBeUndefined();
 
-            const newBaseState = options.onSave.state.mock.calls[0][0];
-            // remove createProject from active and suggested presets
-            expect(newBaseState.activePresets).toEqual([]);
-            expect(newBaseState.suggestedPresets).toEqual([]);
+            // remove createProject from active presets
+            expect(controller.state.base.activePresets).toEqual([]);
+        });
+
+        it('removeFromSuggested=true, remove from suggested', async function () {
+            const options = getOptions({}, {finishedPresets: ['createQueue']});
+
+            const controller = new Controller(options);
+            await controller.resetPresetProgress(['createProject', 'createQueue'], {
+                removeFromSuggested: true,
+            });
+
+            expect(controller.state.base.suggestedPresets).toEqual([]);
         });
     });
 });

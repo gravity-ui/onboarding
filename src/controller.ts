@@ -473,7 +473,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
     };
 
-    resetPresetProgress = async (presetArg: string | string[]) => {
+    resetPresetProgress = async (
+        presetArg: string | string[],
+        {removeFromSuggested} = {removeFromSuggested: false},
+    ) => {
         this.logger.debug('Reset progress for', presetArg);
         await this.ensureRunning();
         this.assertProgressLoaded();
@@ -494,9 +497,11 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             (preset) => !presets.includes(preset as Presets),
         );
 
-        this.state.base.suggestedPresets = this.state.base.activePresets.filter(
-            (preset) => !presets.includes(preset as Presets),
-        );
+        if (removeFromSuggested) {
+            this.state.base.suggestedPresets = this.state.base.activePresets.filter(
+                (preset) => !presets.includes(preset as Presets),
+            );
+        }
 
         await this.updateBaseState();
         await this.updateProgress();
