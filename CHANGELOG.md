@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.4](https://github.com/gravity-ui/onboarding/compare/v0.23.3...v0.23.4) (2024-09-30)
+
+
+### Bug Fixes
+
+* **onboarding:** dont clear suggested in resetPresetProgress ([48f0c79](https://github.com/gravity-ui/onboarding/commit/48f0c79360034c2d9f2b89494f65b428b6f357b4))
+
 ## [0.23.3](https://github.com/gravity-ui/onboarding/compare/v0.23.2...v0.23.3) (2024-09-21)
 
 
