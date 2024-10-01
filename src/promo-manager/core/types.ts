@@ -2,7 +2,7 @@ import {LoggerOptions} from '../../logger';
 import {Controller as OnboardingController} from '../../controller';
 import {Controller} from './controller';
 
-export type PromoStatus = 'forbidden' | 'canRun' | 'active' | 'finished' | 'pending';
+export type PromoStatus = 'forbidden' | 'canRun' | 'canReRun' | 'active' | 'finished' | 'pending';
 export type Priority = 'high';
 export type PromoManagerStatus = 'idle' | 'initialized';
 
@@ -18,10 +18,12 @@ export type Promo<T = PromoMeta> = {
     priority?: Priority;
     meta?: T;
     trigger?: Trigger;
+    repeatable?: boolean;
 };
 
 export type PromoGroup<Config = PromoMeta> = {
     slug: PromoGroupSlug;
+    repeatable?: boolean;
     conditions?: Condition[];
     promos: Promo<Config>[];
 };

@@ -244,7 +244,15 @@ export class Controller {
         }
 
         if (this.isFinished(slug)) {
-            return 'finished';
+            if (!this.isPromoRepeatable(slug)) {
+                return 'finished';
+            }
+
+            if (this.checkPromoConditions(slug)) {
+                return 'canReRun';
+            } else {
+                return 'forbidden';
+            }
         }
 
         if (this.isPending(slug)) {
@@ -524,7 +532,9 @@ export class Controller {
     }
 
     private isAbleToRun = (slug: PromoSlug) => {
-        return this.getPromoStatus(slug) === 'canRun';
+        const status = this.getPromoStatus(slug);
+
+        return status === 'canRun' || status === 'canReRun';
     };
 
     private isActive = (slug: PromoSlug) => {
@@ -539,6 +549,18 @@ export class Controller {
 
     private isPending = (slug: PromoSlug) => {
         return this.state.base.activeQueue.includes(slug);
+    };
+
+    private isPromoRepeatable = (slug: PromoSlug) => {
+        const isPromoRepeatable = this.helpers.promoBySlug[slug].repeatable;
+
+        const groupSlug = this.getGroupBySlug(slug);
+        const group = this.options.config.promoGroups.find(
+            (currentGroup) => currentGroup.slug === groupSlug,
+        );
+        const isGroupRepeatable = Boolean(group?.repeatable);
+
+        return isPromoRepeatable || isGroupRepeatable;
     };
 
     private activatePromo = (slug: PromoSlug) => {
@@ -575,11 +597,7 @@ export class Controller {
         this.logger.debug('Add promo to the queue', slug);
         this.assertProgressLoaded();
 
-        if (
-            this.state.progress.finishedPromos.includes(slug) ||
-            this.state.base.activeQueue.includes(slug) ||
-            !this.checkPromoConditions(slug)
-        ) {
+        if (this.state.base.activeQueue.includes(slug) || !this.checkPromoConditions(slug)) {
             return;
         }
 
