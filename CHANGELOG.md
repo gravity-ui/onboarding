@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.24.0](https://github.com/gravity-ui/onboarding/compare/v0.23.4...v0.24.0) (2024-10-02)
+
+
+### Features
+
+* **onboarding:** add goNextstep, goPrevStep helpers ([2cc9881](https://github.com/gravity-ui/onboarding/commit/2cc988171382abbe28653eec1324cba8049e43b7))
+* **promo-manager:** add repeated promos ([50d28b2](https://github.com/gravity-ui/onboarding/commit/50d28b2e1b973aac93098abd7a5f45b962e119fd))
+
 ## [0.23.4](https://github.com/gravity-ui/onboarding/compare/v0.23.3...v0.23.4) (2024-09-30)
 
 
