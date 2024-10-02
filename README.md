@@ -176,8 +176,8 @@ For default preset you can specify properties:
 const onboardingOptions = {
   config: {
     presets: {
-      // you can also use createPreset helper
-      createProject: {
+      // you can use goPrevStep and goNextStep in steps
+      createProject: createPreset(({goPrevStep, goNextStep}) => ({
         // preset name should be unique
         name: 'Creating project', // text for user
         type: 'default', // optional. 'default'(default value) | 'interlal' | 'combined'
@@ -190,7 +190,25 @@ const onboardingOptions = {
             description: '', // text to show in popup
             placement: 'top', // optional. Hint placement for step
             passMode: 'onAction', // optional. 'onAction'(default value) | 'onShowHint' - trigger step pass on hint show
-            hintParams: {}, // optional. any custom properties for hint
+            hintParams: {
+              // you can use theese actions in Hint component to display buttons
+              actions: [
+                {
+                  children: 'Go back',
+                  view: 'action' as const,
+                  onClick: () => {
+                    goNextStep()
+                  },
+                },
+                {
+                  children: 'Go next',
+                  view: 'action' as const,
+                  onClick: () => {
+                    goNextStep()
+                  },
+                },
+              ],
+            }, // optional. any custom properties for hint
             closeOnElementUnmount: false, // optional. default valeue - false. Will close hint when element umnounts. 'True' not reccomended in general^ but may me helpful for some corners
             passRestriction: 'afterPrevious', // optional. afterPrevious will block pass step is previous not passed
             hooks: {
@@ -207,7 +225,7 @@ const onboardingOptions = {
           onStart: () => {/**/},
           onEnd: () => {/**/},
         },
-      },
+      })),
     },
   },
 };

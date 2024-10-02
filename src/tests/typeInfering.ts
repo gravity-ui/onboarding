@@ -1,12 +1,12 @@
 import {
     CombinedPreset,
-    CommonPreset,
     createCombinedPreset,
     createOnboarding,
     createPreset,
     createStep,
     InferHintParamsFromPreset,
     InferStepsFromPreset,
+    PresetField,
 } from '../index';
 import {Controller} from '../controller';
 
@@ -73,7 +73,7 @@ export type PresetHelper2 = Expect<
 // preset helper types
 export type Preset1 = Expect<Equal<typeof combinedPreset, CombinedPreset<string>>>;
 export type Preset2 = Expect<
-    Equal<typeof commonPreset, CommonPreset<{a: number} | undefined, 'step1' | 'step2'>>
+    Equal<typeof commonPreset, PresetField<{a: number} | undefined, 'step1' | 'step2'>>
 >;
 
 // onboarding types

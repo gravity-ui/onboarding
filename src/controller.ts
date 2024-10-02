@@ -1,7 +1,14 @@
-import type {BaseState, InitOptions, ProgressState, ReachElementParams} from './types';
+import type {
+    BaseState,
+    InitOptions,
+    Preset,
+    PresetField,
+    ProgressState,
+    ReachElementParams,
+} from './types';
+import {CommonPreset, EventsMap, EventTypes, PresetStatus, ResolvedOptions} from './types';
 import {HintStore} from './hints/hintStore';
 import {createLogger, Logger} from './logger';
-import {CommonPreset, EventsMap, EventTypes, PresetStatus} from './types';
 import {createDebounceHandler} from './debounce';
 import {EventEmitter} from './event-emitter';
 
@@ -55,7 +62,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         return undefined;
     }
 
-    options: InitOptions<HintParams, Presets, Steps>;
+    options: ResolvedOptions<HintParams, Presets, Steps>;
     state: {
         base: BaseState;
         progress?: ProgressState;
@@ -76,7 +83,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         options: InitOptions<HintParams, Presets, Steps>,
         hintStore?: HintStore<HintParams, Presets, Steps>,
     ) {
-        this.options = options;
+        this.options = this.resolveOptions(options);
 
         this.state = {
             base: {
@@ -138,6 +145,32 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         this.events.emit('init', {});
     }
+
+    resolveOptions = (
+        options: InitOptions<HintParams, Presets, Steps>,
+    ): ResolvedOptions<HintParams, Presets, Steps> => {
+        const resolvedPresets = {} as Record<Presets, Preset<HintParams, Steps>>;
+
+        for (const [presetKey, preset] of Object.entries<PresetField<HintParams, Steps>>(
+            options.config.presets,
+        )) {
+            resolvedPresets[presetKey as Presets] =
+                typeof preset === 'function'
+                    ? preset({
+                          goNextStep: this.goNextStep.bind(this, presetKey as Presets),
+                          goPrevStep: this.goPrevStep.bind(this, presetKey as Presets),
+                      })
+                    : preset;
+        }
+
+        return {
+            ...options,
+            config: {
+                ...options.config,
+                presets: resolvedPresets,
+            },
+        };
+    };
 
     passStep = async (stepSlug: Steps) => {
         this.logger.debug('Step passed', stepSlug);
@@ -648,7 +681,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return undefined;
         }
 
-        return Controller.findNextUnpassedStep(presetSteps, passedSteps);
+        return Controller.findNextUnpassedStep(presetSteps, passedSteps) as Steps;
     }
 
     private findActivePresetWithStep(stepSlug: Steps) {
@@ -790,5 +823,40 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
 
         return undefined;
+    }
+
+    private async goNextStep(presetSlug: Presets) {
+        const nextStep = this.findNextStepForPreset(presetSlug);
+
+        if (!nextStep) {
+            return;
+        }
+
+        await this.passStep(nextStep);
+    }
+
+    private async goPrevStep(presetSlug: Presets) {
+        this.assertProgressLoaded();
+
+        const preset = this.options.config.presets[presetSlug as Presets];
+
+        if (!preset || preset.type === 'combined') {
+            return;
+        }
+
+        const presetSteps = preset.steps.map((step) => step.slug);
+        const passedSteps = this.state.progress.presetPassedSteps[presetSlug] ?? [];
+
+        const lastPassedStep = passedSteps[passedSteps.length - 1];
+        const lastPassedStepIndex = presetSteps.findIndex((step) => step === lastPassedStep);
+
+        if (lastPassedStepIndex === -1) {
+            return;
+        }
+        this.state.progress.presetPassedSteps[presetSlug] = presetSteps.slice(
+            0,
+            lastPassedStepIndex,
+        );
+        await this.updateProgress();
     }
 }

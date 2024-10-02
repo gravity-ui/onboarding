@@ -8,8 +8,9 @@ import type {
     InferHintParamsFromOptions,
     InferStepsFromOptions,
     InferPresetsFromOptions,
+    PresetFunctions,
 } from './types';
-import {BaseState, CombinedPreset, CommonPreset, InternalPreset} from './types';
+import {BaseState, CombinedPreset, InternalPreset, PresetField} from './types';
 
 let controllerRef: Controller<object, string, string>;
 
@@ -44,8 +45,8 @@ export function createStep<
     return step;
 }
 
-export function createPreset<T>(preset: T) {
-    return preset as CommonPreset<InferHintParamsFromPreset<T>, InferStepsFromPreset<T>>;
+export function createPreset<T>(preset: T | ((fns: PresetFunctions) => T)) {
+    return preset as PresetField<InferHintParamsFromPreset<T>, InferStepsFromPreset<T>>;
 }
 
 export function createCombinedPreset<T>(preset: T) {
