@@ -857,6 +857,9 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             0,
             lastPassedStepIndex,
         );
+
+        this.closedHints.delete(lastPassedStep as Steps);
+        this.checkReachedHints();
         await this.updateProgress();
     }
 }

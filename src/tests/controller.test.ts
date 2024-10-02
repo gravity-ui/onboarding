@@ -328,6 +328,53 @@ describe('goNextStep and goNextStep', function () {
     });
 
     describe('goPrevStep', function () {
+        it('goPrevStep -> show prev hint', async function () {
+            const options = getOptions(
+                {},
+                {
+                    presetPassedSteps: {
+                        createProject: ['openBoard', 'createSprint'],
+                    },
+                },
+            );
+            const controller = new Controller(options);
+
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+
+            await controller.ensureRunning();
+            await controller['goPrevStep']('createProject');
+
+            expect(controller.hintStore.state.open).toBe(true);
+            expect(controller.hintStore.state.hint?.step.slug).toBe('createSprint');
+        });
+
+        it('pass step, goPrevStep -> show prev hint', async function () {
+            const options = getOptions(
+                {},
+                {
+                    presetPassedSteps: {
+                        createProject: ['openBoard'],
+                    },
+                },
+            );
+            const controller = new Controller(options);
+
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+            await controller.passStep('createSprint');
+
+            await controller.ensureRunning();
+            await controller['goPrevStep']('createProject');
+
+            expect(controller.hintStore.state.open).toBe(true);
+            expect(controller.hintStore.state.hint?.step.slug).toBe('createSprint');
+        });
+
         it('rollback to previous step in preset', async function () {
             const options = getOptions(
                 {},
