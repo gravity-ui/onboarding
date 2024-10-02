@@ -312,3 +312,111 @@ it('set onboarding state = true', async function () {
     expect(controller.state.base.enabled).toBe(true);
     expect(newState.enabled).toBe(true);
 });
+
+describe('goNextStep and goNextStep', function () {
+    it('goNextStep -> pass next step in preset', async function () {
+        const options = getOptions();
+        const controller = new Controller(options);
+
+        await controller.ensureRunning();
+        await controller['goNextStep']('createProject');
+
+        expect(controller.state.progress?.presetPassedSteps.createProject).toEqual([
+            'openBoard',
+            'createSprint',
+        ]);
+    });
+
+    describe('goPrevStep', function () {
+        it('rollback to previous step in preset', async function () {
+            const options = getOptions(
+                {},
+                {
+                    presetPassedSteps: {
+                        createProject: ['openBoard', 'createSprint'],
+                    },
+                },
+            );
+            const controller = new Controller(options);
+
+            await controller.ensureRunning();
+            await controller['goPrevStep']('createProject');
+
+            expect(controller.state.progress?.presetPassedSteps.createProject).toEqual([
+                'openBoard',
+            ]);
+        });
+
+        it('passed only first steo -> empty list', async function () {
+            const options = getOptions(
+                {},
+                {
+                    presetPassedSteps: {
+                        createProject: ['openBoard'],
+                    },
+                },
+            );
+            const controller = new Controller(options);
+
+            await controller.ensureRunning();
+            await controller['goPrevStep']('createProject');
+
+            expect(controller.state.progress?.presetPassedSteps.createProject).toEqual([]);
+        });
+
+        it('no passed steps -> empty list', async function () {
+            const options = getOptions(
+                {},
+                {
+                    presetPassedSteps: {},
+                },
+            );
+            const controller = new Controller(options);
+
+            await controller.ensureRunning();
+            await controller['goPrevStep']('createProject');
+
+            expect(controller.state.progress?.presetPassedSteps.createProject).toBe(undefined);
+        });
+
+        it('skipped step -> add skipped step', async function () {
+            const options = getOptions(
+                {},
+                {
+                    presetPassedSteps: {
+                        createProject: ['openBoard', 'createIssue'],
+                    },
+                },
+            );
+            const controller = new Controller(options);
+
+            await controller.ensureRunning();
+            await controller['goPrevStep']('createProject');
+
+            expect(controller.state.progress?.presetPassedSteps.createProject).toEqual([
+                'openBoard',
+                'createSprint',
+            ]);
+        });
+
+        it('skipped first step -> add skipped step', async function () {
+            const options = getOptions(
+                {},
+                {
+                    presetPassedSteps: {
+                        createProject: ['createIssue'],
+                    },
+                },
+            );
+            const controller = new Controller(options);
+
+            await controller.ensureRunning();
+            await controller['goPrevStep']('createProject');
+
+            expect(controller.state.progress?.presetPassedSteps.createProject).toEqual([
+                'openBoard',
+                'createSprint',
+            ]);
+        });
+    });
+});

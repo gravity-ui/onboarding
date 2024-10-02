@@ -3,6 +3,8 @@ import type {LoggerOptions} from './logger';
 import {Controller} from './controller';
 import {HintState} from './hints/hintStore';
 
+type VoidFn = () => void;
+
 type HintPlacement =
     | 'top'
     | 'bottom'
@@ -80,7 +82,19 @@ export type CombinedPreset<InternalPresets extends string> = {
     pickPreset: () => InternalPresets | Promise<InternalPresets>;
 };
 
+export type PresetFunctions = {
+    goNextStep: VoidFn;
+    goPrevStep: VoidFn;
+};
+export type PresetField<HintParams, Steps extends string> =
+    | Preset<HintParams, Steps>
+    | ((presetFunctions: PresetFunctions) => Preset<HintParams, Steps>);
+
 export type InitConfig<HintParams, Presets extends string, Steps extends string> = {
+    presets: Record<Presets, PresetField<HintParams, Steps>>;
+};
+
+export type ResolvedConfig<HintParams, Presets extends string, Steps extends string> = {
     presets: Record<Presets, Preset<HintParams, Steps>>;
 };
 
@@ -128,6 +142,11 @@ export type InitOptions<HintParams, Presets extends string, Steps extends string
         ) => HookCallbackReturnType;
     };
 };
+
+export type ResolvedOptions<HintParams, Presets extends string, Steps extends string> = Exclude<
+    InitOptions<HintParams, Presets, Steps>,
+    'config'
+> & {config: ResolvedConfig<HintParams, Presets, Steps>};
 
 export type OnboardingPlugin = {
     name: string;
