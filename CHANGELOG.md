@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.24.2](https://github.com/gravity-ui/onboarding/compare/v0.24.1...v0.24.2) (2024-10-03)
+
+
+### Bug Fixes
+
+* **onboarding:** close hint on goPrevStep ([0d48a4b](https://github.com/gravity-ui/onboarding/commit/0d48a4b276d971234a2f8dcd96295ce2165e870e))
+
 ## [0.24.1](https://github.com/gravity-ui/onboarding/compare/v0.24.0...v0.24.1) (2024-10-02)
 
 
