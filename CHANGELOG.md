@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0](https://github.com/gravity-ui/onboarding/compare/v0.24.2...v1.0.0) (2024-10-03)
+
+
+### chore
+
+* major release ([8f3002e](https://github.com/gravity-ui/onboarding/commit/8f3002efe4e20ee76649c605995e9a609ad578c4))
+
 ## [0.24.2](https://github.com/gravity-ui/onboarding/compare/v0.24.1...v0.24.2) (2024-10-03)
 
 
