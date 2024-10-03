@@ -328,7 +328,7 @@ describe('goNextStep and goNextStep', function () {
     });
 
     describe('goPrevStep', function () {
-        it('goPrevStep -> show prev hint', async function () {
+        it('goPrevStep -> show previous hint', async function () {
             const options = getOptions(
                 {},
                 {
@@ -344,14 +344,13 @@ describe('goNextStep and goNextStep', function () {
                 element: getAnchorElement(),
             });
 
-            await controller.ensureRunning();
             await controller['goPrevStep']('createProject');
 
             expect(controller.hintStore.state.open).toBe(true);
             expect(controller.hintStore.state.hint?.step.slug).toBe('createSprint');
         });
 
-        it('pass step, goPrevStep -> show prev hint', async function () {
+        it('pass step, goPrevStep -> show previous hint', async function () {
             const options = getOptions(
                 {},
                 {
@@ -366,10 +365,42 @@ describe('goNextStep and goNextStep', function () {
                 stepSlug: 'createSprint',
                 element: getAnchorElement(),
             });
+            await controller.stepElementReached({
+                stepSlug: 'createIssue',
+                element: getAnchorElement(),
+            });
+
             await controller.passStep('createSprint');
 
             await controller.ensureRunning();
             await controller['goPrevStep']('createProject');
+
+            expect(controller.hintStore.state.open).toBe(true);
+            expect(controller.hintStore.state.hint?.step.slug).toBe('createSprint');
+        });
+
+        it('pass step, goPrevStep -> show previous hint', async function () {
+            const options = getOptions(
+                {},
+                {
+                    presetPassedSteps: {
+                        createProject: ['openBoard'],
+                    },
+                },
+            );
+            const controller = new Controller(options);
+
+            await controller.stepElementReached({
+                stepSlug: 'openBoard',
+                element: getAnchorElement(),
+            });
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+
+            await controller['goPrevStep']('createProject');
+            await controller.passStep('openBoard');
 
             expect(controller.hintStore.state.open).toBe(true);
             expect(controller.hintStore.state.hint?.step.slug).toBe('createSprint');
