@@ -26,7 +26,7 @@
     "build": "tsc",
     "size": "size-limit",
     "prepublishOnly": "npm run build",
-    "force-release": "echo 42"
+    "force-release": "echo 43"
   },
   "dependencies": {
     "dayjs": "^1.11.11"
