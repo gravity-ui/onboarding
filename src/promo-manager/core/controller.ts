@@ -552,7 +552,7 @@ export class Controller {
     };
 
     private isPromoRepeatable = (slug: PromoSlug) => {
-        const isPromoRepeatable = this.helpers.promoBySlug[slug].repeatable;
+        const isPromoRepeatable = this.helpers.promoBySlug[slug]?.repeatable ?? false;
 
         const groupSlug = this.getGroupBySlug(slug);
         const group = this.options.config.promoGroups.find(
