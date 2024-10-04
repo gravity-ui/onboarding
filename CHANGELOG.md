@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/gravity-ui/onboarding/compare/v1.0.0...v1.0.1) (2024-10-04)
+
+
+### Bug Fixes
+
+* **promo-manager:** get promo status for deleted promo ([78f251a](https://github.com/gravity-ui/onboarding/commit/78f251a51ad21d1fb7432dcbb03ad8c035d6a2d5))
+
 ## [1.0.0](https://github.com/gravity-ui/onboarding/compare/v0.24.2...v1.0.0) (2024-10-03)
 
 
