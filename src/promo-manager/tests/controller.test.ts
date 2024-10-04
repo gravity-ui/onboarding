@@ -132,6 +132,32 @@ describe('promo status', function () {
         expect(status).toBe('forbidden');
     });
 
+    it('undefined promo -> forbidden', async function () {
+        const controller = new Controller(testOptions);
+
+        const status = controller.getPromoStatus('boardPollFake');
+
+        expect(status).toBe('forbidden');
+    });
+
+    it('deleted promo with progress promo -> return false', async function () {
+        const controller = new Controller({
+            ...testOptions,
+            progressState: {
+                finishedPromos: ['boardPollFake'],
+                progressInfoByPromo: {
+                    boardPollFake: {
+                        lastCallTime: Date.now(),
+                    },
+                },
+            },
+        });
+
+        const status = controller.getPromoStatus('boardPollFake');
+
+        expect(status).toBe('finished');
+    });
+
     describe('repeatable promos', function () {
         it('repeatable finished promo -> canReRun', async function () {
             const controller = new Controller(testOptions);
