@@ -328,6 +328,25 @@ describe('goNextStep and goNextStep', function () {
     });
 
     describe('goPrevStep', function () {
+        it('goPrevStep -> delete step from presetPassedSteps', async function () {
+            const options = getOptions(
+                {},
+                {
+                    presetPassedSteps: {
+                        createProject: ['openBoard', 'createSprint'],
+                    },
+                },
+            );
+            const controller = new Controller(options);
+
+            await controller.ensureRunning();
+            await controller['goPrevStep']('createProject');
+
+            expect(controller.state.progress?.presetPassedSteps.createProject).toEqual([
+                'openBoard',
+            ]);
+        });
+
         it('goPrevStep -> show previous hint', async function () {
             const options = getOptions(
                 {},
@@ -348,98 +367,6 @@ describe('goNextStep and goNextStep', function () {
 
             expect(controller.hintStore.state.open).toBe(true);
             expect(controller.hintStore.state.hint?.step.slug).toBe('createSprint');
-        });
-
-        it('pass step, goPrevStep -> show previous hint', async function () {
-            const options = getOptions(
-                {},
-                {
-                    presetPassedSteps: {
-                        createProject: ['openBoard'],
-                    },
-                },
-            );
-            const controller = new Controller(options);
-
-            await controller.stepElementReached({
-                stepSlug: 'createSprint',
-                element: getAnchorElement(),
-            });
-            await controller.stepElementReached({
-                stepSlug: 'createIssue',
-                element: getAnchorElement(),
-            });
-
-            await controller.passStep('createSprint');
-
-            await controller.ensureRunning();
-            await controller['goPrevStep']('createProject');
-
-            expect(controller.hintStore.state.open).toBe(true);
-            expect(controller.hintStore.state.hint?.step.slug).toBe('createSprint');
-        });
-
-        it('pass step, goPrevStep -> show previous hint', async function () {
-            const options = getOptions(
-                {},
-                {
-                    presetPassedSteps: {
-                        createProject: ['openBoard'],
-                    },
-                },
-            );
-            const controller = new Controller(options);
-
-            await controller.stepElementReached({
-                stepSlug: 'openBoard',
-                element: getAnchorElement(),
-            });
-            await controller.stepElementReached({
-                stepSlug: 'createSprint',
-                element: getAnchorElement(),
-            });
-
-            await controller['goPrevStep']('createProject');
-            await controller.passStep('openBoard');
-
-            expect(controller.hintStore.state.open).toBe(true);
-            expect(controller.hintStore.state.hint?.step.slug).toBe('createSprint');
-        });
-
-        it('rollback to previous step in preset', async function () {
-            const options = getOptions(
-                {},
-                {
-                    presetPassedSteps: {
-                        createProject: ['openBoard', 'createSprint'],
-                    },
-                },
-            );
-            const controller = new Controller(options);
-
-            await controller.ensureRunning();
-            await controller['goPrevStep']('createProject');
-
-            expect(controller.state.progress?.presetPassedSteps.createProject).toEqual([
-                'openBoard',
-            ]);
-        });
-
-        it('passed only first steo -> empty list', async function () {
-            const options = getOptions(
-                {},
-                {
-                    presetPassedSteps: {
-                        createProject: ['openBoard'],
-                    },
-                },
-            );
-            const controller = new Controller(options);
-
-            await controller.ensureRunning();
-            await controller['goPrevStep']('createProject');
-
-            expect(controller.state.progress?.presetPassedSteps.createProject).toEqual([]);
         });
 
         it('no passed steps -> empty list', async function () {
@@ -495,6 +422,113 @@ describe('goNextStep and goNextStep', function () {
                 'openBoard',
                 'createSprint',
             ]);
+        });
+
+        describe('combine with other actions', function () {
+            it('passed only first step -> empty list', async function () {
+                const options = getOptions(
+                    {},
+                    {
+                        presetPassedSteps: {
+                            createProject: ['openBoard'],
+                        },
+                    },
+                );
+                const controller = new Controller(options);
+
+                await controller.ensureRunning();
+                await controller['goPrevStep']('createProject');
+
+                expect(controller.state.progress?.presetPassedSteps.createProject).toEqual([]);
+            });
+
+            it('pass step, goPrevStep -> show previous hint', async function () {
+                const options = getOptions(
+                    {},
+                    {
+                        presetPassedSteps: {
+                            createProject: ['openBoard'],
+                        },
+                    },
+                );
+                const controller = new Controller(options);
+
+                await controller.stepElementReached({
+                    stepSlug: 'createSprint',
+                    element: getAnchorElement(),
+                });
+                await controller.stepElementReached({
+                    stepSlug: 'createIssue',
+                    element: getAnchorElement(),
+                });
+
+                await controller.passStep('createSprint');
+
+                await controller.ensureRunning();
+                await controller['goPrevStep']('createProject');
+
+                expect(controller.hintStore.state.open).toBe(true);
+                expect(controller.hintStore.state.hint?.step.slug).toBe('createSprint');
+            });
+
+            it('goPrevStep, pass step -> show initial hint', async function () {
+                const options = getOptions(
+                    {},
+                    {
+                        presetPassedSteps: {
+                            createProject: ['openBoard'],
+                        },
+                    },
+                );
+                const controller = new Controller(options);
+
+                await controller.stepElementReached({
+                    stepSlug: 'openBoard',
+                    element: getAnchorElement(),
+                });
+                await controller.stepElementReached({
+                    stepSlug: 'createSprint',
+                    element: getAnchorElement(),
+                });
+
+                await controller['goPrevStep']('createProject');
+                await controller.passStep('openBoard');
+
+                expect(controller.hintStore.state.open).toBe(true);
+                expect(controller.hintStore.state.hint?.step.slug).toBe('createSprint');
+            });
+
+            it('goPrevStep, goNextStep -> show initial hint', async function () {
+                const options = getOptions(
+                    {},
+                    {
+                        presetPassedSteps: {
+                            createProject: ['openBoard'],
+                        },
+                    },
+                );
+                const controller = new Controller(options);
+
+                await controller.stepElementReached({
+                    stepSlug: 'openBoard',
+                    element: getAnchorElement(),
+                });
+                await controller.stepElementReached({
+                    stepSlug: 'createSprint',
+                    element: getAnchorElement(),
+                });
+
+                expect(controller.hintStore.state.open).toBe(true);
+                expect(controller.hintStore.state.hint?.step.slug).toBe('createSprint');
+
+                const promise1 = controller['goPrevStep']('createProject');
+                const promise2 = controller['goNextStep']('createProject');
+
+                await Promise.all([promise1, promise2]);
+
+                expect(controller.hintStore.state.open).toBe(true);
+                expect(controller.hintStore.state.hint?.step.slug).toBe('createSprint');
+            });
         });
     });
 });
