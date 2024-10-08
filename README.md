@@ -122,54 +122,52 @@ return (
 
 ## Onboarding configuration
 
+
+### Onboarding options
 You can configure onboarding
 
 ```typescript jsx
 const onboardingOptions = {
   config: {
     presets: {/**/},
-    baseState: {/**/}, // initial state for current user
-    getProgressState: () => {/**/}, // function to load user progress
-    onSave: {
-      // functions to save user state
-      state: (state) => {/**/},
-      progress: (progress) => {/**/},
-    },
-    showHint: (state) => {
-      /**/
-    }, // optional. function to show hint. Only for vanilla js usage
+  },
+  baseState: {/**/}, // initial state for current user
+  getProgressState: () => {/**/}, // function to load user progress
+  onSave: {
+    // functions to save user state
+    state: (state) => {/**/},
+    progress: (progress) => {/**/},
+  },
+  showHint: (state) => {}, // optional. function to show hint. Only for vanilla js usage
+  logger: { // optional. you can specify custom logger
+    level: 'error' as const,
     logger: {
-      // optional. you can specify custom logger
-      level: 'error' as const,
-      logger: {
-        debug: () => {/**/},
-        error: () => {/**/},
-      },
+      debug: () => {/**/},
+      error: () => {/**/},
     },
-    debugMode: true, // optional. true will show a lot of debug messages. Recommended for dev environment
-    plugins: [/**/], // optional. you can use existing plugins or write your own
-    hooks: {
-      // optional. you can subscribe to onboarding events
-      showHint: ({preset, step}) => {/**/},
-      stepPass: ({preset, step}) => {/**/},
-      addPreset: ({preset}) => {/**/},
-      beforeRunPreset: ({preset}) => {/**/},
-      runPreset: ({preset}) => {/**/},
-      finishPreset: ({preset}) => {/**/},
-      beforeSuggestPreset: ({preset}) => {/**/},
-      beforeShowHint: ({stepData}) => {/**/},
-      stateChange: ({state}) => {/**/},
-      hintDataChanged: ({state}) => {/**/},
-      closeHint: ({hint}) => {/**/},
-      init: () => {/**/},
-      wizardStateChanged: ({wizardState}) => {/**/},
-    },
+  },
+  debugMode: true, // optional. true will show a lot of debug messages. Recommended for dev environment
+  plugins: [/**/], // optional. you can use existing plugins or write your own
+  // optional. you can subscribe to onboarding events
+  hooks: {
+    showHint: ({preset, step}) => {/**/},
+    stepPass: ({preset, step}) => {/**/},
+    addPreset: ({preset}) => {/**/},
+    beforeRunPreset: ({preset}) => {/**/},
+    runPreset: ({preset}) => {/**/},
+    finishPreset: ({preset}) => {/**/},
+    beforeSuggestPreset: ({preset}) => {/**/},
+    beforeShowHint: ({stepData}) => {/**/},
+    stateChange: ({state}) => {/**/},
+    hintDataChanged: ({state}) => {/**/},
+    closeHint: ({hint}) => {/**/},
+    init: () => {/**/},
+    wizardStateChanged: ({wizardState}) => {/**/},
   },
 };
 ```
 
----
-
+## Common preset configuration
 For default preset you can specify properties:
 
 ```typescript jsx
@@ -231,14 +229,66 @@ const onboardingOptions = {
 };
 ```
 
-Also, there are combined preset. It is group presets, but it acts like one. When combined preset runs, it resolves to one of internal preset. You can find example in [test data](https://github.com/gravity-ui/onboarding/blob/main/src/tests/utils.ts#L71)
+### Combined presets
+
+For combined preset you need to add internal preset to config and specify `pickPreset` function.
+
+```typescript jsx
+import {createInternalPreset, createCombinedPreset, createOnboarding} from '@gravity-ui/onboarding';
+
+createOnboarding({
+    config: {
+        presets: {
+            //  you need to add internal presets. Here it is internal1 and internal2
+            internal1:  createInternalPreset({
+                name: 'Internal2',
+                type: 'internal' as const,
+                steps: [/* ... */]
+            }),
+            internal2:  createInternalPreset({
+                name: 'Internal2',
+                type: 'internal' as const,
+                steps: [/* ... */],
+            }),
+            // combined preset has no steps
+            combined: createCombinedPreset({
+                name: 'combined',
+                type: 'combined' as const,
+                // pickPreset calls on preset start and resolve combined preset to specific internal preset
+                pickPreset: () => {
+                    if(someCondition) {
+                        return 'internal1'
+                    }
+                    
+                    return 'internal2'
+                },
+                internalPresets: ['internal1', 'internal2'],
+            }),
+        },
+    },
+});
+```
+
+ You can find more examples in [test data](https://github.com/gravity-ui/onboarding/blob/main/src/tests/utils.ts#L71)
 
 ## Plugins and event
 
-You can use event system. Available events: `showHint`, `stepPass`, `addPreset`, `beforeRunPreset`, `runPreset`, `finishPreset`, `beforeSuggestPreset`, `beforeShowHint`, `stateChange`, `hintDataChanged`, `closeHint`, `init`, `wizardStateChange`
+You can use event system. Available events: `showHint`, `stepPass`, `addPreset`, `beforeRunPreset`, `runPreset`, `finishPreset`, `beforeSuggestPreset`, `stepElementReached`, `beforeShowHint`, `stateChange`, `hintDataChanged`, `closeHint`, `init`, `wizardStateChange`
 
 ```typescript jsx
 controller.events.subscribe('beforeShowHint', callback);
+```
+
+Callbacks can be async. Some events can cancel target action: `stepElementReached`, `beforeShowHint`, `beforeSuggestPreset`
+
+```typescript jsx
+controller.events.subscribe('stepElementReached', async () => {
+    /* ... */
+    if(someCondition) {
+        // forbid show hint
+        return false
+    }
+});
 ```
 
 ---
