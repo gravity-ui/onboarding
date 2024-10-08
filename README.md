@@ -15,7 +15,8 @@ Use with React, any other frameworks or vanilla JS.
 - [Onboarding guide](#onboarding-guide)
   - [How to use onboarding](#how-to-use-onboarding)
   - [Onboarding configuration](#onboarding-configuration)
-  - [Plugins and events](#plugins-and-event)
+  - [Plugins](#onboarding-plugins)
+  - [Events](#events)
 - [Promo manager](#promo-manager)
   - [How to use promo manager](#how-to-use-promo-manager)
   - [Condition and constraints](#condition-and-constraints)
@@ -271,7 +272,7 @@ createOnboarding({
 
  You can find more examples in [test data](https://github.com/gravity-ui/onboarding/blob/main/src/tests/utils.ts#L71)
 
-## Plugins and event
+## Events
 
 You can use event system. Available events: `showHint`, `stepPass`, `addPreset`, `beforeRunPreset`, `runPreset`, `finishPreset`, `beforeSuggestPreset`, `stepElementReached`, `beforeShowHint`, `stateChange`, `hintDataChanged`, `closeHint`, `init`, `wizardStateChange`
 
@@ -291,27 +292,23 @@ controller.events.subscribe('stepElementReached', async () => {
 });
 ```
 
----
+## Onboarding plugins
 
 You can use plugins
 
-- MultiTabSyncPlugin - closes hint in all browser tabs.
-```typescript jsx
-new MultiTabSyncPlugin({
-    enableStateSync: false, // Experimantal. Default - false(recommended). Sync all onboarding state.
-    enableCloseHintSync: true, // closes hont in all browser tabs,
-    changeStateLSKey: 'onboarding.plugin-sync.changeState', // localStorage key for state sync
-    closeHintLSKey: 'onboarding.plugin-sync.closeHint', // localStorage key for close hint in all tabs
-});
-```
-- PromoPresetsPlugin - all 'always hidden presets' becomes 'promo presets'. They can turn on onboarding, can only show hint only if user not interact with common onboarding presets. Perfect for educational hints
-```typescript jsx
-new PromoPresetsPlugin({
-    turnOnWhenShowHint: true, // Default - true. Force to turn on onboarding, when promo hint should be shown
-    turnOnWhenSuggestPromoPreset: true, // Default - true. Force to turn on onboarding, when promo preset suggested
-});
-```
-- WizardPlugin - highly recommended, if wizard is used. hide wizard on run preset, show on finish, erase progress for not finished presets on wizard close.
+- **MultiTabSyncPlugin** - synchronizes the closing of the hint and the state (experimentally between tabs). The user will not have to hack one hint several times if he opened the page in several tabs.
+  State synchronization also synchronizes the state of completed/not completed scenarios and the wizard, but **may lead to memory leaks**. Disabled by default, enable at your own risk
+- **WizardPlugin** - useful if you have a wizard where the user can see his scenarios and can start them. Plugin
+  - loads progress at startup if the wizard is open
+  - shows hint when showing wizard if its element is visible
+  - closes hint when closing wizard
+  - closes hint when starting preset and erases progress for unfinished presets
+  - expands wizard when preset is finished
+- **PromoPresetPlugin** - adds logic around presets with `visibility: 'alwaysHidden'`. Such presets are considered promo presets and additional logic is attached to them.
+  - hints of promo presets are not displayed while wizard is open
+  - hints of regular presets are not displayed while wizard is hidden
+  - (optional) toggles enabled state in user state if hint needs to be displayed
+  - (optional) toggles enabled state in user state when issuing (suggestPresetOnce) preset
 
 Example:
 ```typescript jsx
@@ -323,10 +320,18 @@ import {
 } from '@gravity-ui/onboarding/dist/plugins';
 
 const {controller} = createOnboarding({
-  /**/
+  /* ... */
   plugins: [
-    new MultiTabSyncPlugin({enableStateSync: false}),
-    new PromoPresetsPlugin(),
+    new MultiTabSyncPlugin({
+      enableStateSync: false, // Experimantal. Default - false(recommended). Sync all onboarding state.
+      enableCloseHintSync: true, // closes hont in all browser tabs,
+      changeStateLSKey: 'onboarding.plugin-sync.changeState', // localStorage key for state sync
+      closeHintLSKey: 'onboarding.plugin-sync.closeHint', // localStorage key for close hint in all tabs
+    }),
+    new PromoPresetsPlugin({
+      turnOnWhenShowHint: true, // Default - true. Force to turn on onboarding, when promo hint should be shown
+      turnOnWhenSuggestPromoPreset: true, // Default - true. Force to turn on onboarding, when promo preset suggested
+    }),
     new WizardPlugin(),
   ],
 });
