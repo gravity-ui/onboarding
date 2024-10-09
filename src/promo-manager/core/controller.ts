@@ -203,8 +203,6 @@ export class Controller {
         this.stateActions.removeFromQueue(slug);
 
         this.updateProgressInfo(slug);
-
-        this.triggerNextPromo();
     };
 
     cancelPromo = (slug: Nullable<PromoSlug>, closeActiveTimeout = 0) => {
@@ -301,7 +299,6 @@ export class Controller {
 
         this.stateActions.updateProgressInfoByPromo(slug, info);
 
-        this.emitChange();
         this.saveProgress();
     }
 
@@ -628,12 +625,15 @@ export class Controller {
 
     private closePromo = (slug: PromoSlug) => {
         this.logger.debug('Close promo', slug);
+
         if (!this.isActive(slug)) {
             return;
         }
 
         this.stateActions.clearActive();
         this.stateActions.removeFromQueue(slug);
+
+        this.emitChange();
         this.triggerNextPromo();
     };
 

@@ -260,6 +260,19 @@ describe('trigger subscribe', () => {
         expect(callback).toHaveBeenCalledTimes(1);
     });
 
+    it('finish with timeout -> 1 update', async () => {
+        await controller.requestStart('boardPoll');
+
+        const callback = jest.fn();
+        controller.subscribe(callback);
+
+        await controller.finishPromo('boardPoll', 100);
+
+        await waitForNextTick(100);
+
+        expect(callback).toHaveBeenCalledTimes(1);
+    });
+
     it('cancel -> 1 update', async () => {
         await controller.requestStart('boardPoll');
 
@@ -267,6 +280,19 @@ describe('trigger subscribe', () => {
         controller.subscribe(callback);
 
         await controller.cancelPromo('boardPoll');
+
+        expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    it('cancel with timeout -> 1 update', async () => {
+        await controller.requestStart('boardPoll');
+
+        const callback = jest.fn();
+        controller.subscribe(callback);
+
+        await controller.cancelPromo('boardPoll', 100);
+
+        await waitForNextTick(100);
 
         expect(callback).toHaveBeenCalledTimes(1);
     });
