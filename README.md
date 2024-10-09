@@ -15,7 +15,8 @@ Use with React, any other frameworks or vanilla JS.
 - [Onboarding guide](#onboarding-guide)
   - [How to use onboarding](#how-to-use-onboarding)
   - [Onboarding configuration](#onboarding-configuration)
-  - [Plugins and events](#plugins-and-event)
+  - [Plugins](#onboarding-plugins)
+  - [Events](#events)
 - [Promo manager](#promo-manager)
   - [How to use promo manager](#how-to-use-promo-manager)
   - [Condition and constraints](#condition-and-constraints)
@@ -122,54 +123,52 @@ return (
 
 ## Onboarding configuration
 
+
+### Onboarding options
 You can configure onboarding
 
 ```typescript jsx
 const onboardingOptions = {
   config: {
     presets: {/**/},
-    baseState: {/**/}, // initial state for current user
-    getProgressState: () => {/**/}, // function to load user progress
-    onSave: {
-      // functions to save user state
-      state: (state) => {/**/},
-      progress: (progress) => {/**/},
-    },
-    showHint: (state) => {
-      /**/
-    }, // optional. function to show hint. Only for vanilla js usage
+  },
+  baseState: {/**/}, // initial state for current user
+  getProgressState: () => {/**/}, // function to load user progress
+  onSave: {
+    // functions to save user state
+    state: (state) => {/**/},
+    progress: (progress) => {/**/},
+  },
+  showHint: (state) => {}, // optional. function to show hint. Only for vanilla js usage
+  logger: { // optional. you can specify custom logger
+    level: 'error' as const,
     logger: {
-      // optional. you can specify custom logger
-      level: 'error' as const,
-      logger: {
-        debug: () => {/**/},
-        error: () => {/**/},
-      },
+      debug: () => {/**/},
+      error: () => {/**/},
     },
-    debugMode: true, // optional. true will show a lot of debug messages. Recommended for dev environment
-    plugins: [/**/], // optional. you can use existing plugins or write your own
-    hooks: {
-      // optional. you can subscribe to onboarding events
-      showHint: ({preset, step}) => {/**/},
-      stepPass: ({preset, step}) => {/**/},
-      addPreset: ({preset}) => {/**/},
-      beforeRunPreset: ({preset}) => {/**/},
-      runPreset: ({preset}) => {/**/},
-      finishPreset: ({preset}) => {/**/},
-      beforeSuggestPreset: ({preset}) => {/**/},
-      beforeShowHint: ({stepData}) => {/**/},
-      stateChange: ({state}) => {/**/},
-      hintDataChanged: ({state}) => {/**/},
-      closeHint: ({hint}) => {/**/},
-      init: () => {/**/},
-      wizardStateChanged: ({wizardState}) => {/**/},
-    },
+  },
+  debugMode: true, // optional. true will show a lot of debug messages. Recommended for dev environment
+  plugins: [/**/], // optional. you can use existing plugins or write your own
+  // optional. you can subscribe to onboarding events
+  hooks: {
+    showHint: ({preset, step}) => {/**/},
+    stepPass: ({preset, step}) => {/**/},
+    addPreset: ({preset}) => {/**/},
+    beforeRunPreset: ({preset}) => {/**/},
+    runPreset: ({preset}) => {/**/},
+    finishPreset: ({preset}) => {/**/},
+    beforeSuggestPreset: ({preset}) => {/**/},
+    beforeShowHint: ({stepData}) => {/**/},
+    stateChange: ({state}) => {/**/},
+    hintDataChanged: ({state}) => {/**/},
+    closeHint: ({hint}) => {/**/},
+    init: () => {/**/},
+    wizardStateChanged: ({wizardState}) => {/**/},
   },
 };
 ```
 
----
-
+## Common preset configuration
 For default preset you can specify properties:
 
 ```typescript jsx
@@ -231,37 +230,85 @@ const onboardingOptions = {
 };
 ```
 
-Also, there are combined preset. It is group presets, but it acts like one. When combined preset runs, it resolves to one of internal preset. You can find example in [test data](https://github.com/gravity-ui/onboarding/blob/main/src/tests/utils.ts#L71)
+### Combined presets
 
-## Plugins and event
+For combined preset you need to add internal preset to config and specify `pickPreset` function.
 
-You can use event system. Available events: `showHint`, `stepPass`, `addPreset`, `beforeRunPreset`, `runPreset`, `finishPreset`, `beforeSuggestPreset`, `beforeShowHint`, `stateChange`, `hintDataChanged`, `closeHint`, `init`, `wizardStateChange`
+```typescript jsx
+import {createInternalPreset, createCombinedPreset, createOnboarding} from '@gravity-ui/onboarding';
+
+createOnboarding({
+    config: {
+        presets: {
+            //  you need to add internal presets. Here it is internal1 and internal2
+            internal1:  createInternalPreset({
+                name: 'Internal2',
+                type: 'internal' as const,
+                steps: [/* ... */]
+            }),
+            internal2:  createInternalPreset({
+                name: 'Internal2',
+                type: 'internal' as const,
+                steps: [/* ... */],
+            }),
+            // combined preset has no steps
+            combined: createCombinedPreset({
+                name: 'combined',
+                type: 'combined' as const,
+                // pickPreset calls on preset start and resolve combined preset to specific internal preset
+                pickPreset: () => {
+                    if(someCondition) {
+                        return 'internal1'
+                    }
+                    
+                    return 'internal2'
+                },
+                internalPresets: ['internal1', 'internal2'],
+            }),
+        },
+    },
+});
+```
+
+ You can find more examples in [test data](https://github.com/gravity-ui/onboarding/blob/main/src/tests/utils.ts#L71)
+
+## Events
+
+You can use event system. Available events: `showHint`, `stepPass`, `addPreset`, `beforeRunPreset`, `runPreset`, `finishPreset`, `beforeSuggestPreset`, `stepElementReached`, `beforeShowHint`, `stateChange`, `hintDataChanged`, `closeHint`, `init`, `wizardStateChange`
 
 ```typescript jsx
 controller.events.subscribe('beforeShowHint', callback);
 ```
 
----
+Callbacks can be async. Some events can cancel target action: `stepElementReached`, `beforeShowHint`, `beforeSuggestPreset`
+
+```typescript jsx
+controller.events.subscribe('stepElementReached', async () => {
+    /* ... */
+    if(someCondition) {
+        // forbid show hint
+        return false
+    }
+});
+```
+
+## Onboarding plugins
 
 You can use plugins
 
-- MultiTabSyncPlugin - closes hint in all browser tabs.
-```typescript jsx
-new MultiTabSyncPlugin({
-    enableStateSync: false, // Experimantal. Default - false(recommended). Sync all onboarding state.
-    enableCloseHintSync: true, // closes hont in all browser tabs,
-    changeStateLSKey: 'onboarding.plugin-sync.changeState', // localStorage key for state sync
-    closeHintLSKey: 'onboarding.plugin-sync.closeHint', // localStorage key for close hint in all tabs
-});
-```
-- PromoPresetsPlugin - all 'always hidden presets' becomes 'promo presets'. They can turn on onboarding, can only show hint only if user not interact with common onboarding presets. Perfect for educational hints
-```typescript jsx
-new PromoPresetsPlugin({
-    turnOnWhenShowHint: true, // Default - true. Force to turn on onboarding, when promo hint should be shown
-    turnOnWhenSuggestPromoPreset: true, // Default - true. Force to turn on onboarding, when promo preset suggested
-});
-```
-- WizardPlugin - highly recommended, if wizard is used. hide wizard on run preset, show on finish, erase progress for not finished presets on wizard close.
+- **MultiTabSyncPlugin** - synchronizes the closing of the hint and the state (experimentally between tabs). The user will not have to hack one hint several times if he opened the page in several tabs.
+  State synchronization also synchronizes the state of completed/not completed scenarios and the wizard, but **may lead to memory leaks**. Disabled by default, enable at your own risk
+- **WizardPlugin** - useful if you have a wizard where the user can see his scenarios and can start them. Plugin
+  - loads progress at startup if the wizard is open
+  - shows hint when showing wizard if its element is visible
+  - closes hint when closing wizard
+  - closes hint when starting preset and erases progress for unfinished presets
+  - expands wizard when preset is finished
+- **PromoPresetPlugin** - adds logic around presets with `visibility: 'alwaysHidden'`. Such presets are considered promo presets and additional logic is attached to them.
+  - hints of promo presets are not displayed while wizard is open
+  - hints of regular presets are not displayed while wizard is hidden
+  - (optional) toggles enabled state in user state if hint needs to be displayed
+  - (optional) toggles enabled state in user state when issuing (suggestPresetOnce) preset
 
 Example:
 ```typescript jsx
@@ -273,10 +320,18 @@ import {
 } from '@gravity-ui/onboarding/dist/plugins';
 
 const {controller} = createOnboarding({
-  /**/
+  /* ... */
   plugins: [
-    new MultiTabSyncPlugin({enableStateSync: false}),
-    new PromoPresetsPlugin(),
+    new MultiTabSyncPlugin({
+      enableStateSync: false, // Experimantal. Default - false(recommended). Sync all onboarding state.
+      enableCloseHintSync: true, // closes hont in all browser tabs,
+      changeStateLSKey: 'onboarding.plugin-sync.changeState', // localStorage key for state sync
+      closeHintLSKey: 'onboarding.plugin-sync.closeHint', // localStorage key for close hint in all tabs
+    }),
+    new PromoPresetsPlugin({
+      turnOnWhenShowHint: true, // Default - true. Force to turn on onboarding, when promo hint should be shown
+      turnOnWhenSuggestPromoPreset: true, // Default - true. Force to turn on onboarding, when promo preset suggested
+    }),
     new WizardPlugin(),
   ],
 });
