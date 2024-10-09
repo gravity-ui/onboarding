@@ -299,6 +299,7 @@ export class Controller {
 
         this.stateActions.updateProgressInfoByPromo(slug, info);
 
+        this.emitChange();
         this.saveProgress();
     }
 

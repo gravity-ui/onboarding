@@ -249,7 +249,7 @@ describe('trigger subscribe', () => {
         expect(callback).toHaveBeenCalledTimes(1);
     });
 
-    it('finish -> 1 update', async () => {
+    it('finish -> 2 updates', async () => {
         await controller.requestStart('boardPoll');
 
         const callback = jest.fn();
@@ -257,10 +257,10 @@ describe('trigger subscribe', () => {
 
         await controller.finishPromo('boardPoll');
 
-        expect(callback).toHaveBeenCalledTimes(1);
+        expect(callback).toHaveBeenCalledTimes(2);
     });
 
-    it('finish with timeout -> 1 update', async () => {
+    it('finish with timeout -> 2 updates', async () => {
         await controller.requestStart('boardPoll');
 
         const callback = jest.fn();
@@ -268,12 +268,15 @@ describe('trigger subscribe', () => {
 
         await controller.finishPromo('boardPoll', 100);
 
+        expect(controller.state.base.activePromo).toBe('boardPoll');
+
         await waitForNextTick(100);
 
-        expect(callback).toHaveBeenCalledTimes(1);
+        expect(controller.state.base.activePromo).toBe(null);
+        expect(callback).toHaveBeenCalledTimes(2);
     });
 
-    it('cancel -> 1 update', async () => {
+    it('cancel -> 2 updates', async () => {
         await controller.requestStart('boardPoll');
 
         const callback = jest.fn();
@@ -281,10 +284,10 @@ describe('trigger subscribe', () => {
 
         await controller.cancelPromo('boardPoll');
 
-        expect(callback).toHaveBeenCalledTimes(1);
+        expect(callback).toHaveBeenCalledTimes(2);
     });
 
-    it('cancel with timeout -> 1 update', async () => {
+    it('cancel with timeout -> 2 updates', async () => {
         await controller.requestStart('boardPoll');
 
         const callback = jest.fn();
@@ -292,9 +295,12 @@ describe('trigger subscribe', () => {
 
         await controller.cancelPromo('boardPoll', 100);
 
+        expect(controller.state.base.activePromo).toBe('boardPoll');
+
         await waitForNextTick(100);
 
-        expect(callback).toHaveBeenCalledTimes(1);
+        expect(controller.state.base.activePromo).toBe(null);
+        expect(callback).toHaveBeenCalledTimes(2);
     });
 
     it('skipPromo -> 1 update', async () => {
@@ -308,7 +314,7 @@ describe('trigger subscribe', () => {
         expect(callback).toHaveBeenCalledTimes(1);
     });
 
-    it('start and finish -> 2 updates', async () => {
+    it('start and finish -> 3 updates', async () => {
         const callback = jest.fn();
 
         controller.subscribe(callback);
@@ -316,10 +322,10 @@ describe('trigger subscribe', () => {
         await controller.requestStart('boardPoll');
         await controller.finishPromo('boardPoll');
 
-        expect(callback).toHaveBeenCalledTimes(2);
+        expect(callback).toHaveBeenCalledTimes(3);
     });
 
-    it('start, finish and has next -> 3 updates', async () => {
+    it('start, finish and has next -> 4 updates', async () => {
         const callback = jest.fn();
 
         controller.subscribe(callback);
@@ -331,10 +337,10 @@ describe('trigger subscribe', () => {
 
         await controller.finishPromo('boardPoll');
 
-        expect(callback).toHaveBeenCalledTimes(3);
+        expect(callback).toHaveBeenCalledTimes(4);
     });
 
-    it('start and cancel -> 2 updates', async () => {
+    it('start and cancel -> 3 updates', async () => {
         const callback = jest.fn();
 
         controller.subscribe(callback);
@@ -342,7 +348,7 @@ describe('trigger subscribe', () => {
         await controller.requestStart('boardPoll');
         await controller.cancelPromo('boardPoll');
 
-        expect(callback).toHaveBeenCalledTimes(2);
+        expect(callback).toHaveBeenCalledTimes(3);
     });
 
     it('double start and cancel -> 3 updates', async () => {
@@ -357,7 +363,7 @@ describe('trigger subscribe', () => {
 
         await controller.cancelPromo('boardPoll');
 
-        expect(callback).toHaveBeenCalledTimes(3);
+        expect(callback).toHaveBeenCalledTimes(4);
     });
 });
 
