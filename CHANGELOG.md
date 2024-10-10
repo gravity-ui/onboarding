@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/gravity-ui/onboarding/compare/v1.0.1...v1.0.2) (2024-10-10)
+
+
+### Bug Fixes
+
+* **promo-managed:** allow to enable debug in config ([3b0f513](https://github.com/gravity-ui/onboarding/commit/3b0f513a62958e0f0ea1fff27ed9ba7ddb4f6e64))
+
 ## [1.0.1](https://github.com/gravity-ui/onboarding/compare/v1.0.0...v1.0.1) (2024-10-04)
 
 
