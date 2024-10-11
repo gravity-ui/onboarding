@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/gravity-ui/onboarding/compare/v1.0.2...v1.0.3) (2024-10-11)
+
+
+### Bug Fixes
+
+* **PM:** update tests ([6ad7e8c](https://github.com/gravity-ui/onboarding/commit/6ad7e8c363e773369a7b9164d2f10317ec801d42))
+
 ## [1.0.2](https://github.com/gravity-ui/onboarding/compare/v1.0.1...v1.0.2) (2024-10-10)
 
 
