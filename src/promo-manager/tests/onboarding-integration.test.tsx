@@ -31,304 +31,380 @@ const getData = () => {
     };
 };
 
-it('no group -> error', async function () {
-    const onboardingController = new OnboardingController(getOptionsWithPromo());
+describe('init', function () {
+    it('no group -> error', async function () {
+        const onboardingController = new OnboardingController(getOptionsWithPromo());
 
-    const errorLoggerMock = jest.fn();
+        const errorLoggerMock = jest.fn();
 
-    const controller = new Controller({
-        ...testOptions,
-        config: {
-            promoGroups: [],
-        },
-        onboarding: {
-            getInstance: () => onboardingController,
-            groupSlug: 'hintPromos',
-        },
-        logger: {
-            level: 'error',
-            logger: {
-                error: errorLoggerMock,
-                debug: jest.fn(),
+        const controller = new Controller({
+            ...testOptions,
+            config: {
+                promoGroups: [],
             },
-        },
-    });
-
-    await controller.ensureInit();
-
-    expect(errorLoggerMock).toHaveBeenCalled();
-});
-
-it('adds promos for every "alwaysHidden" preset', async function () {
-    const {options} = getData();
-    const controller = new Controller(options);
-
-    await controller.ensureInit();
-
-    const {promos} = controller.options.config.promoGroups[0];
-
-    expect(promos).toEqual([
-        {slug: 'coolNewFeature', conditions: []},
-        {slug: 'coolNewFeature2', conditions: []},
-    ]);
-});
-
-it('not duplicate existing promos', async function () {
-    const onboardingController = new OnboardingController(getOptionsWithPromo());
-
-    const existingPromo = {
-        slug: 'coolNewFeature',
-        conditions: [],
-        meta: {a: 12},
-    };
-    const controller = new Controller({
-        ...testOptions,
-        config: {
-            promoGroups: [
-                {
-                    slug: 'hintPromos',
-                    promos: [existingPromo],
+            onboarding: {
+                getInstance: () => onboardingController,
+                groupSlug: 'hintPromos',
+            },
+            logger: {
+                level: 'error',
+                logger: {
+                    error: errorLoggerMock,
+                    debug: jest.fn(),
                 },
-            ],
-        },
-        onboarding: {
-            getInstance: () => onboardingController,
-            groupSlug: 'hintPromos',
-        },
+            },
+        });
+
+        await controller.ensureInit();
+
+        expect(errorLoggerMock).toHaveBeenCalled();
     });
 
-    await controller.ensureInit();
+    it('adds promos for every "alwaysHidden" preset', async function () {
+        const {options} = getData();
+        const controller = new Controller(options);
 
-    const {promos} = controller.options.config.promoGroups[0];
+        await controller.ensureInit();
 
-    expect(promos[0]).toBe(existingPromo);
-    expect(promos[1]).toEqual({slug: 'coolNewFeature2', conditions: []});
-});
+        const {promos} = controller.options.config.promoGroups[0];
 
-it('reach element -> activate promo', async function () {
-    const {options, onboardingController} = getData();
-
-    const controller = new Controller(options);
-
-    await controller.ensureInit();
-
-    await onboardingController.stepElementReached({
-        stepSlug: 'showCoolFeature',
-        element: getAnchorElement(),
+        expect(promos).toEqual([
+            {slug: 'coolNewFeature', conditions: []},
+            {slug: 'coolNewFeature2', conditions: []},
+        ]);
     });
 
-    await expect(controller.state.base.activePromo).toBe('coolNewFeature');
-});
+    it('not duplicate existing promos', async function () {
+        const onboardingController = new OnboardingController(getOptionsWithPromo());
 
-it('false in promo condition -> no hint, no activePromo', async function () {
-    const onboardingController = new OnboardingController(
-        getOptionsWithPromo({wizardState: 'hidden'}),
-    );
+        const existingPromo = {
+            slug: 'coolNewFeature',
+            conditions: [],
+            meta: {a: 12},
+        };
+        const controller = new Controller({
+            ...testOptions,
+            config: {
+                promoGroups: [
+                    {
+                        slug: 'hintPromos',
+                        promos: [existingPromo],
+                    },
+                ],
+            },
+            onboarding: {
+                getInstance: () => onboardingController,
+                groupSlug: 'hintPromos',
+            },
+        });
 
-    const controller = new Controller({
-        ...testOptions,
-        config: {
-            promoGroups: [
-                {
-                    slug: 'hintPromos',
-                    conditions: [() => false],
-                    promos: [],
-                },
-            ],
-        },
-        onboarding: {
-            getInstance: () => onboardingController,
-            groupSlug: 'hintPromos',
-        },
-    });
+        await controller.ensureInit();
 
-    await controller.ensureInit();
+        const {promos} = controller.options.config.promoGroups[0];
 
-    await onboardingController.stepElementReached({
-        stepSlug: 'showCoolFeature',
-        element: getAnchorElement(),
-    });
-
-    expect(onboardingController.hintStore.state.open).toBe(false);
-    expect(controller.state.base.activePromo).toBe(null);
-});
-
-it('pass preset -> finish promo', async function () {
-    const {options, onboardingController} = getData();
-
-    const controller = new Controller(options);
-
-    await controller.ensureInit();
-
-    await onboardingController.stepElementReached({
-        stepSlug: 'showCoolFeature',
-        element: getAnchorElement(),
-    });
-    await onboardingController.passStep('showCoolFeature');
-
-    expect(controller.state.base.activePromo).toBe(null);
-    expect(controller.state.progress?.finishedPromos).toContain('coolNewFeature');
-});
-
-it('element disappears -> cancel start promo', async function () {
-    const {options, onboardingController} = getData();
-
-    const controller = new Controller(options);
-
-    await controller.ensureInit();
-
-    await onboardingController.stepElementReached({
-        stepSlug: 'showCoolFeature',
-        element: getAnchorElement(),
-    });
-    await onboardingController.stepElementDisappeared('showCoolFeature');
-
-    expect(controller.state.base.activePromo).toBe(null);
-    expect(controller.state.progress?.finishedPromos).not.toContain('coolNewFeature');
-});
-
-it('cant run promo preset now -> delete from queue', async function () {
-    const onboardingController = new OnboardingController(
-        getOptionsWithPromo({wizardState: 'hidden'}),
-    );
-
-    const controller = new Controller({
-        ...testOptions,
-        config: {
-            promoGroups: [
-                {
-                    slug: 'somePromoGroup',
-                    conditions: [],
-                    promos: [{slug: 'someOtherPromo'}],
-                },
-                {
-                    slug: 'hintPromos',
-                    conditions: [],
-                    promos: [],
-                },
-            ],
-        },
-        onboarding: {
-            getInstance: () => onboardingController,
-            groupSlug: 'hintPromos',
-        },
-    });
-
-    await controller.ensureInit();
-
-    await controller.requestStart('someOtherPromo');
-    await onboardingController.stepElementReached({
-        stepSlug: 'showCoolFeature',
-        element: getAnchorElement(),
-    });
-
-    expect(controller.state.base.activeQueue).not.toContain('coolNewFeature');
-});
-
-it('return to onboarding promo -> show hint', async function () {
-    const {options, onboardingController} = getData();
-    const controller = new Controller(options);
-
-    await controller.ensureInit();
-
-    await controller.requestStart('someOtherPromo');
-    await onboardingController.stepElementReached({
-        stepSlug: 'showCoolFeature',
-        element: getAnchorElement(),
-    });
-
-    await controller.finishPromo('someOtherPromo');
-
-    await waitForNextTick();
-
-    expect(controller.state.base.activePromo).toBe('coolNewFeature');
-    expect(onboardingController.hintStore.state.open).toBe(true);
-    expect(onboardingController.hintStore.state.hint?.step.slug).toBe('showCoolFeature');
-});
-
-it('reset progress -> erase onboarding presets', async function () {
-    const {options, onboardingController} = getData();
-    const controller = new Controller(options);
-
-    await controller.resetToDefaultState();
-
-    expect(onboardingController.state.base.activePresets).toEqual(['createProject']);
-    expect(onboardingController.state.base.suggestedPresets).toEqual(['createProject']);
-
-    expect(onboardingController.state.progress).toEqual({
-        finishedPresets: [],
-        presetPassedSteps: {},
+        expect(promos[0]).toBe(existingPromo);
+        expect(promos[1]).toEqual({slug: 'coolNewFeature2', conditions: []});
     });
 });
 
-it('should allow to show common preset', async function () {
-    const onboardingController = new OnboardingController(
-        getOptionsWithPromo({wizardState: 'visible'}),
-    );
-    const options = {
-        ...testOptions,
-        config: {
-            promoGroups: [
-                {
-                    slug: 'hintPromos',
-                    conditions: [],
-                    promos: [],
-                },
-            ],
-        },
-        onboarding: {
-            getInstance: () => onboardingController,
-            groupSlug: 'hintPromos',
-        },
-    };
+describe('show hint', function () {
+    it('reach element -> show hint', async function () {
+        const onboardingController = new OnboardingController(
+            getOptionsWithPromo({wizardState: 'hidden'}),
+        );
+        const options = {
+            ...testOptions,
+            config: {
+                promoGroups: [
+                    {
+                        slug: 'hintPromos',
+                        conditions: [],
+                        promos: [],
+                    },
+                ],
+            },
+            onboarding: {
+                getInstance: () => onboardingController,
+                groupSlug: 'hintPromos',
+            },
+        };
 
-    const controller = new Controller(options);
-    await controller.ensureInit();
+        const controller = new Controller(options);
+        await controller.ensureInit();
 
-    await onboardingController.stepElementReached({
-        stepSlug: 'openBoard',
-        element: getAnchorElement(),
+        await onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature',
+            element: getAnchorElement(),
+        });
+
+        expect(onboardingController.hintStore.state.open).toBe(true);
+        expect(onboardingController.hintStore.state.hint?.step.slug).toBe('showCoolFeature');
     });
 
-    expect(onboardingController.hintStore.state.open).toBe(true);
-    expect(onboardingController.hintStore.state.hint?.step.slug).toBe('openBoard');
+    it('2 reach element(race condition) -> show hint', async function () {
+        const onboardingController = new OnboardingController(
+            getOptionsWithPromo({wizardState: 'hidden'}),
+        );
+        const options = {
+            ...testOptions,
+            config: {
+                promoGroups: [
+                    {
+                        slug: 'hintPromos',
+                        conditions: [],
+                        promos: [],
+                    },
+                ],
+            },
+            onboarding: {
+                getInstance: () => onboardingController,
+                groupSlug: 'hintPromos',
+            },
+        };
+
+        const controller = new Controller(options);
+        await controller.ensureInit();
+
+        const promise1 = onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature',
+            element: getAnchorElement(),
+        });
+        const promise2 = onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature',
+            element: getAnchorElement(),
+        });
+
+        await Promise.all([promise1, promise2]);
+
+        expect(onboardingController.hintStore.state.open).toBe(true);
+        expect(onboardingController.hintStore.state.hint?.step.slug).toBe('showCoolFeature');
+    });
+
+    it('false in promo condition -> no hint, no activePromo', async function () {
+        const onboardingController = new OnboardingController(
+            getOptionsWithPromo({wizardState: 'hidden'}),
+        );
+
+        const controller = new Controller({
+            ...testOptions,
+            config: {
+                promoGroups: [
+                    {
+                        slug: 'hintPromos',
+                        conditions: [() => false],
+                        promos: [],
+                    },
+                ],
+            },
+            onboarding: {
+                getInstance: () => onboardingController,
+                groupSlug: 'hintPromos',
+            },
+        });
+
+        await controller.ensureInit();
+
+        await onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature',
+            element: getAnchorElement(),
+        });
+
+        expect(onboardingController.hintStore.state.open).toBe(false);
+        expect(controller.state.base.activePromo).toBe(null);
+    });
+
+    it('return to onboarding promo -> show hint', async function () {
+        const {options, onboardingController} = getData();
+        const controller = new Controller(options);
+
+        await controller.ensureInit();
+
+        await controller.requestStart('someOtherPromo');
+        await onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature',
+            element: getAnchorElement(),
+        });
+
+        await controller.finishPromo('someOtherPromo');
+
+        await waitForNextTick();
+
+        expect(controller.state.base.activePromo).toBe('coolNewFeature');
+        expect(onboardingController.hintStore.state.open).toBe(true);
+        expect(onboardingController.hintStore.state.hint?.step.slug).toBe('showCoolFeature');
+    });
+
+    it('should allow to show common preset', async function () {
+        const onboardingController = new OnboardingController(
+            getOptionsWithPromo({wizardState: 'visible'}),
+        );
+        const options = {
+            ...testOptions,
+            config: {
+                promoGroups: [
+                    {
+                        slug: 'hintPromos',
+                        conditions: [],
+                        promos: [],
+                    },
+                ],
+            },
+            onboarding: {
+                getInstance: () => onboardingController,
+                groupSlug: 'hintPromos',
+            },
+        };
+
+        const controller = new Controller(options);
+        await controller.ensureInit();
+
+        await onboardingController.stepElementReached({
+            stepSlug: 'openBoard',
+            element: getAnchorElement(),
+        });
+
+        expect(onboardingController.hintStore.state.open).toBe(true);
+        expect(onboardingController.hintStore.state.hint?.step.slug).toBe('openBoard');
+    });
 });
 
-it('cancelled hint -> not trigger promo run', async function () {
-    const onboardingController = new OnboardingController(
-        getOptionsWithPromo({wizardState: 'visible'}),
-    );
+describe('promos behavior', function () {
+    it('reach element -> activate promo', async function () {
+        const {options, onboardingController} = getData();
 
-    const options = {
-        ...testOptions,
-        config: {
-            promoGroups: [
-                {
-                    slug: 'hintPromos',
-                    conditions: [],
-                    promos: [],
-                },
-            ],
-        },
-        onboarding: {
-            getInstance: () => onboardingController,
-            groupSlug: 'hintPromos',
-        },
-        debugMode: true,
-        logger: {
-            level: 'debug' as const,
-            context: 'Promo manager',
-        },
-    };
+        const controller = new Controller(options);
 
-    const controller = new Controller(options);
-    await controller.ensureInit();
+        await controller.ensureInit();
 
-    // show promo hint with visible guide
-    await onboardingController.stepElementReached({
-        stepSlug: 'showCoolFeature',
-        element: getAnchorElement(),
+        await onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature',
+            element: getAnchorElement(),
+        });
+
+        await expect(controller.state.base.activePromo).toBe('coolNewFeature');
     });
 
-    expect(controller.state.base.activePromo).toBe(null);
+    it('pass preset -> finish promo', async function () {
+        const {options, onboardingController} = getData();
+
+        const controller = new Controller(options);
+
+        await controller.ensureInit();
+
+        await onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature',
+            element: getAnchorElement(),
+        });
+        await onboardingController.passStep('showCoolFeature');
+
+        expect(controller.state.base.activePromo).toBe(null);
+        expect(controller.state.progress?.finishedPromos).toContain('coolNewFeature');
+    });
+
+    it('element disappears -> cancel start promo', async function () {
+        const {options, onboardingController} = getData();
+
+        const controller = new Controller(options);
+
+        await controller.ensureInit();
+
+        await onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature',
+            element: getAnchorElement(),
+        });
+        await onboardingController.stepElementDisappeared('showCoolFeature');
+
+        expect(controller.state.base.activePromo).toBe(null);
+        expect(controller.state.progress?.finishedPromos).not.toContain('coolNewFeature');
+    });
+
+    it('cant run promo preset now -> delete from queue', async function () {
+        const onboardingController = new OnboardingController(
+            getOptionsWithPromo({wizardState: 'hidden'}),
+        );
+
+        const controller = new Controller({
+            ...testOptions,
+            config: {
+                promoGroups: [
+                    {
+                        slug: 'somePromoGroup',
+                        conditions: [],
+                        promos: [{slug: 'someOtherPromo'}],
+                    },
+                    {
+                        slug: 'hintPromos',
+                        conditions: [],
+                        promos: [],
+                    },
+                ],
+            },
+            onboarding: {
+                getInstance: () => onboardingController,
+                groupSlug: 'hintPromos',
+            },
+        });
+
+        await controller.ensureInit();
+
+        await controller.requestStart('someOtherPromo');
+        await onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature',
+            element: getAnchorElement(),
+        });
+
+        expect(controller.state.base.activeQueue).not.toContain('coolNewFeature');
+    });
+
+    it('cancelled hint -> not trigger promo run', async function () {
+        const onboardingController = new OnboardingController(
+            getOptionsWithPromo({wizardState: 'visible'}),
+        );
+
+        const options = {
+            ...testOptions,
+            config: {
+                promoGroups: [
+                    {
+                        slug: 'hintPromos',
+                        conditions: [],
+                        promos: [],
+                    },
+                ],
+            },
+            onboarding: {
+                getInstance: () => onboardingController,
+                groupSlug: 'hintPromos',
+            },
+            debugMode: true,
+        };
+
+        const controller = new Controller(options);
+        await controller.ensureInit();
+
+        // show promo hint with visible guide
+        await onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature',
+            element: getAnchorElement(),
+        });
+
+        expect(controller.state.base.activePromo).toBe(null);
+    });
+});
+
+describe('reset progress', function () {
+    it('reset promoManager progress -> erase onboarding presets', async function () {
+        const {options, onboardingController} = getData();
+        const controller = new Controller(options);
+
+        await controller.resetToDefaultState();
+
+        expect(onboardingController.state.base.activePresets).toEqual(['createProject']);
+        expect(onboardingController.state.base.suggestedPresets).toEqual(['createProject']);
+
+        expect(onboardingController.state.progress).toEqual({
+            finishedPresets: [],
+            presetPassedSteps: {},
+        });
+    });
 });

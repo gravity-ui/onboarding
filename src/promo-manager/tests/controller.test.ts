@@ -32,30 +32,51 @@ describe('active promo', () => {
             expect(controller.state.base.activePromo).toBe('boardPoll');
         });
 
-        it('can start now -> return true', async function () {
-            const result = await controller.requestStart('boardPoll');
+        describe('return value', function () {
+            it('can start now -> return true', async function () {
+                const result = await controller.requestStart('boardPoll');
 
-            expect(result).toBe(true);
-        });
+                expect(result).toBe(true);
+            });
 
-        it('undefined promo -> return false', async function () {
-            const result = await controller.requestStart('boardPollFake');
+            it('2 request before init -> return true', async function () {
+                const promise1 = controller.requestStart('boardPoll');
+                const promise2 = controller.requestStart('boardPoll');
 
-            expect(result).toBe(false);
-        });
+                const [result1, result2] = await Promise.all([promise1, promise2]);
 
-        it('already started -> return true', async function () {
-            await controller.requestStart('boardPoll');
-            const result2 = await controller.requestStart('boardPoll');
+                expect(result1).toBe(true);
+                expect(result2).toBe(true);
+                expect(controller.state.base.activePromo).toBe('boardPoll');
+            });
 
-            expect(result2).toBe(true);
-        });
+            it('undefined promo -> return false', async function () {
+                const result = await controller.requestStart('boardPollFake');
 
-        it("can't start now -> return false", async function () {
-            await controller.requestStart('boardPoll');
-            const result = await controller.requestStart('ganttPoll');
+                expect(result).toBe(false);
+            });
 
-            expect(result).toBe(false);
+            it('already started -> return true', async function () {
+                await controller.requestStart('boardPoll');
+                const result = await controller.requestStart('boardPoll');
+
+                expect(result).toBe(true);
+            });
+
+            it('pending -> return false', async function () {
+                await controller.requestStart('boardPoll');
+                await controller.requestStart('boardPoll');
+                const result = await controller.requestStart('ganttPoll');
+
+                expect(result).toBe(false);
+            });
+
+            it("can't start now -> return false", async function () {
+                await controller.requestStart('boardPoll');
+                const result = await controller.requestStart('ganttPoll');
+
+                expect(result).toBe(false);
+            });
         });
     });
 

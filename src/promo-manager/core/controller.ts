@@ -532,7 +532,7 @@ export class Controller {
     private isAbleToRun = (slug: PromoSlug) => {
         const status = this.getPromoStatus(slug);
 
-        return status === 'canRun' || status === 'canReRun';
+        return status === 'canRun' || status === 'canReRun' || status === 'pending';
     };
 
     private isActive = (slug: PromoSlug) => {
