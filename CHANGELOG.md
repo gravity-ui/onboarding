@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.4](https://github.com/gravity-ui/onboarding/compare/v1.0.3...v1.0.4) (2024-10-18)
+
+
+### Bug Fixes
+
+* **promo-manager, onboarding:** fix promo preset race condition ([66df0df](https://github.com/gravity-ui/onboarding/commit/66df0df2c060935422624ef82c4260c1370818c4))
+
 ## [1.0.3](https://github.com/gravity-ui/onboarding/compare/v1.0.2...v1.0.3) (2024-10-11)
 
 
