@@ -72,7 +72,9 @@ describe('preset management', function () {
         it('preset not from config -> nothing', async function () {
             const controller = new Controller(options);
 
-            expect(controller.runPreset('createQueue123')).rejects.toThrow();
+            const result = await controller.runPreset('createQueue123');
+
+            expect(result).toBe(false);
             expect(options.onSave.state).not.toHaveBeenCalled();
             expect(options.onSave.progress).not.toHaveBeenCalled();
         });

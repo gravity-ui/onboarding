@@ -82,6 +82,13 @@ export type CombinedPreset<InternalPresets extends string> = {
     pickPreset: () => InternalPresets | Promise<InternalPresets>;
 };
 
+export type UserPreset<Presets extends string> = {
+    slug: Presets;
+    name: string;
+    description: string;
+    status: PresetStatus;
+};
+
 export type PresetFunctions = {
     goNextStep: VoidFn;
     goPrevStep: VoidFn;

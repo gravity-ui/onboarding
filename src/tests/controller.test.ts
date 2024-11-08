@@ -215,33 +215,24 @@ describe('wrong data', function () {
         expect(options.logger.logger.error).not.toHaveBeenCalled();
     });
 
-    it('suggest not existed preset -> error', async function () {
-        expect.assertions(2);
-
+    it('suggest not existed preset -> афдыу', async function () {
         const options = getOptions();
         const controller = new Controller(options);
 
-        try {
-            await controller.suggestPresetOnce('unknownPreset');
-        } catch (e: unknown) {
-            // @ts-ignore
-            expect(e.message).toBe('No preset in config');
+        const result = await controller.suggestPresetOnce('unknownPreset');
 
-            expect(options.logger.logger.error).toHaveBeenCalled();
-        }
+        expect(result).toBe(false);
+        expect(options.logger.logger.error).toHaveBeenCalled();
     });
 
-    it('run not existed preset -> throw error', async function () {
-        expect.assertions(1);
-
+    it('run not existed preset -> return false', async function () {
         const options = getOptions();
         const controller = new Controller(options);
 
-        try {
-            await controller.runPreset('unknownPreset');
-        } catch (e) {
-            expect(options.logger.logger.error).toHaveBeenCalled();
-        }
+        const result = await controller.runPreset('unknownPreset');
+
+        expect(result).toBe(false);
+        expect(options.logger.logger.error).toHaveBeenCalled();
     });
 
     it('reach not existed step', async function () {
