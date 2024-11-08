@@ -10,6 +10,7 @@ import type {
     EventTypes,
     PresetStatus,
     ResolvedOptions,
+    UserPreset,
 } from './types';
 import {HintStore} from './hints/hintStore';
 import {createLogger, Logger} from './logger';
