@@ -143,7 +143,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }, 100);
 
         this.saveProgressState = createDebounceHandler(() => {
-            this.assertProgressLoaded();
+            this.progressLoadedGuard();
 
             this.options.onSave.progress(this.state.progress);
         }, 100);
@@ -268,7 +268,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
 
         await this.ensureRunning();
-        this.assertProgressLoaded();
+        this.progressLoadedGuard();
 
         if (this.hintStore.state.hint?.step.slug === stepSlug && this.hintStore.state.open) {
             this.logger.debug('Updating hint anchor', preset, stepSlug);
@@ -370,8 +370,13 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         return userExistedPresetSlugs
             .map((presetSlug) => {
                 let status: PresetStatus = 'unPassed';
+                let slug: Presets | undefined;
 
-                const slug = this.resolvePresetSlug(presetSlug);
+                try {
+                    slug = this.resolvePresetSlug(presetSlug);
+                } catch (e) {
+                    status = 'unPassed';
+                }
 
                 if (!slug) {
                     status = 'unPassed';
@@ -434,7 +439,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     };
 
     runPreset = async (presetToRunSlug: string) => {
-        if (!this.ensurePresetExists(presetToRunSlug)) {
+        if (!this.presetExistsGuard(presetToRunSlug)) {
             return false;
         }
 
@@ -496,7 +501,6 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         if (!presetSlug) {
             return false;
         }
-        this.ensurePresetExists(presetToFinish);
 
         this.logger.debug('Preset finished', presetToFinish);
 
@@ -509,7 +513,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
 
         await this.ensureRunning();
-        this.assertProgressLoaded();
+        this.progressLoadedGuard();
 
         this.state.base.activePresets = this.state.base.activePresets.filter(
             (activePresetSlug) => activePresetSlug !== presetSlug,
@@ -533,7 +537,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     ) => {
         this.logger.debug('Reset progress for', presetArg);
         await this.ensureRunning();
-        this.assertProgressLoaded();
+        this.progressLoadedGuard();
 
         const presets = this.filterExistedPresets(
             Array.isArray(presetArg) ? presetArg : [presetArg],
@@ -637,7 +641,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     }
 
     private resolvePresetSlug = (presetSlug: string) => {
-        if (!this.ensurePresetExists(presetSlug)) {
+        if (!this.presetExistsGuard(presetSlug)) {
             return undefined;
         }
         const preset = this.options.config.presets[presetSlug];
@@ -669,11 +673,11 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     };
 
     private isVisiblePreset = (presetSlug: string) => {
-        if (!this.ensurePresetExists(presetSlug)) {
+        if (!this.checkPresetExists(presetSlug)) {
             return false;
         }
 
-        const preset = this.options.config.presets[presetSlug];
+        const preset = this.options.config.presets[presetSlug as Presets];
 
         const isInternal = preset.type === 'internal';
         if (isInternal) {
@@ -691,7 +695,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     };
 
     private findNextStepForPreset(presetSlug: Presets) {
-        this.assertProgressLoaded();
+        this.progressLoadedGuard();
 
         const preset = this.options.config.presets[presetSlug as Presets];
 
@@ -757,7 +761,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     private async savePassedStepData(preset: Presets, step: Steps, callback?: () => void) {
         this.logger.debug('Save passed step data', preset, step);
 
-        this.assertProgressLoaded();
+        this.progressLoadedGuard();
 
         const passedSteps = this.state.progress.presetPassedSteps[preset] ?? [];
 
@@ -777,7 +781,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     }
 
     private async checkAndProcessPresetFinish(presetSlug: Presets) {
-        this.assertProgressLoaded();
+        this.progressLoadedGuard();
         const preset = this.options.config.presets[presetSlug];
 
         if (!preset || preset.type === 'combined') {
@@ -796,7 +800,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     }
 
     private async updateProgress() {
-        this.assertProgressLoaded();
+        this.progressLoadedGuard();
         this.logger.debug('Update progress data', this.state.progress);
 
         this.emitStateChange();
@@ -812,9 +816,13 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         await this.saveBaseState();
     }
 
-    private ensurePresetExists(preset: string): preset is Presets {
-        if (!(preset in this.options.config.presets)) {
+    private presetExistsGuard(preset: string): preset is Presets {
+        if (!this.checkPresetExists(preset)) {
             this.logger.error('No preset in config', preset);
+
+            if (!this.options.ignoreUnknownPresets) {
+                throw new Error('No preset in config');
+            }
 
             return false;
         }
@@ -822,7 +830,11 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         return true;
     }
 
-    private assertProgressLoaded(): asserts this is this & {
+    private checkPresetExists(preset: string) {
+        return preset in this.options.config.presets;
+    }
+
+    private progressLoadedGuard(): asserts this is this & {
         state: {base: BaseState; progress: ProgressState};
     } {
         if (!this.state.progress) {
@@ -863,7 +875,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     }
 
     private async goPrevStep(presetSlug: Presets) {
-        this.assertProgressLoaded();
+        this.progressLoadedGuard();
 
         const preset = this.options.config.presets[presetSlug as Presets];
 

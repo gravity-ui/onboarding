@@ -140,6 +140,7 @@ export type InitOptions<HintParams, Presets extends string, Steps extends string
     };
     showHint?: (params: ShowHintParams<HintParams, Presets, Steps>) => void;
     logger?: LoggerOptions;
+    ignoreUnknownPresets?: boolean;
     debugMode?: boolean;
     plugins?: OnboardingPlugin[];
     hooks?: {

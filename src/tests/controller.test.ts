@@ -215,24 +215,33 @@ describe('wrong data', function () {
         expect(options.logger.logger.error).not.toHaveBeenCalled();
     });
 
-    it('suggest not existed preset -> афдыу', async function () {
+    it('suggest not existed preset -> error', async function () {
+        expect.assertions(2);
+
         const options = getOptions();
         const controller = new Controller(options);
 
-        const result = await controller.suggestPresetOnce('unknownPreset');
+        try {
+            await controller.suggestPresetOnce('unknownPreset');
+        } catch (e: unknown) {
+            // @ts-ignore
+            expect(e.message).toBe('No preset in config');
 
-        expect(result).toBe(false);
-        expect(options.logger.logger.error).toHaveBeenCalled();
+            expect(options.logger.logger.error).toHaveBeenCalled();
+        }
     });
 
-    it('run not existed preset -> return false', async function () {
+    it('run not existed preset -> throw error', async function () {
+        expect.assertions(1);
+
         const options = getOptions();
         const controller = new Controller(options);
 
-        const result = await controller.runPreset('unknownPreset');
-
-        expect(result).toBe(false);
-        expect(options.logger.logger.error).toHaveBeenCalled();
+        try {
+            await controller.runPreset('unknownPreset');
+        } catch (e) {
+            expect(options.logger.logger.error).toHaveBeenCalled();
+        }
     });
 
     it('reach not existed step', async function () {
@@ -254,6 +263,48 @@ describe('wrong data', function () {
         await controller.passStep('unknownStep');
 
         expect(options.logger.logger.error).not.toHaveBeenCalled();
+    });
+
+    describe('ignoreUnknownPresets=true', () => {
+        const prepareOptions = () => {
+            const options = getOptions();
+            options.ignoreUnknownPresets = true;
+
+            return options;
+        };
+        let options = prepareOptions();
+
+        beforeEach(() => {
+            options = prepareOptions();
+        });
+
+        it('run preset -> nothing', async function () {
+            const controller = new Controller(options);
+
+            const result = await controller.runPreset('createQueue123');
+
+            expect(result).toBe(false);
+            expect(options.onSave.state).not.toHaveBeenCalled();
+            expect(options.onSave.progress).not.toHaveBeenCalled();
+        });
+
+        it('suggest not existed preset -> false', async function () {
+            const controller = new Controller(options);
+
+            const result = await controller.suggestPresetOnce('unknownPreset');
+
+            expect(result).toBe(false);
+            expect(options.logger.logger.error).toHaveBeenCalled();
+        });
+
+        it('run not existed preset -> return false', async function () {
+            const controller = new Controller(options);
+
+            const result = await controller.runPreset('unknownPreset');
+
+            expect(result).toBe(false);
+            expect(options.logger.logger.error).toHaveBeenCalled();
+        });
     });
 });
 
