@@ -142,6 +142,7 @@ export type InitOptions<HintParams, Presets extends string, Steps extends string
     logger?: LoggerOptions;
     ignoreUnknownPresets?: boolean;
     debugMode?: boolean;
+    customDefaultState?: Partial<BaseState>;
     plugins?: OnboardingPlugin[];
     hooks?: {
         [K in keyof EventsMap<HintParams, Presets, Steps>]?: (

@@ -24,6 +24,7 @@ let instanceCounter = 0;
 const defaultLoggerOptions = {
     context: 'Onboarding',
 };
+
 const getDefaultBaseState = (): BaseState => ({
     availablePresets: [],
     activePresets: [],
@@ -93,6 +94,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.state = {
             base: {
                 ...getDefaultBaseState(),
+                ...options.customDefaultState,
                 ...options.baseState,
             },
         };

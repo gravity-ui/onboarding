@@ -1,4 +1,11 @@
-import {BaseState, CombinedPreset, OnboardingPlugin, PresetStep, ProgressState} from '../types';
+import {
+    BaseState,
+    CombinedPreset,
+    InitOptions,
+    OnboardingPlugin,
+    PresetStep,
+    ProgressState,
+} from '../types';
 import {PromoPresetsPlugin} from '../plugins/promo-presets';
 
 export const getOptions = (
@@ -57,7 +64,7 @@ export const getOptions = (
         },
         showHint: jest.fn(),
         debugMode: false,
-        ignoreUnknownPresets: false,
+        ignoreUnknownPresets: false as boolean,
         logger: {
             level: 'error' as const,
             logger: {
@@ -66,7 +73,8 @@ export const getOptions = (
             },
         },
         plugins: [] as OnboardingPlugin[],
-    };
+        customDefaultState: {} as Partial<BaseState>,
+    } satisfies InitOptions<any, any, any>;
 };
 
 export const getOptionsWithCombined = (
