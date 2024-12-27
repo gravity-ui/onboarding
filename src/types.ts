@@ -82,6 +82,13 @@ export type CombinedPreset<InternalPresets extends string> = {
     pickPreset: () => InternalPresets | Promise<InternalPresets>;
 };
 
+export type UserPreset<Presets extends string> = {
+    slug: Presets;
+    name: string;
+    description: string;
+    status: PresetStatus;
+};
+
 export type PresetFunctions = {
     goNextStep: VoidFn;
     goPrevStep: VoidFn;
@@ -133,6 +140,7 @@ export type InitOptions<HintParams, Presets extends string, Steps extends string
     };
     showHint?: (params: ShowHintParams<HintParams, Presets, Steps>) => void;
     logger?: LoggerOptions;
+    ignoreUnknownPresets?: boolean;
     debugMode?: boolean;
     plugins?: OnboardingPlugin[];
     hooks?: {

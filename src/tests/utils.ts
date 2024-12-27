@@ -57,6 +57,7 @@ export const getOptions = (
         },
         showHint: jest.fn(),
         debugMode: false,
+        ignoreUnknownPresets: false,
         logger: {
             level: 'error' as const,
             logger: {
