@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.1.0](https://github.com/gravity-ui/onboarding/compare/v1.0.4...v1.1.0) (2025-01-14)
+
+
+### Features
+
+* **onboarding:** add ignoreUnknownPresets option ([038bc57](https://github.com/gravity-ui/onboarding/commit/038bc57aa508c0f0cbdc8d9576ce2fbb8730122f))
+* **onboarding:** dont throw error for unknown presets ([955020d](https://github.com/gravity-ui/onboarding/commit/955020da54ab4c6c7a846b21848ee4a700d05408))
+* type import ([67a4654](https://github.com/gravity-ui/onboarding/commit/67a4654405e62f9a17ee23e1b079975ee6ad27de))
+
+
+### Bug Fixes
+
+* **promo-manager:** fix period with short month ([844af6e](https://github.com/gravity-ui/onboarding/commit/844af6e60553cfb12d22d359f8dc4c3c33853bed))
+
 ## [1.0.4](https://github.com/gravity-ui/onboarding/compare/v1.0.3...v1.0.4) (2024-10-18)
 
 
