@@ -15,9 +15,11 @@ const config: PromoOptions['config'] = {
 };
 describe('ShowOnceForPeriod', function () {
     const currentDate = new Date('07-15-2024').valueOf();
+    // there are bug with weeks, so use days https://github.com/iamkun/dayjs/issues/2750
+    const promoPeriod = {days: 2};
 
     it('empty state -> true', function () {
-        const helper = ShowOnceForPeriod({weeks: 1});
+        const helper = ShowOnceForPeriod(promoPeriod);
 
         const state = {
             base: {
@@ -33,9 +35,36 @@ describe('ShowOnceForPeriod', function () {
         expect(helper(state, {currentDate, promoSlug: 'somePromo1', config})).toBe(true);
     });
 
+    it('should work for short month', () => {
+        const helper = ShowOnceForPeriod({months: 2});
+
+        const state = {
+            base: {
+                activePromo: null,
+                activeQueue: [],
+            },
+            progress: {
+                finishedPromos: ['somePromo1'],
+                progressInfoByPromo: {
+                    somePromo1: {
+                        lastCallTime: new Date('01-01-2025').valueOf(),
+                    },
+                },
+            },
+        };
+
+        expect(
+            helper(state, {
+                currentDate: new Date('03-02-2025').valueOf(),
+                promoSlug: 'somePromo1',
+                config,
+            }),
+        ).toBe(true);
+    });
+
     describe('pick by promo', function () {
         it('not enough time has passed to start -> false', function () {
-            const helper = ShowOnceForPeriod({weeks: 1});
+            const helper = ShowOnceForPeriod(promoPeriod);
 
             const state = {
                 base: {
@@ -55,8 +84,8 @@ describe('ShowOnceForPeriod', function () {
             expect(helper(state, {currentDate, promoSlug: 'somePromo1', config})).toBe(false);
         });
 
-        it('enough time has passed to start -> false', function () {
-            const helper = ShowOnceForPeriod({weeks: 1});
+        it('enough time has passed to start -> true', function () {
+            const helper = ShowOnceForPeriod(promoPeriod);
 
             const state = {
                 base: {
@@ -79,7 +108,7 @@ describe('ShowOnceForPeriod', function () {
 
     describe('pick by group', function () {
         it('not enough time has passed to start -> false', function () {
-            const helper = ShowOnceForPeriod({weeks: 1});
+            const helper = ShowOnceForPeriod(promoPeriod);
 
             const state = {
                 base: {
@@ -100,7 +129,7 @@ describe('ShowOnceForPeriod', function () {
         });
 
         it('enough time has passed to start -> true', function () {
-            const helper = ShowOnceForPeriod({weeks: 1});
+            const helper = ShowOnceForPeriod(promoPeriod);
 
             const state = {
                 base: {

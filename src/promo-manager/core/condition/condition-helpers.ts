@@ -3,7 +3,7 @@ import {ConditionContext} from '../types';
 
 import dayjs from 'dayjs';
 import duration, {DurationUnitsObjectType} from 'dayjs/plugin/duration';
-import {getTimeFromLastCallInMs} from './condition-utils';
+import {getLastTimeCall, getTimeFromLastCallInMs} from './condition-utils';
 
 dayjs.extend(duration);
 
@@ -14,10 +14,17 @@ export const PromoInCurrentDay = (date: Date) => {
 };
 export const ShowOnceForPeriod = (interval: DurationParam) => {
     return (state: PromoState, ctx: ConditionContext) => {
+        const lastTimeCall = getLastTimeCall(state, ctx, ctx.promoSlug || ctx.promoGroup);
+        if (!lastTimeCall) {
+            return true;
+        }
+
         // @ts-ignore
         const targetInterval = dayjs.duration(interval);
+        const availableAtDate = dayjs(lastTimeCall).add(targetInterval);
 
-        return getTimeFromLastCallInMs(state, ctx) > targetInterval.asMilliseconds();
+        const nowDate = dayjs(ctx.currentDate);
+        return availableAtDate.isBefore(nowDate);
     };
 };
 
