@@ -29,7 +29,7 @@
     "force-release": "echo 43"
   },
   "dependencies": {
-    "dayjs": "^1.11.11"
+    "dayjs": "^1.11.13"
   },
   "devDependencies": {
     "@commitlint/cli": "^17.0.0",
