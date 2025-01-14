@@ -569,7 +569,7 @@ describe('event subscriptions', function () {
 
         await controller.addPreset('createQueue');
 
-        await expect(mock).toHaveBeenCalledWith(
+        expect(mock).toHaveBeenCalledWith(
             {
                 preset: 'createQueue',
             },
@@ -585,7 +585,7 @@ describe('event subscriptions', function () {
 
         await controller.runPreset('createQueue');
 
-        await expect(mock).toHaveBeenCalledWith(
+        expect(mock).toHaveBeenCalledWith(
             {
                 preset: 'createQueue',
             },
@@ -601,7 +601,7 @@ describe('event subscriptions', function () {
 
         await controller.runPreset('createQueue');
 
-        await expect(mock).toHaveBeenCalledWith(
+        expect(mock).toHaveBeenCalledWith(
             {
                 preset: 'createQueue',
             },
@@ -617,7 +617,7 @@ describe('event subscriptions', function () {
 
         await controller.finishPreset('createProject');
 
-        await expect(mock).toHaveBeenCalledWith(
+        expect(mock).toHaveBeenCalledWith(
             {
                 preset: 'createProject',
             },
@@ -633,9 +633,25 @@ describe('event subscriptions', function () {
 
         await controller.suggestPresetOnce('createQueue');
 
-        await expect(mock).toHaveBeenCalledWith(
+        expect(mock).toHaveBeenCalledWith(
             {
                 preset: 'createQueue',
+            },
+            controller,
+        );
+    });
+
+    it('resetPresetProgress', async function () {
+        const controller = new Controller(getOptions());
+
+        const mock = jest.fn();
+        controller.events.subscribe('resetPresetProgress', mock);
+
+        await controller.resetPresetProgress('createProject');
+
+        expect(mock).toHaveBeenCalledWith(
+            {
+                presets: ['createProject'],
             },
             controller,
         );
