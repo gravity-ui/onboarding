@@ -128,6 +128,7 @@ export type Nullable<T> = T | null;
 
 export type EventsMap = {
     init: {};
+    finishPromo: {slug: string};
 };
 
 export type EventTypes = keyof EventsMap;

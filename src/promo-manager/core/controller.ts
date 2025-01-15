@@ -203,6 +203,8 @@ export class Controller {
         this.stateActions.removeFromQueue(slug);
 
         this.updateProgressInfo(slug);
+
+        this.events.emit('finishPromo', {slug});
     };
 
     cancelPromo = (slug: Nullable<PromoSlug>, closeActiveTimeout = 0) => {

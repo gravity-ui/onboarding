@@ -27,4 +27,18 @@ describe('events subscriptions', function () {
 
         expect(mock).toHaveBeenCalled();
     });
+
+    it('finishPromo ', async function () {
+        const controller = new Controller(testOptions);
+
+        const mock = jest.fn();
+        controller.events.subscribe('finishPromo', mock);
+
+        await controller.ensureInit();
+        controller.finishPromo('boardPoll');
+
+        expect(mock).toHaveBeenCalled();
+
+        expect(mock.mock.calls[0][0]).toEqual({slug: 'boardPoll'});
+    });
 });
