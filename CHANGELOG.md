@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0](https://github.com/gravity-ui/onboarding/compare/v1.1.0...v1.2.0) (2025-01-15)
+
+
+### Features
+
+* **onboarding:** add customDefaultState option ([cfd3bf9](https://github.com/gravity-ui/onboarding/commit/cfd3bf9f390ed65d8f627aa5e21fc66c2f306171))
+* **onboarding:** apply custom default for resetToDefaultState ([01110f0](https://github.com/gravity-ui/onboarding/commit/01110f0931053b3e44eed6b4bdeed9827013ea7e))
+
 ## [1.1.0](https://github.com/gravity-ui/onboarding/compare/v1.0.4...v1.1.0) (2025-01-14)
 
 
