@@ -574,3 +574,57 @@ describe('goNextStep and goNextStep', function () {
         });
     });
 });
+
+describe('custom default state', () => {
+    it('can use empty custom state', () => {
+        const options = getOptions();
+        // @ts-ignore
+        options.baseState = {};
+        options.customDefaultState = {};
+
+        const controller = new Controller(options);
+        expect(controller.state.base).toEqual({
+            wizardState: 'hidden',
+            enabled: false,
+            activePresets: [],
+            availablePresets: [],
+            suggestedPresets: [],
+        });
+    });
+
+    it('can apply custom state', () => {
+        const options = getOptions();
+        options.customDefaultState = {
+            wizardState: 'visible',
+            enabled: true,
+        };
+
+        const controller = new Controller(options);
+        expect(controller.state.base.wizardState).toBe('visible');
+        expect(controller.state.base.enabled).toBe(true);
+    });
+
+    it('has saved value -> dont apply custom default', () => {
+        const options = getOptions({wizardState: 'collapsed'});
+        options.customDefaultState = {
+            wizardState: 'visible',
+        };
+
+        const controller = new Controller(options);
+        expect(controller.state.base.wizardState).toBe('collapsed');
+    });
+
+    it('resetToDefaultState() -> apply custom default', async () => {
+        const options = getOptions();
+        options.customDefaultState = {
+            wizardState: 'visible',
+            enabled: true,
+        };
+
+        const controller = new Controller(options);
+        await controller.resetToDefaultState();
+
+        expect(controller.state.base.wizardState).toBe('visible');
+        expect(controller.state.base.enabled).toBe(true);
+    });
+});
