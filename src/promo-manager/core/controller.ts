@@ -529,6 +529,13 @@ export class Controller {
             }
         });
 
+        instance.events.subscribe(
+            'resetPresetProgress',
+            async ({presets}: OnboardingEventsMap['resetPresetProgress']) => {
+                this.resetPromoProgress(presets);
+            },
+        );
+
         this.logger.debug('Onboarding integration applied');
     };
 
@@ -666,6 +673,14 @@ export class Controller {
         this.triggerNextPromo();
     };
 
+    private resetPromoProgress(promoSlugs: PromoSlug[]) {
+        for (const slug of promoSlugs) {
+            this.stateActions.deletePromoProgress(slug);
+        }
+
+        this.emitChange();
+    }
+
     // eslint-disable-next-line @typescript-eslint/member-ordering
     stateActions = {
         setActivePromo: (slug: string) => {
@@ -691,6 +706,14 @@ export class Controller {
                 ...this.state.progress.progressInfoByPromo[slug],
                 ...info,
             };
+        },
+        deletePromoProgress: (slug: PromoSlug) => {
+            this.assertProgressLoaded();
+
+            this.state.progress.finishedPromos = this.state.progress.finishedPromos.filter(
+                (currentPromo) => currentPromo !== slug,
+            );
+            delete this.state.progress.progressInfoByPromo[slug];
         },
     };
 }
