@@ -215,6 +215,7 @@ export class Controller {
 
         this.closePromoWithTimeout(slug, closeActiveTimeout);
         this.updateProgressInfo(slug);
+        this.events.emit('cancelPromo', {slug});
     };
 
     skipPromo = (slug: Nullable<PromoSlug>) => {

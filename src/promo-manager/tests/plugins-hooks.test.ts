@@ -28,7 +28,7 @@ describe('events subscriptions', function () {
         expect(mock).toHaveBeenCalled();
     });
 
-    it('finishPromo ', async function () {
+    it('finishPromo', async function () {
         const controller = new Controller(testOptions);
 
         const mock = jest.fn();
@@ -36,6 +36,22 @@ describe('events subscriptions', function () {
 
         await controller.ensureInit();
         controller.finishPromo('boardPoll');
+
+        expect(mock).toHaveBeenCalled();
+
+        expect(mock.mock.calls[0][0]).toEqual({slug: 'boardPoll'});
+    });
+
+    it('cancelPromo', async function () {
+        const controller = new Controller(testOptions);
+
+        const mock = jest.fn();
+        controller.events.subscribe('cancelPromo', mock);
+
+        await controller.ensureInit();
+
+        await controller.requestStart('boardPoll');
+        controller.cancelPromo('boardPoll');
 
         expect(mock).toHaveBeenCalled();
 
