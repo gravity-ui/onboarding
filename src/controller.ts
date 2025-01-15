@@ -25,14 +25,6 @@ const defaultLoggerOptions = {
     context: 'Onboarding',
 };
 
-const getDefaultBaseState = (): BaseState => ({
-    availablePresets: [],
-    activePresets: [],
-    suggestedPresets: [],
-    wizardState: 'hidden' as const,
-    enabled: false,
-});
-
 const getDefaultProgressState = () => ({
     presetPassedSteps: {},
     finishedPresets: [],
@@ -93,8 +85,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         this.state = {
             base: {
-                ...getDefaultBaseState(),
-                ...options.customDefaultState,
+                ...this.getDefaultBaseState(),
                 ...options.baseState,
             },
         };
@@ -598,7 +589,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
     async resetToDefaultState() {
         this.state = {
-            base: getDefaultBaseState(),
+            base: this.getDefaultBaseState(),
             progress: getDefaultProgressState(),
         };
 
@@ -640,6 +631,17 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         for (const [stepSlug, element] of this.reachedElements) {
             this.stepElementReached({stepSlug, element});
         }
+    }
+
+    private getDefaultBaseState(): BaseState {
+        return {
+            availablePresets: [],
+            activePresets: [],
+            suggestedPresets: [],
+            wizardState: 'hidden' as const,
+            enabled: false,
+            ...this.options.customDefaultState,
+        };
     }
 
     private resolvePresetSlug = (presetSlug: string) => {
