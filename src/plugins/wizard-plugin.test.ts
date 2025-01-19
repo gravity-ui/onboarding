@@ -3,6 +3,7 @@ import {
     getOptions,
     getOptionsWithCombined,
     getOptionsWithPromo,
+    waitForNextTick,
 } from '../tests/utils';
 import {Controller} from '../controller';
 import {WizardPlugin} from './wizard-plugin';
@@ -76,6 +77,32 @@ describe('open wizard', function () {
         await controller.setWizardState('visible');
 
         expect(options.getProgressState).toHaveBeenCalled();
+    });
+
+    describe('repair state', () => {
+        it('onboarding disabled, wizard visible -> load progress', async function () {
+            const options = getOptions({enabled: false, wizardState: 'visible'});
+            options.plugins = [new WizardPlugin()];
+
+            // eslint-disable-next-line no-new
+            new Controller(options);
+
+            await waitForNextTick();
+
+            expect(options.getProgressState).toHaveBeenCalled();
+        });
+
+        it('onboarding disabled, wizard visible -> enable onboarding', async function () {
+            const options = getOptions({enabled: false, wizardState: 'visible'});
+            options.plugins = [new WizardPlugin()];
+
+            const controller = new Controller(options);
+
+            await waitForNextTick();
+            await waitForNextTick();
+
+            expect(controller.state.base.enabled).toBe(true);
+        });
     });
 });
 

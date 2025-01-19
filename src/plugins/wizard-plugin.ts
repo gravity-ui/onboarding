@@ -23,6 +23,11 @@ export class WizardPlugin implements OnboardingPlugin {
 
         if (isWizardVisible) {
             this.onboardingInstance.ensureRunning();
+
+            if (this.onboardingInstance.state.base.enabled === false) {
+                this.onboardingInstance.state.base.enabled = true;
+                this.onboardingInstance.emitStateChange();
+            }
         }
     };
 
