@@ -65,6 +65,7 @@ export class Controller {
     initPromise: Promise<void> | undefined;
     saveProgress: () => void;
     logger: Logger;
+    dateNow: () => number;
 
     private status: PromoManagerStatus;
 
@@ -79,6 +80,8 @@ export class Controller {
             ...this.options.logger,
         });
         this.logger.debug('Initialization started');
+
+        this.dateNow = options.dateNow ?? Date.now;
 
         this.state = JSON.parse(
             JSON.stringify({
@@ -161,8 +164,6 @@ export class Controller {
 
         await this.triggerNextPromo();
     };
-
-    dateNow = () => Date.now();
 
     requestStart = async (slug: Nullable<PromoSlug>) => {
         this.logger.debug('Request start preset', slug);
@@ -297,7 +298,7 @@ export class Controller {
         }
 
         const info = {
-            lastCallTime: Date.now(),
+            lastCallTime: this.dateNow(),
         };
 
         this.stateActions.updateProgressInfoByPromo(slug, info);

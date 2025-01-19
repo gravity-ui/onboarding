@@ -60,6 +60,7 @@ export type PromoOptions = {
     plugins?: PromoManagerPlugin[];
     debugMode?: boolean;
     logger?: LoggerOptions;
+    dateNow?: () => number;
 };
 
 export type ConditionContext = {
