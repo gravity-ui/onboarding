@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/gravity-ui/onboarding/compare/v1.2.0...v1.2.1) (2025-01-20)
+
+
+### Bug Fixes
+
+* **onboarding:** for wizard plugin enable onboarding if wizard visible ([2b51139](https://github.com/gravity-ui/onboarding/commit/2b51139e13fd97bb51773a8a7fc5f8891dc9e229))
+
 ## [1.2.0](https://github.com/gravity-ui/onboarding/compare/v1.1.0...v1.2.0) (2025-01-15)
 
 
