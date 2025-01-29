@@ -1,5 +1,6 @@
 import {EventsMap, OnboardingPlugin} from '../types';
 import type {Controller} from '../controller';
+import {isQuotaExceededError} from '../utils/isQuotaExceededError';
 
 type PluginOptions = {
     changeStateLSKey: string;
@@ -15,21 +16,6 @@ const DEFAULT_PLUGIN_OPTIONS = {
     __unstable_enableStateSync: false,
 };
 export class MultiTabSyncPlugin implements OnboardingPlugin {
-    static isQuotaExceededError(err: unknown): boolean {
-        return (
-            err instanceof DOMException &&
-            // everything except Firefox
-            (err.code === 22 ||
-                // Firefox
-                err.code === 1014 ||
-                // test name field too, because code might not be present
-                // everything except Firefox
-                err.name === 'QuotaExceededError' ||
-                // Firefox
-                err.name === 'NS_ERROR_DOM_QUOTA_REACHED')
-        );
-    }
-
     name = 'multiTabSyncPlugin';
     onboardingInstance?: Controller<any, any, any>;
     options: PluginOptions;
@@ -85,7 +71,7 @@ export class MultiTabSyncPlugin implements OnboardingPlugin {
         try {
             localStorage.setItem(this.options.changeStateLSKey, JSON.stringify(newValue));
         } catch (e) {
-            if (MultiTabSyncPlugin.isQuotaExceededError(e)) {
+            if (isQuotaExceededError(e)) {
                 this.isQuotaExceeded = true;
             }
         }
