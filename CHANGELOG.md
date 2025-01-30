@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.3.0](https://github.com/gravity-ui/onboarding/compare/v1.2.1...v1.3.0) (2025-01-30)
+
+
+### Features
+
+* add enterDebugMode method ([2b1e7f2](https://github.com/gravity-ui/onboarding/commit/2b1e7f27ebc80a951b136b2a8b29c17cb10d8913))
+* **promo-manager:** add cancel promo event ([b254184](https://github.com/gravity-ui/onboarding/commit/b254184fc80c544a3be77077198a5f4e24782621))
+* **promo-manager:** add finish promo event ([bf17ff5](https://github.com/gravity-ui/onboarding/commit/bf17ff5c71dfd3415cbba0bfd3d38d718c5e2dfd))
+* **promo-manager:** implement promoTabSync plugin ([cd00729](https://github.com/gravity-ui/onboarding/commit/cd007297bce30449a35b211a000007659bf977a1))
+
 ## [1.2.1](https://github.com/gravity-ui/onboarding/compare/v1.2.0...v1.2.1) (2025-01-20)
 
 
