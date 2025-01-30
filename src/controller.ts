@@ -102,9 +102,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         });
 
         if (this.options.debugMode) {
-            // @ts-ignore
-            window.gravityOnboarding = this;
-            this.logger.debug('Controller available as window.gravityOnboarding', this);
+            this.enterDebugMode();
         }
 
         this.logger.debug('Initialized');
@@ -143,6 +141,12 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         this.events.emit('init', {});
     }
+
+    enterDebugMode = () => {
+        // @ts-ignore
+        window.gravityOnboarding = this;
+        this.logger.debug('Controller available as window.gravityOnboarding', this);
+    };
 
     resolveOptions = (
         options: InitOptions<HintParams, Presets, Steps>,
