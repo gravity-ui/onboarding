@@ -122,8 +122,7 @@ export class Controller {
         }
 
         if (options.debugMode) {
-            // @ts-ignore
-            window.promoManager = this;
+            this.enterDebugMode();
         }
 
         this.initEventMap();
@@ -151,6 +150,12 @@ export class Controller {
 
         this.logger.debug('Initialization started');
     }
+
+    enterDebugMode = () => {
+        // @ts-ignore
+        window.promoManager = this;
+        this.logger.debug('Controller available as window.promoManager', this);
+    };
 
     ensureInit = async () => {
         if (this.status === 'initialized') {
