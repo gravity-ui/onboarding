@@ -1,85 +1,107 @@
 import {getAnchorElement, getOptions, getOptionsWithHooks, waitForNextTick} from './utils';
 import {Controller} from '../controller';
 
-it('reachElement -> showHint called', async function () {
-    const options = getOptionsWithHooks();
-    const controller = new Controller(options);
+describe('showHint event', () => {
+    it('reachElement -> showHint called', async function () {
+        const options = getOptionsWithHooks();
+        const controller = new Controller(options);
 
-    await controller.stepElementReached({
-        stepSlug: 'createSprint',
-        element: getAnchorElement(),
+        await controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: getAnchorElement(),
+        });
+
+        expect(options.hooks.showHint).toHaveBeenCalledWith(
+            {
+                preset: 'createProject',
+                step: 'createSprint',
+            },
+            controller,
+        );
     });
 
-    expect(options.hooks.showHint).toHaveBeenCalledWith(
-        {
-            preset: 'createProject',
-            step: 'createSprint',
-        },
-        controller,
-    );
-});
+    it('reachElement on NOT active preset -> NOT calls showHint', async function () {
+        const options = getOptionsWithHooks({activePresets: []});
+        const controller = new Controller(options);
 
-it('reachElement on NOT active preset -> NOT calls showHint', async function () {
-    const options = getOptionsWithHooks({activePresets: []});
-    const controller = new Controller(options);
+        await controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: getAnchorElement(),
+        });
 
-    await controller.stepElementReached({
-        stepSlug: 'createSprint',
-        element: getAnchorElement(),
+        expect(options.hooks.showHint).not.toHaveBeenCalled();
     });
 
-    expect(options.hooks.showHint).not.toHaveBeenCalled();
+    it('reachElement on passed step -> NOT calls showHint', async function () {
+        const options = getOptionsWithHooks();
+
+        const controller = new Controller(options);
+        await controller.stepElementReached({
+            stepSlug: 'createIssue',
+            element: getAnchorElement(),
+        });
+
+        expect(options.hooks.showHint).not.toHaveBeenCalled();
+    });
 });
 
-it('reachElement on passed step -> NOT calls showHint', async function () {
-    const options = getOptionsWithHooks();
+describe('stepPass event', () => {
+    it('pass step on active preset -> calls passStep', async function () {
+        const options = getOptionsWithHooks();
 
-    const controller = new Controller(options);
-    await controller.stepElementReached({
-        stepSlug: 'createIssue',
-        element: getAnchorElement(),
+        const controller = new Controller(options);
+        await controller.passStep('createSprint');
+
+        expect(options.hooks.stepPass).toHaveBeenCalledWith(
+            {
+                preset: 'createProject',
+                step: 'createSprint',
+            },
+            controller,
+        );
     });
 
-    expect(options.hooks.showHint).not.toHaveBeenCalled();
-});
+    it('pass step on NOT active, but available preset -> calls passStep', async function () {
+        const options = getOptionsWithHooks({activePresets: []});
 
-it('pass step on active preset -> calls passStep', async function () {
-    const options = getOptionsWithHooks();
+        const controller = new Controller(options);
+        await controller.passStep('createSprint');
 
-    const controller = new Controller(options);
-    await controller.passStep('createSprint');
+        expect(options.hooks.stepPass).toHaveBeenCalledWith(
+            {
+                preset: 'createProject',
+                step: 'createSprint',
+            },
+            controller,
+        );
+    });
 
-    expect(options.hooks.stepPass).toHaveBeenCalledWith(
-        {
-            preset: 'createProject',
-            step: 'createSprint',
-        },
-        controller,
-    );
-});
+    it('pass step on NOT active and NOT available preset -> NOT calls passStep', async function () {
+        const options = getOptionsWithHooks({activePresets: [], availablePresets: []});
 
-it('pass step on NOT active, but available preset -> calls passStep', async function () {
-    const options = getOptionsWithHooks({activePresets: []});
+        const controller = new Controller(options);
+        await controller.passStep('createSprint');
 
-    const controller = new Controller(options);
-    await controller.passStep('createSprint');
+        expect(options.hooks.stepPass).not.toHaveBeenCalled();
+    });
 
-    expect(options.hooks.stepPass).toHaveBeenCalledWith(
-        {
-            preset: 'createProject',
-            step: 'createSprint',
-        },
-        controller,
-    );
-});
+    it('unknown preset -> NOT calls passStep', async function () {
+        const options = getOptionsWithHooks();
 
-it('pass step on NOT active and NOT available preset -> NOT calls passStep', async function () {
-    const options = getOptionsWithHooks({activePresets: [], availablePresets: []});
+        const controller = new Controller(options);
+        await controller.passStep('someUnknownStep');
 
-    const controller = new Controller(options);
-    await controller.passStep('createSprint');
+        expect(options.hooks.stepPass).not.toHaveBeenCalled();
+    });
 
-    expect(options.hooks.stepPass).not.toHaveBeenCalled();
+    it('step already passed -> NOT calls passStep', async function () {
+        const options = getOptionsWithHooks();
+
+        const controller = new Controller(options);
+        await controller.passStep('openBoard');
+
+        expect(options.hooks.stepPass).not.toHaveBeenCalled();
+    });
 });
 
 describe('preset hooks', function () {

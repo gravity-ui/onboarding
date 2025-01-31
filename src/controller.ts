@@ -197,10 +197,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             }
         }
 
-        this.events.emit('stepPass', {preset, step: stepSlug});
-        step?.hooks?.onStepPass?.();
-
         await this.savePassedStepData(preset, stepSlug, () => {
+            step?.hooks?.onStepPass?.();
+            this.events.emit('stepPass', {preset, step: stepSlug});
+
             if (step?.passMode !== 'onShowHint') {
                 this.logger.debug('Close hint on step', stepSlug);
                 this.closeHintByUser();
