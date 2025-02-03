@@ -570,25 +570,33 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
+        const progressStateFromOptions = this.options.progressState;
+        if (progressStateFromOptions) {
+            this.initProgressState(progressStateFromOptions);
+            return;
+        }
+
         if (!this.progressLoadingPromise) {
             this.progressLoadingPromise = this.options.getProgressState();
         }
 
         this.logger.debug('Loading onboarding progress data');
         try {
-            const newProgressState = await this.progressLoadingPromise;
-
-            this.state.progress = {
-                ...getDefaultProgressState(),
-                ...newProgressState,
-            };
-            this.status = 'active';
-            this.emitStateChange();
-
-            this.logger.debug('Onboarding progress data loaded');
+            this.initProgressState(await this.progressLoadingPromise);
         } catch (e) {
             this.logger.error('progress data loading error');
         }
+    }
+
+    initProgressState(state: Partial<ProgressState>) {
+        this.state.progress = {
+            ...getDefaultProgressState(),
+            ...state,
+        };
+        this.status = 'active';
+        this.emitStateChange();
+
+        this.logger.debug('Onboarding progress data initialized');
     }
 
     async resetToDefaultState() {

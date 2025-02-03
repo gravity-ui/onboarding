@@ -74,6 +74,7 @@ export const getOptions = (
         },
         plugins: [] as OnboardingPlugin[],
         customDefaultState: {} as Partial<BaseState>,
+        progressState: undefined,
     } satisfies InitOptions<any, any, any>;
 };
 

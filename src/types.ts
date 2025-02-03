@@ -133,6 +133,7 @@ export type ShowHintParams<HintParams, Presets extends string, Steps extends str
 export type InitOptions<HintParams, Presets extends string, Steps extends string> = {
     config: InitConfig<HintParams, Presets, Steps>;
     baseState: Partial<BaseState> | undefined;
+    progressState?: Partial<ProgressState>;
     getProgressState: () => Promise<Partial<ProgressState>>;
     onSave: {
         state: (state: BaseState) => Promise<any>;
