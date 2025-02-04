@@ -208,7 +208,7 @@ describe('pass step', function () {
                 expect(mock).toHaveBeenCalled();
             });
 
-            it('passedStep -> dont call hook', async function () {
+            it('passed step -> dont call hook', async function () {
                 const options = getOptions();
                 const mock = jest.fn();
 

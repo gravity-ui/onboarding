@@ -628,3 +628,43 @@ describe('custom default state', () => {
         expect(controller.state.base.enabled).toBe(true);
     });
 });
+
+describe('progressState init', function () {
+    it('init -> call getProgressState ', async function () {
+        const options = getOptions();
+
+        const controller = new Controller(options);
+        await controller.ensureRunning();
+
+        expect(options.getProgressState).toHaveBeenCalled();
+    });
+
+    it('has progressState in options -> dont call getProgressState ', async function () {
+        const options = getOptions();
+        // @ts-ignore
+        options.progressState = {
+            presetPassedSteps: {},
+            finishedPresets: [],
+        };
+
+        const controller = new Controller(options);
+        await controller.ensureRunning();
+
+        expect(options.getProgressState).not.toHaveBeenCalled();
+    });
+
+    it('has progressState in options -> use progressState value', async function () {
+        const options = getOptions();
+        const progressState = {
+            presetPassedSteps: {},
+            finishedPresets: [],
+        };
+        // @ts-ignore
+        options.progressState = progressState;
+
+        const controller = new Controller(options);
+        await controller.ensureRunning();
+
+        expect(controller.state.progress).toEqual(progressState);
+    });
+});
