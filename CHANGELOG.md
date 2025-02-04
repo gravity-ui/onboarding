@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.4.0](https://github.com/gravity-ui/onboarding/compare/v1.3.0...v1.4.0) (2025-02-04)
+
+
+### Features
+
+* **onboarding:** allow synchronous progress state init ([e423daa](https://github.com/gravity-ui/onboarding/commit/e423daaeea93ab8c569a6d9f15476779780a2a57))
+
+
+### Bug Fixes
+
+* **onboarding:** dont call stepPass hook for passed steps ([6833f89](https://github.com/gravity-ui/onboarding/commit/6833f89e35307f6a0fdc66d3c4365b862d2a14ae))
+
 ## [1.3.0](https://github.com/gravity-ui/onboarding/compare/v1.2.1...v1.3.0) (2025-01-30)
 
 
