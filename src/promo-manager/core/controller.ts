@@ -29,6 +29,11 @@ import {EventsMap as OnboardingEventsMap} from '../../types';
 
 type Listener = () => void;
 
+const defaultBaseState = {
+    activePromo: null,
+    activeQueue: [],
+};
+
 const defaultProgressState: ProgressState = {
     finishedPromos: [],
     progressInfoByPromo: {},
@@ -85,10 +90,7 @@ export class Controller {
 
         this.state = JSON.parse(
             JSON.stringify({
-                base: {
-                    activePromo: null,
-                    activeQueue: [],
-                },
+                base: defaultBaseState,
                 progress: options.progressState
                     ? {
                           ...defaultProgressState,
@@ -359,6 +361,23 @@ export class Controller {
                 await this.requestStart(promoSlug);
             }
         }
+    };
+
+    protected invalidateBaseState = () => {
+        const promoToValidate = [
+            this.state.base.activePromo,
+            ...this.state.base.activeQueue,
+        ].filter((slug): slug is string => {
+            if (!slug) {
+                return false;
+            }
+            return this.isAbleToRun(slug);
+        });
+
+        this.state.base = defaultBaseState;
+
+        promoToValidate.forEach((slug) => this.addPromoToActiveQueue(slug));
+        this.emitChange();
     };
 
     private checkPromoConditions = (slug: PromoSlug): boolean => {
