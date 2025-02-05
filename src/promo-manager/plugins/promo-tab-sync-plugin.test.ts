@@ -108,7 +108,7 @@ it('tab focus -> apply value from LS', async () => {
     expect(controller.state.progress).toEqual(newValue.value);
 });
 
-it('promo finished in fresh state -> closes promo', async () => {
+it('promo finished in fresh state -> apply fresh progress state', async () => {
     const controller = new Controller({
         ...testOptions,
         plugins: [
@@ -145,6 +145,79 @@ it('promo finished in fresh state -> closes promo', async () => {
     expect(controller.state.progress).toEqual(newValue.value);
 });
 
+it('promo finished in fresh state -> mutate base state', async () => {
+    const controller = new Controller({
+        ...testOptions,
+        plugins: [
+            new PromoTabSyncPlugin({
+                stateLSKey: 'someKey',
+                __UNSTABLE__syncState: true,
+            }),
+        ],
+        dateNow: () => DATE_NOW,
+    });
+
+    await controller.ensureInit();
+    await controller.requestStart('boardPoll');
+
+    const newValue = {
+        date: DATE_IN_FUTURE,
+        value: {
+            finishedPromos: ['boardPoll'],
+            progressInfoByPromo: {
+                boardPoll: {
+                    lastCallTime: DATE_IN_FUTURE,
+                },
+            },
+        },
+    };
+    window.localStorage.setItem('someKey', JSON.stringify(newValue));
+
+    // current date > event date
+    controller.dateNow = () => DATE_IN_FUTURE;
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    await waitForNextTick();
+    await waitForNextTick();
+
+    expect(controller.state.base.activePromo).not.toEqual('boardPoll');
+});
+
+it('promo canceled in fresh state -> mutate base state', async () => {
+    const controller = new Controller({
+        ...testOptions,
+        plugins: [
+            new PromoTabSyncPlugin({
+                stateLSKey: 'someKey',
+                __UNSTABLE__syncState: true,
+            }),
+        ],
+        dateNow: () => DATE_NOW,
+    });
+
+    await controller.ensureInit();
+    await controller.requestStart('boardPoll');
+
+    const newValue = {
+        date: DATE_IN_FUTURE,
+        value: {
+            progressInfoByPromo: {
+                boardPoll: {
+                    lastCallTime: DATE_IN_FUTURE,
+                },
+            },
+        },
+    };
+    window.localStorage.setItem('someKey', JSON.stringify(newValue));
+
+    // current date > event date
+    controller.dateNow = () => DATE_IN_FUTURE;
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    await waitForNextTick();
+
+    expect(controller.state.base.activePromo).not.toEqual('boardPoll');
+});
 it('old value int ls + tab focus -> dont apply change', async () => {
     const controller = new Controller({
         ...testOptions,
