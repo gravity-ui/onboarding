@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/gravity-ui/onboarding/compare/v1.4.0...v1.4.1) (2025-02-05)
+
+
+### Bug Fixes
+
+* **promo-manager:** invalidate base state after state sync ([ce7d113](https://github.com/gravity-ui/onboarding/commit/ce7d11312e9bfabd2e7049c2aeddb8a3843665f6))
+
 ## [1.4.0](https://github.com/gravity-ui/onboarding/compare/v1.3.0...v1.4.0) (2025-02-04)
 
 
