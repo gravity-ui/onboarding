@@ -336,6 +336,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             step?.hooks?.onCloseHint?.();
         }
 
+        if (this.hintStore.state.hint) {
+            this.events.emit('closeHintByUser', {hint: this.hintStore.state.hint});
+        }
+
         this.hintStore.closeHint();
         this.checkReachedHints();
     };

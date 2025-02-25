@@ -183,6 +183,7 @@ export type EventsMap<
     stateChange: {state: Controller<any, any, any>['state']};
     hintDataChanged: {state: HintState<HintParams, Presets, Steps>};
     closeHint: {hint: Pick<ShowHintParams<HintParams, Presets, Steps>, 'preset' | 'step'>};
+    closeHintByUser: {hint: Pick<ShowHintParams<HintParams, Presets, Steps>, 'preset' | 'step'>};
     init: {};
     wizardStateChanged: {wizardState: BaseState['wizardState']};
 };

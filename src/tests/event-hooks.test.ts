@@ -396,6 +396,103 @@ describe('event subscriptions', function () {
         });
     });
 
+    describe('closeHintByUser event', () => {
+        it('pass step -> trigger event', async function () {
+            const controller = new Controller(getOptions());
+
+            const mock = jest.fn();
+            controller.events.subscribe('closeHintByUser', mock);
+
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+            await controller.passStep('createSprint');
+
+            expect(mock).toHaveBeenCalledWith(
+                {
+                    hint: {
+                        preset: 'createProject',
+                        step: {
+                            slug: 'createSprint',
+                            name: '',
+                            description: '',
+                        },
+                    },
+                },
+                controller,
+            );
+        });
+
+        it('element disappeared -> NOT trigger event', async function () {
+            const controller = new Controller(getOptions());
+
+            const mock = jest.fn();
+            controller.events.subscribe('closeHintByUser', mock);
+
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+            controller.stepElementDisappeared('createSprint');
+
+            expect(mock).not.toHaveBeenCalled();
+        });
+
+        it('user close hint -> trigger event', async function () {
+            const controller = new Controller(getOptions());
+
+            const mock = jest.fn();
+            controller.events.subscribe('closeHintByUser', mock);
+
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+            controller.closeHintByUser('createSprint');
+
+            expect(mock).toHaveBeenCalledWith(
+                {
+                    hint: {
+                        preset: 'createProject',
+                        step: {
+                            slug: 'createSprint',
+                            name: '',
+                            description: '',
+                        },
+                    },
+                },
+                controller,
+            );
+        });
+
+        it('no open hint -> NOT trigger event', async function () {
+            const controller = new Controller(getOptions());
+
+            const mock = jest.fn();
+            controller.events.subscribe('closeHintByUser', mock);
+
+            controller.closeHintByUser();
+
+            expect(mock).not.toHaveBeenCalled();
+        });
+
+        it('try close other hint -> NOT trigger event', async function () {
+            const controller = new Controller(getOptions());
+
+            const mock = jest.fn();
+            controller.events.subscribe('closeHintByUser', mock);
+
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+            controller.closeHintByUser('openBoard');
+
+            expect(mock).not.toHaveBeenCalled();
+        });
+    });
+
     it('passStep', async function () {
         const controller = new Controller(getOptions());
 
