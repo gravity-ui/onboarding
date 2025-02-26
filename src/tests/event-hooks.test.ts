@@ -221,50 +221,68 @@ describe('preset hooks', function () {
     });
 });
 describe('event subscriptions', function () {
-    it('beforeShowHint', async function () {
-        const controller = new Controller(getOptions());
+    describe('beforeShowHint', () => {
+        it('element reached -> trigger event', async function () {
+            const controller = new Controller(getOptions());
 
-        const mock = jest.fn();
-        controller.events.subscribe('beforeShowHint', mock);
+            const mock = jest.fn();
+            controller.events.subscribe('beforeShowHint', mock);
 
-        await controller.stepElementReached({
-            stepSlug: 'createSprint',
-            element: getAnchorElement(),
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+
+            expect(mock).toHaveBeenCalled();
         });
 
-        expect(mock).toHaveBeenCalled();
-    });
+        it('element reached -> hint shown', async function () {
+            const controller = new Controller(getOptions());
 
-    it('beforeShowHint with cancel -> no hint', async function () {
-        const controller = new Controller(getOptions());
+            const mock = jest.fn();
+            controller.events.subscribe('beforeShowHint', mock);
 
-        const mock = jest.fn(() => false);
-        controller.events.subscribe('beforeShowHint', mock);
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
 
-        await controller.stepElementReached({
-            stepSlug: 'createSprint',
-            element: getAnchorElement(),
+            expect(controller.hintStore.state.open).toBe(true);
         });
 
-        expect(controller.hintStore.state.open).toBe(false);
-    });
+        it('cancel hint show -> hint still not open', async function () {
+            const controller = new Controller(getOptions());
 
-    it('beforeShowHint with cancel -> call all hooks', async function () {
-        const controller = new Controller(getOptions());
+            // return false to cancel hint show
+            const mock = jest.fn(() => false);
+            controller.events.subscribe('beforeShowHint', mock);
 
-        const mock1 = jest.fn(() => false);
-        const mock2 = jest.fn();
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
 
-        controller.events.subscribe('beforeShowHint', mock1);
-        controller.events.subscribe('beforeShowHint', mock2);
-
-        await controller.stepElementReached({
-            stepSlug: 'createSprint',
-            element: getAnchorElement(),
+            expect(controller.hintStore.state.open).toBe(false);
         });
 
-        expect(mock1).toHaveBeenCalled();
-        expect(mock2).toHaveBeenCalled();
+        it('cancel hint show -> call all hooks', async function () {
+            const controller = new Controller(getOptions());
+
+            // return false to cancel hint show
+            const mock1 = jest.fn(() => false);
+            const mock2 = jest.fn();
+
+            controller.events.subscribe('beforeShowHint', mock1);
+            controller.events.subscribe('beforeShowHint', mock2);
+
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+
+            expect(mock1).toHaveBeenCalled();
+            expect(mock2).toHaveBeenCalled();
+        });
     });
 
     it('showHint', async function () {
@@ -285,6 +303,212 @@ describe('event subscriptions', function () {
             },
             controller,
         );
+    });
+
+    describe('closeHint event', () => {
+        it('pass step -> trigger event', async function () {
+            const controller = new Controller(getOptions());
+
+            const mock = jest.fn();
+            controller.events.subscribe('closeHint', mock);
+
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+            await controller.passStep('createSprint');
+
+            expect(mock).toHaveBeenCalledWith(
+                {
+                    hint: {
+                        preset: 'createProject',
+                        step: {
+                            slug: 'createSprint',
+                            name: '',
+                            description: '',
+                        },
+                    },
+                },
+                controller,
+            );
+        });
+
+        it('element disappeared -> trigger event', async function () {
+            const controller = new Controller(getOptions());
+
+            const mock = jest.fn();
+            controller.events.subscribe('closeHint', mock);
+
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+            controller.stepElementDisappeared('createSprint');
+
+            expect(mock).toHaveBeenCalledWith(
+                {
+                    hint: {
+                        preset: 'createProject',
+                        step: {
+                            slug: 'createSprint',
+                            name: '',
+                            description: '',
+                        },
+                    },
+                },
+                controller,
+            );
+        });
+
+        it('user close hint -> trigger event', async function () {
+            const controller = new Controller(getOptions());
+
+            const mock = jest.fn();
+            controller.events.subscribe('closeHint', mock);
+
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+            controller.closeHint('createSprint');
+
+            expect(mock).toHaveBeenCalledWith(
+                {
+                    hint: {
+                        preset: 'createProject',
+                        step: {
+                            slug: 'createSprint',
+                            name: '',
+                            description: '',
+                        },
+                    },
+                },
+                controller,
+            );
+        });
+
+        it('no open hint -> NOT trigger event', async function () {
+            const controller = new Controller(getOptions());
+
+            const mock = jest.fn();
+            controller.events.subscribe('closeHint', mock);
+
+            controller.closeHint();
+
+            expect(mock).not.toHaveBeenCalled();
+        });
+
+        it('try close other hint -> NOT trigger event', async function () {
+            const controller = new Controller(getOptions());
+
+            const mock = jest.fn();
+            controller.events.subscribe('closeHint', mock);
+
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+            controller.closeHint('openBoard');
+
+            expect(mock).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('closeHintByUser event', () => {
+        it('pass step -> trigger event', async function () {
+            const controller = new Controller(getOptions());
+
+            const mock = jest.fn();
+            controller.events.subscribe('closeHintByUser', mock);
+
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+            await controller.passStep('createSprint');
+
+            expect(mock).toHaveBeenCalledWith(
+                {
+                    hint: {
+                        preset: 'createProject',
+                        step: {
+                            slug: 'createSprint',
+                            name: '',
+                            description: '',
+                        },
+                    },
+                },
+                controller,
+            );
+        });
+
+        it('element disappeared -> NOT trigger event', async function () {
+            const controller = new Controller(getOptions());
+
+            const mock = jest.fn();
+            controller.events.subscribe('closeHintByUser', mock);
+
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+            controller.stepElementDisappeared('createSprint');
+
+            expect(mock).not.toHaveBeenCalled();
+        });
+
+        it('user close hint -> trigger event', async function () {
+            const controller = new Controller(getOptions());
+
+            const mock = jest.fn();
+            controller.events.subscribe('closeHintByUser', mock);
+
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+            controller.closeHintByUser('createSprint');
+
+            expect(mock).toHaveBeenCalledWith(
+                {
+                    hint: {
+                        preset: 'createProject',
+                        step: {
+                            slug: 'createSprint',
+                            name: '',
+                            description: '',
+                        },
+                    },
+                },
+                controller,
+            );
+        });
+
+        it('no open hint -> NOT trigger event', async function () {
+            const controller = new Controller(getOptions());
+
+            const mock = jest.fn();
+            controller.events.subscribe('closeHintByUser', mock);
+
+            controller.closeHintByUser();
+
+            expect(mock).not.toHaveBeenCalled();
+        });
+
+        it('try close other hint -> NOT trigger event', async function () {
+            const controller = new Controller(getOptions());
+
+            const mock = jest.fn();
+            controller.events.subscribe('closeHintByUser', mock);
+
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+            controller.closeHintByUser('openBoard');
+
+            expect(mock).not.toHaveBeenCalled();
+        });
     });
 
     it('passStep', async function () {
