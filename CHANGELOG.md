@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/gravity-ui/onboarding/compare/v1.4.1...v1.5.0) (2025-02-26)
+
+
+### Features
+
+* **onboarding:** add closeHintByUser event ([bdc97e4](https://github.com/gravity-ui/onboarding/commit/bdc97e458b982b3ea5419086c65333605e91513c))
+
 ## [1.4.1](https://github.com/gravity-ui/onboarding/compare/v1.4.0...v1.4.1) (2025-02-05)
 
 
