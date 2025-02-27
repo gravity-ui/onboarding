@@ -11,6 +11,7 @@ import type {
     PresetStatus,
     ResolvedOptions,
     UserPreset,
+    HintCloseSource,
 } from './types';
 import {HintStore} from './hints/hintStore';
 import {createLogger, Logger} from './logger';
@@ -203,7 +204,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
             if (step?.passMode !== 'onShowHint') {
                 this.logger.debug('Close hint on step', stepSlug);
-                this.closeHintByUser();
+                this.closeHintByUser(undefined, 'stepPassed');
                 this.checkReachedHints();
             }
         });
@@ -317,11 +318,11 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         const step = this.getStepBySlug(stepSlug);
 
         if (step?.closeOnElementUnmount !== false) {
-            this.closeHint(stepSlug);
+            this.closeHint(stepSlug, 'elementHidden');
         }
     };
 
-    closeHintByUser = (stepSlug?: Steps) => {
+    closeHintByUser = (stepSlug?: Steps, eventSource: HintCloseSource = 'closedByUser') => {
         const currentHintStep = this.hintStore.state.hint?.step.slug;
         this.logger.debug('Close hint(internal)', currentHintStep);
         if (stepSlug && stepSlug !== currentHintStep) {
@@ -332,15 +333,18 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         if (currentHintStep) {
             this.closedHints.add(currentHintStep);
             const step = this.getStepBySlug(currentHintStep);
-            step?.hooks?.onCloseHintByUser?.();
-            step?.hooks?.onCloseHint?.();
+            step?.hooks?.onCloseHintByUser?.({eventSource});
+            step?.hooks?.onCloseHint?.({eventSource});
         }
 
         if (this.hintStore.state.hint) {
-            this.events.emit('closeHintByUser', {hint: this.hintStore.state.hint});
+            this.events.emit('closeHintByUser', {
+                hint: this.hintStore.state.hint,
+                eventSource,
+            });
         }
 
-        this.hintStore.closeHint();
+        this.hintStore.closeHint(eventSource);
         this.checkReachedHints();
     };
 
@@ -613,7 +617,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         await this.updateProgress();
     }
 
-    closeHint = (stepSlug?: Steps) => {
+    closeHint = (stepSlug?: Steps, eventSource: HintCloseSource = 'externalEvent') => {
         const currentHintStep = this.hintStore.state.hint?.step.slug;
         this.logger.debug('Close hint(internal)', currentHintStep);
         if (stepSlug && stepSlug !== currentHintStep) {
@@ -623,10 +627,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         if (currentHintStep) {
             const step = this.getStepBySlug(currentHintStep);
-            step?.hooks?.onCloseHint?.();
+            step?.hooks?.onCloseHint?.({eventSource});
         }
 
-        this.hintStore.closeHint();
+        this.hintStore.closeHint(eventSource);
     };
 
     emitStateChange = () => {

@@ -1,7 +1,6 @@
 import type {MutableRefObject} from 'react';
-import type {ShowHintParams} from '../types';
+import type {HintCloseSource, ShowHintParams, EventListener, EventsMap, EventTypes} from '../types';
 import {EventEmitter} from '../event-emitter';
-import {EventListener, EventsMap, EventTypes} from '../types';
 
 export type HintState<HintParams, Preset extends string, Steps extends string> = {
     anchorRef: MutableRefObject<HTMLElement | null>;
@@ -45,9 +44,9 @@ export class HintStore<HintParams, Preset extends string, Steps extends string> 
         this.emitter.emit('hintDataChanged', {state: this.state});
     };
 
-    closeHint = () => {
+    closeHint = (eventSource: HintCloseSource = 'externalEvent') => {
         if (this.state.hint) {
-            this.emitter.emit('closeHint', {hint: this.state.hint});
+            this.emitter.emit('closeHint', {hint: this.state.hint, eventSource});
         }
 
         this.state = {
