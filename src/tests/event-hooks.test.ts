@@ -328,6 +328,7 @@ describe('event subscriptions', function () {
                             description: '',
                         },
                     },
+                    eventSource: 'stepPassed',
                 },
                 controller,
             );
@@ -355,6 +356,7 @@ describe('event subscriptions', function () {
                             description: '',
                         },
                     },
+                    eventSource: 'elementHidden',
                 },
                 controller,
             );
@@ -370,7 +372,7 @@ describe('event subscriptions', function () {
                 stepSlug: 'createSprint',
                 element: getAnchorElement(),
             });
-            controller.closeHint('createSprint');
+            controller.closeHintByUser('createSprint');
 
             expect(mock).toHaveBeenCalledWith(
                 {
@@ -382,6 +384,35 @@ describe('event subscriptions', function () {
                             description: '',
                         },
                     },
+                    eventSource: 'closedByUser',
+                },
+                controller,
+            );
+        });
+
+        it('call closeHint -> trigger with eventSource=externalEvent', async function () {
+            const controller = new Controller(getOptions());
+
+            const mock = jest.fn();
+            controller.events.subscribe('closeHint', mock);
+
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+            controller.closeHint();
+
+            expect(mock).toHaveBeenCalledWith(
+                {
+                    hint: {
+                        preset: 'createProject',
+                        step: {
+                            slug: 'createSprint',
+                            name: '',
+                            description: '',
+                        },
+                    },
+                    eventSource: 'externalEvent',
                 },
                 controller,
             );
@@ -437,6 +468,7 @@ describe('event subscriptions', function () {
                             description: '',
                         },
                     },
+                    eventSource: 'stepPassed',
                 },
                 controller,
             );
@@ -479,6 +511,7 @@ describe('event subscriptions', function () {
                             description: '',
                         },
                     },
+                    eventSource: 'closedByUser',
                 },
                 controller,
             );

@@ -22,6 +22,8 @@ type HintPlacement =
     | 'left-start'
     | 'left-end';
 
+export type HintCloseSource = 'stepPassed' | 'closedByUser' | 'elementHidden' | 'externalEvent';
+
 export type PresetStatus = 'unPassed' | 'inProgress' | 'finished';
 
 export type PresetStep<Steps extends string, HintParams> = {
@@ -35,8 +37,8 @@ export type PresetStep<Steps extends string, HintParams> = {
     passRestriction?: 'afterPrevious';
     hooks?: {
         onStepPass?: () => void;
-        onCloseHint?: () => void;
-        onCloseHintByUser?: () => void;
+        onCloseHint?: (params: {eventSource: HintCloseSource}) => void;
+        onCloseHintByUser?: (params: {eventSource: HintCloseSource}) => void;
     };
 };
 
@@ -182,8 +184,14 @@ export type EventsMap<
     beforeShowHint: {stepData: ReachElementParams<Presets, Steps>};
     stateChange: {state: Controller<any, any, any>['state']};
     hintDataChanged: {state: HintState<HintParams, Presets, Steps>};
-    closeHint: {hint: Pick<ShowHintParams<HintParams, Presets, Steps>, 'preset' | 'step'>};
-    closeHintByUser: {hint: Pick<ShowHintParams<HintParams, Presets, Steps>, 'preset' | 'step'>};
+    closeHint: {
+        hint: Pick<ShowHintParams<HintParams, Presets, Steps>, 'preset' | 'step'>;
+        eventSource: HintCloseSource;
+    };
+    closeHintByUser: {
+        hint: Pick<ShowHintParams<HintParams, Presets, Steps>, 'preset' | 'step'>;
+        eventSource: HintCloseSource;
+    };
     init: {};
     wizardStateChanged: {wizardState: BaseState['wizardState']};
 };
