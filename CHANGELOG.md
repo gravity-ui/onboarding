@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/gravity-ui/onboarding/compare/v1.5.0...v1.6.0) (2025-02-28)
+
+
+### Features
+
+* add close hint reason ([2f98d34](https://github.com/gravity-ui/onboarding/commit/2f98d34b1d1bc63adcd6aa6129925ba2fda64e6e))
+
 ## [1.5.0](https://github.com/gravity-ui/onboarding/compare/v1.4.1...v1.5.0) (2025-02-26)
 
 
