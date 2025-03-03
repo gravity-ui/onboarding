@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1](https://github.com/gravity-ui/onboarding/compare/v1.6.0...v1.6.1) (2025-03-03)
+
+
+### Bug Fixes
+
+* **onboarding:** wrong step take for shared steps ([ff4796e](https://github.com/gravity-ui/onboarding/commit/ff4796e7a882acf74f7491ceaf993533906ecf1d))
+
 ## [1.6.0](https://github.com/gravity-ui/onboarding/compare/v1.5.0...v1.6.0) (2025-02-28)
 
 
