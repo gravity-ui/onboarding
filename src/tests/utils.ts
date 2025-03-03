@@ -78,6 +78,90 @@ export const getOptions = (
     } satisfies InitOptions<any, any, any>;
 };
 
+export const getSameStepsOptions = (
+    baseState: Partial<BaseState> = {},
+    progressState: Partial<ProgressState> = {},
+) => {
+    return {
+        config: {
+            presets: {
+                preset1: {
+                    name: 'preset1',
+                    steps: [
+                        {
+                            slug: 'step1',
+                            name: 'preset1step1',
+                            description: '',
+                        },
+                        {
+                            slug: 'step2',
+                            name: 'preset1step2',
+                            description: '',
+                        },
+                        {
+                            slug: 'step3',
+                            name: 'preset1step3',
+                            description: '',
+                        },
+                    ] as Array<PresetStep<string, {}>>,
+                },
+                preset2: {
+                    name: 'preset2',
+                    steps: [
+                        {
+                            slug: 'step1',
+                            name: 'preset2step1',
+                            description: '',
+                        },
+                        {
+                            slug: 'step2',
+                            name: 'preset2step2',
+                            description: '',
+                        },
+                        {
+                            slug: 'step3',
+                            name: 'preset2step3',
+                            description: '',
+                        },
+                    ] as Array<PresetStep<string, {}>>,
+                },
+            },
+        },
+        baseState: {
+            wizardState: 'visible' as const,
+            availablePresets: [],
+            activePresets: [],
+            suggestedPresets: [],
+            enabled: true,
+            ...baseState,
+        },
+        getProgressState: jest.fn(() =>
+            Promise.resolve({
+                presetPassedSteps: {},
+                finishedPresets: [],
+                ...progressState,
+            }),
+        ),
+        onSave: {
+            state: jest.fn(),
+            progress: jest.fn(),
+        },
+        showHint: jest.fn(),
+        debugMode: false,
+        ignoreUnknownPresets: false as boolean,
+        logger: {
+            level: 'error' as const,
+            logger: {
+                debug: () => {},
+                error: jest.fn(),
+            },
+        },
+        plugins: [] as OnboardingPlugin[],
+        customDefaultState: {} as Partial<BaseState>,
+        progressState: undefined,
+    } satisfies InitOptions<any, any, any>;
+};
+
 export const getOptionsWithCombined = (
     baseState: Partial<BaseState> = {},
     progressState: Partial<ProgressState> = {},

@@ -1,17 +1,17 @@
 import type {
     BaseState,
-    InitOptions,
-    Preset,
-    PresetField,
-    ProgressState,
-    ReachElementParams,
     CommonPreset,
     EventsMap,
     EventTypes,
+    HintCloseSource,
+    InitOptions,
+    Preset,
+    PresetField,
     PresetStatus,
+    ProgressState,
+    ReachElementParams,
     ResolvedOptions,
     UserPreset,
-    HintCloseSource,
 } from './types';
 import {HintStore} from './hints/hintStore';
 import {createLogger, Logger} from './logger';
@@ -186,7 +186,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         await this.ensureRunning();
 
-        const step = this.getStepBySlug(stepSlug);
+        const step = this.getStepBySlugAndPreset(stepSlug, preset);
         if (step?.passRestriction === 'afterPrevious') {
             const nextStepSlug = this.findNextStepForPreset(preset);
             if (nextStepSlug !== stepSlug) {
@@ -289,7 +289,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
-        const step = this.getStepBySlug(stepSlug);
+        const step = this.getStepBySlugAndPreset(stepSlug, preset);
 
         if (!step) {
             this.logger.debug('Unknown step', preset, stepSlug);
@@ -332,7 +332,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         if (currentHintStep) {
             this.closedHints.add(currentHintStep);
-            const step = this.getStepBySlug(currentHintStep);
+            const preset = this.findActivePresetWithStep(currentHintStep);
+            const step = this.getStepBySlugAndPreset(currentHintStep, preset);
             step?.hooks?.onCloseHintByUser?.({eventSource});
             step?.hooks?.onCloseHint?.({eventSource});
         }
@@ -869,16 +870,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
     private getStepBySlug(stepSlug: Steps) {
         for (const presetName of Object.keys(this.options.config.presets)) {
-            const preset = this.options.config.presets[presetName as Presets];
-            if (!preset) {
-                continue;
-            }
-
-            if (preset.type === 'combined') {
-                continue;
-            }
-
-            const step = preset.steps.find((presetStep) => presetStep.slug === stepSlug);
+            const step = this.getStepBySlugAndPreset(stepSlug, presetName as Presets);
 
             if (step) {
                 return step;
@@ -886,6 +878,16 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
 
         return undefined;
+    }
+
+    private getStepBySlugAndPreset(stepSlug: Steps, presetSlug: Presets) {
+        const targetPreset = this.options.config.presets[presetSlug];
+
+        if (!targetPreset || targetPreset.type === 'combined') {
+            return undefined;
+        }
+
+        return targetPreset.steps.find((presetStep) => presetStep.slug === stepSlug);
     }
 
     private async goNextStep(presetSlug: Presets) {
