@@ -107,12 +107,15 @@ export type ResolvedConfig<HintParams, Presets extends string, Steps extends str
     presets: Record<Presets, Preset<HintParams, Steps>>;
 };
 
+type DateUTC = string;
+
 export type BaseState = {
     availablePresets: string[];
     activePresets: string[];
     suggestedPresets: string[];
     wizardState: 'hidden' | 'collapsed' | 'visible' | 'invisible';
     enabled: boolean;
+    lastUserActivity: DateUTC;
 };
 
 export type ProgressState = {
@@ -146,6 +149,7 @@ export type InitOptions<HintParams, Presets extends string, Steps extends string
     ignoreUnknownPresets?: boolean;
     debugMode?: boolean;
     customDefaultState?: Partial<BaseState>;
+    dateNow?: () => Date;
     plugins?: OnboardingPlugin[];
     hooks?: {
         [K in keyof EventsMap<HintParams, Presets, Steps>]?: (
