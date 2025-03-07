@@ -1,6 +1,8 @@
 import {Controller} from '../controller';
 import {getAnchorElement, getOptions} from './utils';
 
+const NOW_DATE = new Date(2025, 2, 7);
+
 describe('init with not full data', function () {
     it('empty progress, reachElement -> show hint', async function () {
         const options = getOptions();
@@ -28,6 +30,42 @@ describe('init with not full data', function () {
         });
 
         // not throw error
+    });
+
+    it('empty base state -> set lastUserActivity=now date', async function () {
+        const options = getOptions();
+        options.dateNow = () => NOW_DATE;
+        // @ts-ignore
+        options.baseState = undefined;
+
+        const controller = new Controller(options);
+        await controller.stepElementReached({
+            stepSlug: 'openBoard',
+            element: getAnchorElement(),
+        });
+
+        expect(controller.state.base.lastUserActivity).toBe(NOW_DATE.toUTCString());
+    });
+
+    it('base state without lastUserActivity field -> set lastUserActivity=now date', async function () {
+        const options = getOptions();
+        options.dateNow = () => NOW_DATE;
+        // @ts-ignore
+        options.baseState = {
+            wizardState: 'visible',
+            availablePresets: [],
+            activePresets: [],
+            suggestedPresets: [],
+            enabled: true,
+        };
+
+        const controller = new Controller(options);
+        await controller.stepElementReached({
+            stepSlug: 'openBoard',
+            element: getAnchorElement(),
+        });
+
+        expect(controller.state.base.lastUserActivity).toBe(NOW_DATE.toUTCString());
     });
 });
 
@@ -310,6 +348,7 @@ describe('wrong data', function () {
 
 it('resetToDefaultState -> hidden and empty ', async function () {
     const options = getOptions();
+    options.dateNow = () => NOW_DATE;
 
     const controller = new Controller(options);
     await controller.ensureRunning();
@@ -323,6 +362,7 @@ it('resetToDefaultState -> hidden and empty ', async function () {
             suggestedPresets: [],
             wizardState: 'hidden',
             enabled: false,
+            lastUserActivity: NOW_DATE.toUTCString(),
         },
         progress: {
             finishedPresets: [],
@@ -578,6 +618,7 @@ describe('goNextStep and goNextStep', function () {
 describe('custom default state', () => {
     it('can use empty custom state', () => {
         const options = getOptions();
+        options.dateNow = () => NOW_DATE;
         // @ts-ignore
         options.baseState = {};
         options.customDefaultState = {};
@@ -589,6 +630,7 @@ describe('custom default state', () => {
             activePresets: [],
             availablePresets: [],
             suggestedPresets: [],
+            lastUserActivity: NOW_DATE.toUTCString(),
         });
     });
 

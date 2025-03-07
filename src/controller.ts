@@ -657,12 +657,14 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     }
 
     private getDefaultBaseState(): BaseState {
+        const nowDate = this.options.dateNow?.() ?? new Date();
         return {
             availablePresets: [],
             activePresets: [],
             suggestedPresets: [],
             wizardState: 'hidden' as const,
             enabled: false,
+            lastUserActivity: nowDate.toUTCString(),
             ...this.options.customDefaultState,
         };
     }
