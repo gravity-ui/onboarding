@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.7.0](https://github.com/gravity-ui/onboarding/compare/v1.6.1...v1.7.0) (2025-03-20)
+
+
+### Features
+
+* **onboarding:** add resetPresetProgress event ([244db09](https://github.com/gravity-ui/onboarding/commit/244db0966d71452aadd00000d73cf465fe78bc38))
+* **onboarding:** reset preset progress -&gt; reset promo-manager promo progress ([2b4f220](https://github.com/gravity-ui/onboarding/commit/2b4f220bad29ae0ab8ae7b300f8c58994e0ff968))
+
 ## [1.6.1](https://github.com/gravity-ui/onboarding/compare/v1.6.0...v1.6.1) (2025-03-03)
 
 
