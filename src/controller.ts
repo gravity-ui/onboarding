@@ -569,6 +569,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             );
         }
 
+        this.events.emit('resetPresetProgress', {presets});
+
         await this.updateBaseState();
         await this.updateProgress();
         this.logger.debug('Progress reset finished', presetArg);

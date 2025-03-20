@@ -407,4 +407,21 @@ describe('reset progress', function () {
             presetPassedSteps: {},
         });
     });
+
+    it('reset onboarding promo preset progress -> remove promo progress', async function () {
+        const {options, onboardingController} = getData();
+        const controller = new Controller(options);
+
+        await controller.ensureInit();
+        await onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature',
+            element: getAnchorElement(),
+        });
+        await onboardingController.passStep('showCoolFeature');
+
+        await onboardingController.resetPresetProgress('coolNewFeature');
+
+        expect(controller.state.progress?.finishedPromos).toEqual([]);
+        expect(controller.state.progress?.progressInfoByPromo.coolNewFeature).toBe(undefined);
+    });
 });
