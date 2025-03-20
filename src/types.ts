@@ -126,13 +126,13 @@ export type ProgressState = {
 export type ReachElementParams<Presets, Steps> = {
     preset: Presets;
     stepSlug: Steps;
-    element: HTMLElement;
+    element: Element;
 };
 
 export type ShowHintParams<HintParams, Presets extends string, Steps extends string> = {
     preset: Presets;
     step: PresetStep<Steps, HintParams | undefined>;
-    element: HTMLElement;
+    element: Element;
 };
 
 export type InitOptions<HintParams, Presets extends string, Steps extends string> = {
