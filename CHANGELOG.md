@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.8.0](https://github.com/gravity-ui/onboarding/compare/v1.7.0...v1.8.0) (2025-03-21)
+
+
+### Features
+
+* add PromoWrapper component ([d64e932](https://github.com/gravity-ui/onboarding/commit/d64e93225995c14652afcc6068d513ae02cdfa08))
+* **onboarding:** add lastUserActivity state property ([99f5ed0](https://github.com/gravity-ui/onboarding/commit/99f5ed0057d66f23340c2a44cd534c603ab1b2f5))
+
 ## [1.7.0](https://github.com/gravity-ui/onboarding/compare/v1.6.1...v1.7.0) (2025-03-20)
 
 
