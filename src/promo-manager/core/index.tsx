@@ -49,5 +49,5 @@ export const PromoWrapper = ({children, showOnPromo}: Props) => {
         return null;
     }
 
-    return children;
+    return <>{children}</>;
 };
