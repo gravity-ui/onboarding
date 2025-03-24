@@ -84,14 +84,22 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     ) {
         this.options = this.resolveOptions(options);
 
+        this.events = new EventEmitter(this);
+        if (this.options.hooks) {
+            for (const [hookName, hookFunction] of Object.entries(this.options.hooks)) {
+                if (hookFunction) {
+                    this.events.subscribe(hookName as EventTypes, hookFunction);
+                }
+            }
+        }
+
         this.state = {
-            base: this.fullfillUserBaseState(options.baseState ?? {}),
+            base: this.fulfillUserBaseState(options.baseState ?? {}),
         };
         this.status = 'idle';
         this.closedHints = new Set();
         this.reachedElements = new Map();
 
-        this.events = new EventEmitter(this);
         this.hintStore = hintStore || new HintStore(this.events);
         this.passStepListeners = new Set();
         this.logger = createLogger({
@@ -116,14 +124,6 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             for (const plugin of this.options.plugins) {
                 plugin.apply({onboarding: this});
                 this.logger.debug('Init onboarding plugin', plugin.name);
-            }
-        }
-
-        if (this.options.hooks) {
-            for (const [hookName, hookFunction] of Object.entries(this.options.hooks)) {
-                if (hookFunction) {
-                    this.events.subscribe(hookName as EventTypes, hookFunction);
-                }
             }
         }
 
@@ -609,7 +609,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
     async resetToDefaultState() {
         this.state = {
-            base: this.fullfillUserBaseState({}),
+            base: this.fulfillUserBaseState({}),
             progress: getDefaultProgressState(),
         };
 
@@ -653,7 +653,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
     }
 
-    private fullfillUserBaseState = (userState: Partial<BaseState>): BaseState => {
+    private fulfillUserBaseState = (userState: Partial<BaseState>): BaseState => {
         const nowDate = this.getOnboardingDate();
         const defaultState = {
             availablePresets: [],
@@ -666,9 +666,12 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         const isUserStateComplete =
             Object.keys(userState).length === Object.keys(defaultState).length;
+
         if (isUserStateComplete) {
             return userState as BaseState;
         }
+
+        this.events.emit('applyDefaultState', {});
 
         return {
             ...defaultState,

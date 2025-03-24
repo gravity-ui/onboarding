@@ -220,6 +220,19 @@ describe('preset hooks', function () {
         expect(options.hooks.beforeSuggestPreset).toHaveBeenCalledTimes(1);
     });
 });
+
+it('apply default state hook', async () => {
+    const options = getOptionsWithHooks();
+    // @ts-ignore
+    options.baseState = {};
+    const controller = new Controller(options);
+
+    await controller.ensureRunning();
+    await waitForNextTick();
+
+    expect(options.hooks.applyDefaultState).toHaveBeenCalledWith({}, controller);
+});
+
 describe('event subscriptions', function () {
     describe('beforeShowHint', () => {
         it('element reached -> trigger event', async function () {
