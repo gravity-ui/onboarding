@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.1](https://github.com/gravity-ui/onboarding/compare/v1.8.0...v1.8.1) (2025-03-24)
+
+
+### Bug Fixes
+
+* **promo-manager:** promo-wrapper typings ([bcff16e](https://github.com/gravity-ui/onboarding/commit/bcff16e5eb45d3dbc6ae59752623417811705ef9))
+
 ## [1.8.0](https://github.com/gravity-ui/onboarding/compare/v1.7.0...v1.8.0) (2025-03-21)
 
 
