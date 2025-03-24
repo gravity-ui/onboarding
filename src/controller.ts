@@ -85,10 +85,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.options = this.resolveOptions(options);
 
         this.state = {
-            base: {
-                ...this.getDefaultBaseState(),
-                ...options.baseState,
-            },
+            base: this.fullfillUserBaseState(options.baseState ?? {}),
         };
         this.status = 'idle';
         this.closedHints = new Set();
@@ -612,7 +609,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
     async resetToDefaultState() {
         this.state = {
-            base: this.getDefaultBaseState(),
+            base: this.fullfillUserBaseState({}),
             progress: getDefaultProgressState(),
         };
 
@@ -656,17 +653,32 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
     }
 
-    private getDefaultBaseState(): BaseState {
-        const nowDate = this.options.dateNow?.() ?? new Date();
-        return {
+    private fullfillUserBaseState = (userState: Partial<BaseState>): BaseState => {
+        const nowDate = this.getOnboardingDate();
+        const defaultState = {
             availablePresets: [],
             activePresets: [],
             suggestedPresets: [],
             wizardState: 'hidden' as const,
             enabled: false,
             lastUserActivity: nowDate.toUTCString(),
-            ...this.options.customDefaultState,
         };
+
+        const isUserStateComplete =
+            Object.keys(userState).length === Object.keys(defaultState).length;
+        if (isUserStateComplete) {
+            return userState as BaseState;
+        }
+
+        return {
+            ...defaultState,
+            ...this.options.customDefaultState,
+            ...userState,
+        } as BaseState;
+    };
+
+    private getOnboardingDate() {
+        return this.options.dateNow?.() ?? new Date();
     }
 
     private resolvePresetSlug = (presetSlug: string) => {
