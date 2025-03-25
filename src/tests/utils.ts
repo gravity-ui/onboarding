@@ -328,6 +328,7 @@ export const getOptionsWithHooks = (...args: Parameters<typeof getOptions>) => (
         finishPreset: jest.fn(),
         beforeSuggestPreset: jest.fn(),
         beforeShowHint: jest.fn(async () => true),
+        applyDefaultState: jest.fn(),
     },
 });
 

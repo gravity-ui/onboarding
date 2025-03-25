@@ -199,6 +199,7 @@ export type EventsMap<
     };
     init: {};
     wizardStateChanged: {wizardState: BaseState['wizardState']};
+    applyDefaultState: {};
 };
 
 export type EventTypes = keyof EventsMap<any, any, any>;
