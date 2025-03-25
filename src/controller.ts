@@ -66,7 +66,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         base: BaseState;
         progress?: ProgressState;
     };
-    status: 'idle' | 'active';
+    status: 'idle' | 'active' | 'disabled';
     progressLoadingPromise: Promise<Partial<ProgressState>> | undefined;
     closedHints: Set<Steps>;
     reachedElements: Map<Steps, HTMLElement>;
@@ -82,6 +82,12 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         options: InitOptions<HintParams, Presets, Steps>,
         hintStore?: HintStore<HintParams, Presets, Steps>,
     ) {
+        if (options.globalSwitch === 'off') {
+            this.status = 'disabled';
+        } else {
+            this.status = 'idle';
+        }
+
         this.options = this.resolveOptions(options);
 
         this.events = new EventEmitter(this);
@@ -96,7 +102,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.state = {
             base: this.fulfillUserBaseState(options.baseState ?? {}),
         };
-        this.status = 'idle';
+
         this.closedHints = new Set();
         this.reachedElements = new Map();
 
@@ -173,6 +179,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     };
 
     passStep = async (stepSlug: Steps) => {
+        if (this.status === 'disabled') {
+            return;
+        }
+
         this.logger.debug('Step passed', stepSlug);
 
         const preset = this.findAvailablePresetWithStep(stepSlug);
@@ -208,12 +218,20 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     };
 
     setWizardState = async (state: BaseState['wizardState']) => {
+        if (this.status === 'disabled') {
+            return;
+        }
+
         this.state.base.wizardState = state;
         await this.events.emit('wizardStateChanged', {wizardState: state});
         await this.updateBaseState();
     };
 
     setOnboardingEnabled = async (enabled: boolean) => {
+        if (this.status === 'disabled') {
+            return;
+        }
+
         this.state.base.enabled = enabled;
         await this.updateBaseState();
     };
@@ -222,6 +240,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         stepSlug,
         element,
     }: Omit<ReachElementParams<Presets, Steps>, 'preset'>) => {
+        if (this.status === 'disabled') {
+            return;
+        }
+
         this.logger.debug('Step element reached', stepSlug, element);
         this.reachedElements.set(stepSlug, element);
 
@@ -404,6 +426,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     }
 
     addPreset = async (presetArg: string | string[]) => {
+        if (this.status === 'disabled') {
+            return;
+        }
+
         const presets = this.filterExistedPresets(
             Array.isArray(presetArg) ? presetArg : [presetArg],
         );
@@ -442,6 +468,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     };
 
     runPreset = async (presetToRunSlug: string) => {
+        if (this.status === 'disabled') {
+            return false;
+        }
+
         if (!this.presetExistsGuard(presetToRunSlug)) {
             return false;
         }
@@ -499,6 +529,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     };
 
     finishPreset = async (presetToFinish: Presets, shouldSave = true) => {
+        if (this.status === 'disabled') {
+            return false;
+        }
+
         // take normal or find internal
         const presetSlug = this.resolvePresetSlug(presetToFinish);
         if (!presetSlug) {
@@ -538,6 +572,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         presetArg: string | string[],
         {removeFromSuggested} = {removeFromSuggested: false},
     ) => {
+        if (this.status === 'disabled') {
+            return;
+        }
+
         this.logger.debug('Reset progress for', presetArg);
         await this.ensureRunning();
         this.progressLoadedGuard();
@@ -574,7 +612,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     };
 
     async ensureRunning() {
-        if (this.status === 'active') {
+        if (this.status === 'active' || this.status === 'disabled') {
             return;
         }
 

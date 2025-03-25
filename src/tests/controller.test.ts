@@ -710,3 +710,151 @@ describe('progressState init', function () {
         expect(controller.state.progress).toEqual(progressState);
     });
 });
+
+describe('global switch = off. No requests. No errors', () => {
+    it('init', async () => {
+        const options = getOptions();
+        // @ts-ignore
+        options.globalSwitch = 'off';
+
+        const controller = new Controller(options);
+        await controller.ensureRunning();
+
+        expect(options.getProgressState).not.toHaveBeenCalled();
+        expect(options.onSave.state).not.toHaveBeenCalled();
+        expect(options.onSave.progress).not.toHaveBeenCalled();
+    });
+
+    it('reach element', async () => {
+        const options = getOptions();
+        // @ts-ignore
+        options.globalSwitch = 'off';
+
+        const controller = new Controller(options);
+        await controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: getAnchorElement(),
+        });
+
+        expect(options.getProgressState).not.toHaveBeenCalled();
+        expect(options.onSave.state).not.toHaveBeenCalled();
+        expect(options.onSave.progress).not.toHaveBeenCalled();
+    });
+
+    it('pass step', async () => {
+        const options = getOptions();
+        // @ts-ignore
+        options.globalSwitch = 'off';
+
+        const controller = new Controller(options);
+        await controller.passStep('createSprint');
+
+        expect(options.getProgressState).not.toHaveBeenCalled();
+        expect(options.onSave.state).not.toHaveBeenCalled();
+        expect(options.onSave.progress).not.toHaveBeenCalled();
+    });
+
+    it('add preset', async () => {
+        const options = getOptions();
+        // @ts-ignore
+        options.globalSwitch = 'off';
+
+        const controller = new Controller(options);
+        await controller.addPreset('createQueue');
+
+        expect(options.getProgressState).not.toHaveBeenCalled();
+        expect(options.onSave.state).not.toHaveBeenCalled();
+        expect(options.onSave.progress).not.toHaveBeenCalled();
+    });
+
+    it('run preset', async () => {
+        const options = getOptions();
+        // @ts-ignore
+        options.globalSwitch = 'off';
+
+        const controller = new Controller(options);
+        await controller.runPreset('createQueue');
+
+        expect(options.getProgressState).not.toHaveBeenCalled();
+        expect(options.onSave.state).not.toHaveBeenCalled();
+        expect(options.onSave.progress).not.toHaveBeenCalled();
+    });
+
+    it('suggest preset', async () => {
+        const options = getOptions();
+        // @ts-ignore
+        options.globalSwitch = 'off';
+
+        const controller = new Controller(options);
+        await controller.runPreset('createQueue');
+
+        expect(options.getProgressState).not.toHaveBeenCalled();
+        expect(options.onSave.state).not.toHaveBeenCalled();
+        expect(options.onSave.progress).not.toHaveBeenCalled();
+    });
+
+    it('run preset', async () => {
+        const options = getOptions();
+        // @ts-ignore
+        options.globalSwitch = 'off';
+
+        const controller = new Controller(options);
+        await controller.runPreset('createProject');
+
+        expect(options.getProgressState).not.toHaveBeenCalled();
+        expect(options.onSave.state).not.toHaveBeenCalled();
+        expect(options.onSave.progress).not.toHaveBeenCalled();
+    });
+
+    it('finish preset', async () => {
+        const options = getOptions();
+        // @ts-ignore
+        options.globalSwitch = 'off';
+
+        const controller = new Controller(options);
+        await controller.runPreset('createProject');
+
+        expect(options.getProgressState).not.toHaveBeenCalled();
+        expect(options.onSave.state).not.toHaveBeenCalled();
+        expect(options.onSave.progress).not.toHaveBeenCalled();
+    });
+
+    it('setWizard', async () => {
+        const options = getOptions();
+        // @ts-ignore
+        options.globalSwitch = 'off';
+
+        const controller = new Controller(options);
+        await controller.setWizardState('hidden');
+
+        expect(options.getProgressState).not.toHaveBeenCalled();
+        expect(options.onSave.state).not.toHaveBeenCalled();
+        expect(options.onSave.progress).not.toHaveBeenCalled();
+    });
+
+    it('setEnabled', async () => {
+        const options = getOptions();
+        // @ts-ignore
+        options.globalSwitch = 'off';
+
+        const controller = new Controller(options);
+        await controller.setOnboardingEnabled(false);
+
+        expect(options.getProgressState).not.toHaveBeenCalled();
+        expect(options.onSave.state).not.toHaveBeenCalled();
+        expect(options.onSave.progress).not.toHaveBeenCalled();
+    });
+
+    it('resetPresetProgress', async () => {
+        const options = getOptions();
+        // @ts-ignore
+        options.globalSwitch = 'off';
+
+        const controller = new Controller(options);
+        await controller.resetPresetProgress('createProject');
+
+        expect(options.getProgressState).not.toHaveBeenCalled();
+        expect(options.onSave.state).not.toHaveBeenCalled();
+        expect(options.onSave.progress).not.toHaveBeenCalled();
+    });
+});
