@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.9.0](https://github.com/gravity-ui/onboarding/compare/v1.8.1...v1.9.0) (2025-03-25)
+
+
+### Features
+
+* **onboarding:** add applyDefaultState hook ([5503bb5](https://github.com/gravity-ui/onboarding/commit/5503bb5daea05558f98ee953b444e7d1f2ba6ebb))
+* **onboarding:** add global turn off switch ([12f37e6](https://github.com/gravity-ui/onboarding/commit/12f37e60744e9eb684e41ff7c3aa9916f376ba12))
+
 ## [1.8.1](https://github.com/gravity-ui/onboarding/compare/v1.8.0...v1.8.1) (2025-03-24)
 
 
