@@ -39,13 +39,15 @@ This package contains 2 tools:
 
 # Onboarding guide
 
+You can try it out in [playground](https://stackblitz.com/edit/vitejs-vite-77hphtee?file=src%2Fonboarding%2Flib.ts)
+
 ## How to use onboarding
 
 <details>
   <summary>Basic react example</summary>
 
 ```typescript jsx
-// todo-list-onboarding.ts
+// onboarding/lib.ts
 import {createOnboarding, createPreset} from '@gravity-ui/onboarding';
 
 export const {
@@ -83,40 +85,54 @@ export const {
 ```
 
 ```typescript jsx
-// App.tsx
-import {useOnboardingHint} from '../todo-list-onboarding.ts';
+// Hint.tsx
+import { useCallback } from 'react';
+import { Popup } from '@gravity-ui/uikit';
+import { useOnboardingHint } from './lib.ts';
 
-const {anchorRef, hint, open, onClose} = useOnboardingHint();
+export const OnboardingHint = () => {
+  const { anchorRef, hint, open, onClose } = useOnboardingHint();
 
-return (
-  <HintPopup
-    open={open}
-    anchor={anchorRef}
-    title={hint?.step.name}
-    description={hint?.step.description}
-    onClose={onClose}
-  />
-);
+  const handleClose = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
+  return (
+    <>
+      <Popup
+        anchorElement={anchorRef.current}
+        open={open}
+        onOpenChange={handleClose}
+      >
+        <h3>{hint?.step.name}</h3>
+        {hint?.step.description}
+      </Popup>
+    </>
+  );
+};
 ```
 
 ```typescript jsx
 // todo-list.tsx
-import {useOnboardingStep} from '../todo-list-onboarding.ts';
+import { useOnboardingStep } from './onboarding/lib';
 
-const {pass, ref} = useOnboardingStep('createFirstIssue');
+export const SomeFeature = () => {
+  const { pass, ref } = useOnboardingStep('createTodoList');
 
-return (
-  <Button
-    onClick={() => {
-      pass();
-      handleAddTodoList();
-    }}
-    ref={ref}
-    // ...
-  >
-    "Add new list"
-  </Button>
-);
+  return (
+    <Button
+      onClick={() => {
+        pass();
+        handleAddTodoList();
+      }}
+      ref={ref}
+      // ...
+    >
+      "Add new list"
+    </Button>
+  );
+
+};
 ```
 
 </details>
@@ -132,8 +148,11 @@ const onboardingOptions = {
   config: {
     presets: {/**/},
   },
+  globalSwitch: 'off', // optional.  turn off onboarding globally. For example in some entire env 
+  ignoreUnknownPresets: true, // optional. will not thorow error for unknown presets
   baseState: {/**/}, // initial state for current user
   getProgressState: () => {/**/}, // function to load user progress
+  customDefaultState: {/**/}, // optional. will apply this value for user with no base state
   onSave: {
     // functions to save user state
     state: (state) => {/**/},
@@ -161,9 +180,11 @@ const onboardingOptions = {
     beforeShowHint: ({stepData}) => {/**/},
     stateChange: ({state}) => {/**/},
     hintDataChanged: ({state}) => {/**/},
-    closeHint: ({hint}) => {/**/},
+    closeHint: ({hint, eventSource}) => {/**/},
+    closeHintByUser: ({hint, eventSource}) => {/**/},
     init: () => {/**/},
     wizardStateChanged: ({wizardState}) => {/**/},
+    applyDefaultState: ({wizardState}) => {/**/},
   },
 };
 ```
