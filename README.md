@@ -135,6 +135,34 @@ export const SomeFeature = () => {
 };
 ```
 
+If you dont have access to target element you can use `useOnboardingStepBySelector`
+
+```typescript jsx
+// todo-list.tsx
+import {useOnboardingStepBySelector} from '../todo-list-onboarding.ts';
+
+const ref = useRef()
+useOnboardingStepBySelector({
+  element: ref.current,
+  selector: '.deep_nested_element',
+  step: 'createFirstIssue'
+});
+
+return (
+  <Button
+    onClick={() => {
+      pass();
+      handleAddTodoList();
+    }}
+    ref={ref}
+    // ...
+  >
+    "Add new list"
+  </Button>
+);
+```
+
+
 </details>
 
 ## Onboarding configuration
