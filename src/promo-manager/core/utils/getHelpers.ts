@@ -1,4 +1,4 @@
-import type {Helpers, PromoGroup, Promo, PromoMeta} from '../types';
+import type {Helpers, Promo, PromoGroup, PromoMeta} from '../types';
 
 const getPriority = (promo: Promo, counter: number) => {
     return promo.priority === 'high' ? -1 : counter;

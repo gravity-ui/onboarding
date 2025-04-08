@@ -64,6 +64,7 @@ export class PromoTabSyncPlugin implements PromoManagerPlugin {
                         const isFreshData = lsValue.date > this.storeChangedTime;
 
                         if (isFreshData) {
+                            // eslint-disable-next-line no-param-reassign
                             promoManager.state.progress = lsValue.value;
                             promoManager['emitChange']();
                             promoManager['invalidateBaseState']();

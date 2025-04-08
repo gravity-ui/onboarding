@@ -218,9 +218,8 @@ export type Merge<T extends object> = {
     [k in NonCommonKeys<T>]?: PickTypeOf<T, k>;
 };
 
-type PickTypeOf<T, K extends string | number | symbol> = K extends AllKeys<T>
-    ? PickType<T, K>
-    : never;
+type PickTypeOf<T, K extends string | number | symbol> =
+    K extends AllKeys<T> ? PickType<T, K> : never;
 
 export type InferStepsFromPreset<T> = T extends {steps: Array<infer U>}
     ? U extends PresetStep<infer Steps, any>

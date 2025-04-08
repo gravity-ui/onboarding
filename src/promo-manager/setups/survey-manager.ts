@@ -1,5 +1,5 @@
 import {createPromoManager} from '../core';
-import type {PromoProgressState, PromoOptions, PromoGroup} from '../core/types';
+import type {PromoGroup, PromoOptions, PromoProgressState} from '../core/types';
 
 type CreateSurveyOptions = {
     group?: PromoGroup;

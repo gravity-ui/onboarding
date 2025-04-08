@@ -277,7 +277,7 @@ describe('wrong data', function () {
 
         try {
             await controller.runPreset('unknownPreset');
-        } catch (e) {
+        } catch {
             expect(options.logger.logger.error).toHaveBeenCalled();
         }
     });

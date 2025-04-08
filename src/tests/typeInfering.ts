@@ -1,19 +1,18 @@
 import {
     CombinedPreset,
+    InferHintParamsFromPreset,
+    InferStepsFromPreset,
+    PresetField,
     createCombinedPreset,
     createOnboarding,
     createPreset,
     createStep,
-    InferHintParamsFromPreset,
-    InferStepsFromPreset,
-    PresetField,
 } from '../index';
 import {Controller} from '../controller';
 
 type Expect<T extends true> = T;
-type Equal<X, Y> = (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2
-    ? true
-    : false;
+type Equal<X, Y> =
+    (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2 ? true : false;
 type Extends<X, Y> = X extends Y ? true : false;
 type Not<T extends boolean> = T extends false ? true : false;
 
@@ -45,6 +44,7 @@ const combinedPreset = createCombinedPreset({
     pickPreset: () => 'one',
 });
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const {controller} = createOnboarding({
     config: {
         presets: {

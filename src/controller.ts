@@ -1,8 +1,8 @@
 import type {
     BaseState,
     CommonPreset,
-    EventsMap,
     EventTypes,
+    EventsMap,
     HintCloseSource,
     InitOptions,
     Preset,
@@ -14,7 +14,7 @@ import type {
     UserPreset,
 } from './types';
 import {HintStore} from './hints/hintStore';
-import {createLogger, Logger} from './logger';
+import {Logger, createLogger} from './logger';
 import {createDebounceHandler} from './debounce';
 import {EventEmitter} from './event-emitter';
 
@@ -399,7 +399,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
                 try {
                     slug = this.resolvePresetSlug(presetSlug);
-                } catch (e) {
+                } catch {
                     status = 'unPassed';
                 }
 
@@ -629,7 +629,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.logger.debug('Loading onboarding progress data');
         try {
             this.initProgressState(await this.progressLoadingPromise);
-        } catch (e) {
+        } catch {
             this.logger.error('progress data loading error');
         }
     }
