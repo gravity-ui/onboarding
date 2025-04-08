@@ -1,5 +1,5 @@
 import type {MutableRefObject} from 'react';
-import type {HintCloseSource, ShowHintParams, EventListener, EventsMap, EventTypes} from '../types';
+import type {EventListener, EventTypes, EventsMap, HintCloseSource, ShowHintParams} from '../types';
 import {EventEmitter} from '../event-emitter';
 
 export type HintState<HintParams, Preset extends string, Steps extends string> = {

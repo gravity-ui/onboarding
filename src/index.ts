@@ -1,14 +1,14 @@
 import {getHooks} from './hooks';
 import {Controller} from './controller';
 import type {
-    InitOptions,
-    PresetStep,
-    InferStepsFromPreset,
-    InferHintParamsFromPreset,
     InferHintParamsFromOptions,
-    InferStepsFromOptions,
+    InferHintParamsFromPreset,
     InferPresetsFromOptions,
+    InferStepsFromOptions,
+    InferStepsFromPreset,
+    InitOptions,
     PresetFunctions,
+    PresetStep,
 } from './types';
 import {BaseState, CombinedPreset, InternalPreset, PresetField} from './types';
 

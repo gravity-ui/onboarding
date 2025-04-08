@@ -1,19 +1,19 @@
 import {createDebounceHandler} from '../../debounce';
-import {createLogger, Logger} from '../../logger';
+import {Logger, createLogger} from '../../logger';
 import type {
+    PromoBaseState as BaseState,
     ConditionHelper,
     Conditions,
-    EventsMap,
     EventTypes,
+    EventsMap,
     Helpers,
     InitPromoManagerOptions,
     Nullable,
     ProgressInfoConfig,
-    PromoBaseState as BaseState,
+    PromoProgressState as ProgressState,
     PromoGroupSlug,
     PromoManagerStatus,
     PromoOptions,
-    PromoProgressState as ProgressState,
     PromoSlug,
     PromoState,
     PromoStatus,

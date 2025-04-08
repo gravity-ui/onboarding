@@ -6,6 +6,7 @@ const addStepHookMocks = (step: PresetStep<any, any>) => {
     const onCloseHintByUserMock = jest.fn();
     const onCloseHintMock = jest.fn();
     const onStepPassMock = jest.fn();
+    // eslint-disable-next-line no-param-reassign
     step.hooks = {
         onCloseHintByUser: onCloseHintByUserMock,
         onCloseHint: onCloseHintMock,
