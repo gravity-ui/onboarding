@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.10.0](https://github.com/gravity-ui/onboarding/compare/v1.9.0...v1.10.0) (2025-04-18)
+
+
+### Features
+
+* add useOnboardingStepBySelector hook ([39b67df](https://github.com/gravity-ui/onboarding/commit/39b67df8d287526352f95fc5a36451e257a99a68))
+
+
+### Bug Fixes
+
+* type HTMLElement -&gt; Element ([529822a](https://github.com/gravity-ui/onboarding/commit/529822a14b42b93c43dd4cb3a55f7c2fe9447975))
+
 ## [1.9.0](https://github.com/gravity-ui/onboarding/compare/v1.8.1...v1.9.0) (2025-03-25)
 
 
