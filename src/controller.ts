@@ -69,7 +69,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     status: 'idle' | 'active' | 'disabled';
     progressLoadingPromise: Promise<Partial<ProgressState>> | undefined;
     closedHints: Set<Steps>;
-    reachedElements: Map<Steps, HTMLElement>;
+    reachedElements: Map<Steps, Element>;
     hintStore: HintStore<HintParams, Presets, Steps>;
     logger: Logger;
     passStepListeners: Set<Listener>;

@@ -3,7 +3,7 @@ import type {EventListener, EventTypes, EventsMap, HintCloseSource, ShowHintPara
 import {EventEmitter} from '../event-emitter';
 
 export type HintState<HintParams, Preset extends string, Steps extends string> = {
-    anchorRef: MutableRefObject<HTMLElement | null>;
+    anchorRef: MutableRefObject<Element | null>;
     open: boolean;
     hint?: Pick<ShowHintParams<HintParams, Preset, Steps>, 'preset' | 'step'>;
 };
@@ -31,7 +31,7 @@ export class HintStore<HintParams, Preset extends string, Steps extends string> 
         this.emitter.emit('hintDataChanged', {state: this.state});
     };
 
-    updateHintAnchor = ({element, step}: {element: HTMLElement | null; step: Steps}) => {
+    updateHintAnchor = ({element, step}: {element: Element | null; step: Steps}) => {
         if (this.state.hint?.step?.slug !== step) {
             return;
         }
