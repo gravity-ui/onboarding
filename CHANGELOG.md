@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.1](https://github.com/gravity-ui/onboarding/compare/v1.10.0...v1.10.1) (2025-04-18)
+
+
+### Bug Fixes
+
+* export useOnboardingStepBySelector hook ([d48b846](https://github.com/gravity-ui/onboarding/commit/d48b8469aa00e7fe225a338a44a20b54d44d2388))
+
 ## [1.10.0](https://github.com/gravity-ui/onboarding/compare/v1.9.0...v1.10.0) (2025-04-18)
 
 
