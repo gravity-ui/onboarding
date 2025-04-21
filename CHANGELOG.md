@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.2](https://github.com/gravity-ui/onboarding/compare/v1.10.1...v1.10.2) (2025-04-21)
+
+
+### Bug Fixes
+
+* useOnboardingStepBySelector fix typings, add actions ([f3e3878](https://github.com/gravity-ui/onboarding/commit/f3e38780cb42718fc10a2c2d5327d92fa7d2d392))
+
 ## [1.10.1](https://github.com/gravity-ui/onboarding/compare/v1.10.0...v1.10.1) (2025-04-18)
 
 
