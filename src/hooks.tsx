@@ -2,7 +2,7 @@ import {useCallback, useEffect, useMemo, useSyncExternalStore} from 'react';
 import type {Controller} from './controller';
 
 type StepBySelectorOptions<Steps> = {
-    element: Element;
+    element: Element | null | undefined;
     selector: string;
     step: Steps;
     readyForHint?: boolean;
@@ -66,6 +66,19 @@ export function getHooks<HintParams, Presets extends string, Steps extends strin
                 controller.stepElementDisappeared(step);
             };
         }, [element, selector]);
+
+        const pass = useCallback(async () => {
+            await controller.passStep(step);
+        }, [step]);
+
+        const closeHint = useCallback(() => {
+            controller.closeHintByUser(step);
+        }, [step]);
+
+        return {
+            pass,
+            closeHint,
+        };
     };
 
     const useOnboardingPresets = () => {
