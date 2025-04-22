@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.0](https://github.com/gravity-ui/onboarding/compare/v1.10.2...v1.11.0) (2025-04-22)
+
+
+### Features
+
+* **onboarding:** adds the ability to pass ref for useOnboardingStepBySelector ([3301951](https://github.com/gravity-ui/onboarding/commit/33019512e4572c9008e471cf7496e40be2e6153c))
+
 ## [1.10.2](https://github.com/gravity-ui/onboarding/compare/v1.10.1...v1.10.2) (2025-04-21)
 
 
