@@ -1,8 +1,9 @@
-import {useCallback, useEffect, useMemo, useSyncExternalStore} from 'react';
+import {RefObject, useCallback, useEffect, useMemo, useSyncExternalStore} from 'react';
 import type {Controller} from './controller';
 
 type StepBySelectorOptions<Steps> = {
-    element: Element | null | undefined;
+    element?: Element | null | undefined;
+    ref?: RefObject<Element | null | undefined>;
     selector: string;
     step: Steps;
     readyForHint?: boolean;
@@ -39,15 +40,18 @@ export function getHooks<HintParams, Presets extends string, Steps extends strin
     };
 
     const useOnboardingStepBySelector = ({
+        ref,
         element,
         selector,
         step,
         readyForHint = true,
     }: StepBySelectorOptions<Steps>) => {
         useEffect(() => {
+            const parentElement = ref?.current ?? element;
+
             if (readyForHint) {
-                if (element) {
-                    const targetElement = element.querySelector(selector);
+                if (parentElement) {
+                    const targetElement = parentElement.querySelector(selector);
 
                     if (targetElement) {
                         controller.stepElementReached({
@@ -65,7 +69,7 @@ export function getHooks<HintParams, Presets extends string, Steps extends strin
             return () => {
                 controller.stepElementDisappeared(step);
             };
-        }, [element, selector]);
+        }, [ref?.current, element, selector]);
 
         const pass = useCallback(async () => {
             await controller.passStep(step);
