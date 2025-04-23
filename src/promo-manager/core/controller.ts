@@ -471,7 +471,9 @@ export class Controller {
         );
 
         if (!promoGroupToIntegrate) {
-            this.logger.error("Can't find group for onboarding integration", promoGroupToIntegrate);
+            this.logger.error(
+                `Promo gpoup for onboarding integration with slug"${promoGroupToIntegrate}" not found in promo manager config`,
+            );
             return;
         }
 
