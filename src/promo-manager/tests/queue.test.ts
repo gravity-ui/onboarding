@@ -1,6 +1,7 @@
 import {Controller} from '../core/controller';
 
 import {testOptions} from './options';
+import {LimitFrequency} from '../core/condition/condition-helpers';
 
 test('add two same promo -> no duplicates in queue', async () => {
     const controller = new Controller(testOptions);
@@ -55,4 +56,48 @@ test('priority of boardPoll is higher -> boardPoll is active', async () => {
     await Promise.all([promise1, promise2, promise3]);
 
     expect(controller.state.base.activePromo).toBe('boardPoll');
+});
+
+test('finish promo -> save progress before next promo run', async () => {
+    const controller = new Controller({
+        ...testOptions,
+        config: {
+            ...testOptions.config,
+            constraints: [
+                // forbid sequential runs
+                LimitFrequency({
+                    slugs: ['boardPoll', 'ganttPoll'],
+                    interval: {weeks: 1},
+                }),
+            ],
+        },
+    });
+
+    await controller.requestStart('boardPoll');
+    await controller.requestStart('ganttPoll');
+    controller.finishPromo('boardPoll');
+
+    expect(controller.state.base.activePromo).toBe(null);
+});
+
+test('cancel promo -> save progress before next promo run', async () => {
+    const controller = new Controller({
+        ...testOptions,
+        config: {
+            ...testOptions.config,
+            constraints: [
+                LimitFrequency({
+                    // forbid sequential runs
+                    slugs: ['boardPoll', 'ganttPoll'],
+                    interval: {weeks: 1},
+                }),
+            ],
+        },
+    });
+
+    await controller.requestStart('boardPoll');
+    await controller.requestStart('ganttPoll');
+    controller.cancelPromo('boardPoll');
+
+    expect(controller.state.base.activePromo).toBe(null);
 });
