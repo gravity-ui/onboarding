@@ -206,11 +206,11 @@ export class Controller {
             return;
         }
 
-        this.closePromoWithTimeout(slug, closeActiveTimeout);
         this.stateActions.addPromoToFinished(slug);
         this.stateActions.removeFromQueue(slug);
-
         this.updateProgressInfo(slug);
+
+        this.closePromoWithTimeout(slug, closeActiveTimeout);
 
         this.events.emit('finishPromo', {slug});
     };
@@ -221,8 +221,9 @@ export class Controller {
             return;
         }
 
-        this.closePromoWithTimeout(slug, closeActiveTimeout);
         this.updateProgressInfo(slug);
+        this.closePromoWithTimeout(slug, closeActiveTimeout);
+
         this.events.emit('cancelPromo', {slug});
     };
 
