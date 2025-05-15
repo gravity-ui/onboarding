@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.1](https://github.com/gravity-ui/onboarding/compare/v1.11.0...v1.11.1) (2025-05-15)
+
+
+### Bug Fixes
+
+* **promo-manger:** fix conditions in sequential runs ([edc63f6](https://github.com/gravity-ui/onboarding/commit/edc63f65eb32878b3231b8cde0866ce972bc924a))
+
 ## [1.11.0](https://github.com/gravity-ui/onboarding/compare/v1.10.2...v1.11.0) (2025-04-22)
 
 
