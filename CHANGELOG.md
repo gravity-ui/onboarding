@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.2](https://github.com/gravity-ui/onboarding/compare/v1.11.1...v1.11.2) (2025-05-16)
+
+
+### Bug Fixes
+
+* **promo-manger:** forbid rerun not repeatable promos ([901dc3d](https://github.com/gravity-ui/onboarding/commit/901dc3db970540b041931cb4e57ece3f33a8c99d))
+
 ## [1.11.1](https://github.com/gravity-ui/onboarding/compare/v1.11.0...v1.11.1) (2025-05-15)
 
 
