@@ -13,13 +13,13 @@ describe('active promo', () => {
     });
 
     describe('requestStart', function () {
-        test('run one promo', async () => {
+        test('run one promo -> promo became active', async () => {
             await controller.requestStart('boardPoll');
 
             expect(controller.state.base.activePromo).toBe('boardPoll');
         });
 
-        test('run one promo not from the config', async () => {
+        test('run one promo not from the config -> no active promo', async () => {
             await controller.requestStart('boardPollFake');
 
             expect(controller.state.base.activePromo).toBe(null);
@@ -229,27 +229,73 @@ describe('promo status', function () {
     });
 });
 
-describe('repeated runs', function () {
-    it('common promo -> cannot run', async function () {
-        const controller = new Controller(testOptions);
+describe('repeated runs', () => {
+    describe('common promos', () => {
+        it('finished common promo -> cannot rerun', async function () {
+            const controller = new Controller(testOptions);
 
-        await controller.requestStart('boardPoll');
-        await controller.finishPromo('boardPoll');
+            await controller.requestStart('boardPoll');
+            await controller.finishPromo('boardPoll');
 
-        await controller.requestStart('boardPoll');
+            await controller.requestStart('boardPoll');
 
-        expect(controller.state.base.activePromo).toBe(null);
+            expect(controller.state.base.activePromo).toBe(null);
+        });
+
+        it('cancelled common promo -> cannot rerun', async function () {
+            const controller = new Controller(testOptions);
+
+            await controller.requestStart('boardPoll');
+            await controller.cancelPromo('boardPoll');
+            await controller.requestStart('boardPoll');
+
+            expect(controller.state.base.activePromo).toBe(null);
+        });
+
+        it('skipped common promo -> cannot rerun', async function () {
+            const controller = new Controller(testOptions);
+
+            await controller.requestStart('boardPoll');
+            await controller.skipPromo('boardPoll');
+            await controller.requestStart('boardPoll');
+
+            expect(controller.state.base.activePromo).toBe('boardPoll');
+        });
     });
 
-    it('repeated promo -> can rerun', async function () {
-        const controller = new Controller(testOptions);
+    describe('repeatable promos', () => {
+        it('finished repeated promo -> can rerun', async function () {
+            const controller = new Controller(testOptions);
 
-        await controller.requestStart('boardPollRepeatable');
-        await controller.finishPromo('boardPollRepeatable');
+            await controller.requestStart('boardPollRepeatable');
+            await controller.finishPromo('boardPollRepeatable');
 
-        await controller.requestStart('boardPollRepeatable');
+            await controller.requestStart('boardPollRepeatable');
 
-        expect(controller.state.base.activePromo).toBe('boardPollRepeatable');
+            expect(controller.state.base.activePromo).toBe('boardPollRepeatable');
+        });
+
+        it('skipped repeated promo -> can rerun', async function () {
+            const controller = new Controller(testOptions);
+
+            await controller.requestStart('boardPollRepeatable');
+            await controller.skipPromo('boardPollRepeatable');
+
+            await controller.requestStart('boardPollRepeatable');
+
+            expect(controller.state.base.activePromo).toBe('boardPollRepeatable');
+        });
+
+        it('cancelled repeated promo -> can rerun', async function () {
+            const controller = new Controller(testOptions);
+
+            await controller.requestStart('boardPollRepeatable');
+            await controller.cancelPromo('boardPollRepeatable');
+
+            await controller.requestStart('boardPollRepeatable');
+
+            expect(controller.state.base.activePromo).toBe('boardPollRepeatable');
+        });
     });
 });
 

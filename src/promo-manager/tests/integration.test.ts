@@ -37,7 +37,7 @@ describe('periodic runs', function () {
         expect(controller.state.base.activePromo).toBe('every2Months');
     });
 
-    it('finish promo and request after 2 months -> not show again', async () => {
+    it('finish promo and request after 2 months -> show again', async () => {
         const controller = new Controller(options);
 
         await controller.requestStart('every2Months');
@@ -51,7 +51,7 @@ describe('periodic runs', function () {
 
         await controller.requestStart('every2Months');
 
-        expect(controller.state.base.activePromo).toBe(null);
+        expect(controller.state.base.activePromo).toBe('every2Months');
     });
 });
 

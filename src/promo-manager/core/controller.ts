@@ -253,7 +253,7 @@ export class Controller {
             return 'active';
         }
 
-        if (this.isFinished(slug)) {
+        if (this.isFinished(slug) || this.isCancelled(slug)) {
             if (!this.isPromoRepeatable(slug)) {
                 return 'finished';
             }
@@ -579,6 +579,16 @@ export class Controller {
         this.assertProgressLoaded();
 
         return this.state.progress.finishedPromos.includes(slug);
+    };
+
+    private isCancelled = (slug: PromoSlug) => {
+        this.assertProgressLoaded();
+
+        if (this.isFinished(slug)) {
+            return false;
+        }
+
+        return Boolean(this.state.progress?.progressInfoByPromo[slug]);
     };
 
     private isPending = (slug: PromoSlug) => {

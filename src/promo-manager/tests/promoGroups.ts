@@ -82,6 +82,7 @@ export const repeatedPoll: PromoGroup = {
 export const pollWithConditions: PromoGroup = {
     slug: 'ask',
     conditions: [ShowOnceForPeriod({months: 1})],
+    repeatable: true,
     promos: [
         {
             slug: 'every2Months',
@@ -101,6 +102,7 @@ export const pollWithConditions: PromoGroup = {
 export const pollWitJsonConditions: PromoGroup = {
     slug: 'ask',
     conditions: [ShowOnceForPeriod({months: 1})],
+    repeatable: true,
     promos: [
         {
             slug: 'every2Months',
