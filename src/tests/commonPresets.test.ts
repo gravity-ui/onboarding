@@ -338,6 +338,57 @@ describe('preset management', function () {
 
             expect(controller.state.base.suggestedPresets).toEqual([]);
         });
+
+        it('removeFromSuggested=true, preserve non-reset presets in suggested', async function () {
+            const options = getOptions(
+                {
+                    suggestedPresets: ['createProject', 'createQueue', 'anotherPreset'],
+                    activePresets: ['createProject'],
+                },
+                {finishedPresets: ['createQueue']},
+            );
+
+            const controller = new Controller(options);
+            await controller.resetPresetProgress(['createProject'], {
+                removeFromSuggested: true,
+            });
+
+            expect(controller.state.base.suggestedPresets).toEqual([
+                'createQueue',
+                'anotherPreset',
+            ]);
+        });
+
+        it('removeFromSuggested=true, only remove specified presets from suggested', async function () {
+            const options = getOptions({
+                suggestedPresets: ['createProject', 'createQueue'],
+                activePresets: ['createProject', 'createQueue'],
+            });
+
+            const controller = new Controller(options);
+            await controller.resetPresetProgress(['createProject'], {
+                removeFromSuggested: true,
+            });
+
+            expect(controller.state.base.suggestedPresets).toEqual(['createQueue']);
+        });
+
+        it('removeFromSuggested=false, keep all suggested presets', async function () {
+            const options = getOptions({
+                suggestedPresets: ['createProject', 'createQueue'],
+                activePresets: ['createProject'],
+            });
+
+            const controller = new Controller(options);
+            await controller.resetPresetProgress(['createProject'], {
+                removeFromSuggested: false,
+            });
+
+            expect(controller.state.base.suggestedPresets).toEqual([
+                'createProject',
+                'createQueue',
+            ]);
+        });
     });
 });
 

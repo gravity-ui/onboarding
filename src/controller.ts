@@ -599,7 +599,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         );
 
         if (removeFromSuggested) {
-            this.state.base.suggestedPresets = this.state.base.activePresets.filter(
+            this.state.base.suggestedPresets = this.state.base.suggestedPresets.filter(
                 (preset) => !presets.includes(preset as Presets),
             );
         }
