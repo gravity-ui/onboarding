@@ -111,7 +111,7 @@ describe('combined presets', function () {
             await controller.finishPreset('combinedPreset');
             await controller.finishPreset('combinedPreset');
 
-            // При повторном вызове finishPreset сохранение не должно происходить
+            // On repeated finishPreset call, saving should not occur
             expect(options.onSave.progress).toHaveBeenCalledTimes(1);
 
             const newProgressState = options.onSave.progress.mock.calls[0][0];

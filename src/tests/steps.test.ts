@@ -168,6 +168,101 @@ describe('pass step', function () {
 
             expect(options.onSave.progress).not.toHaveBeenCalled();
         });
+
+        it('should prevent passing step with afterPrevious restriction when previous not passed', async () => {
+            const options = getOptions();
+            // @ts-ignore
+            options.config.presets.restrictedPreset = {
+                name: 'Restricted Preset',
+                steps: [
+                    {slug: 'step1', name: 'Step 1', description: 'First'},
+                    {
+                        slug: 'step2',
+                        name: 'Step 2',
+                        description: 'Second',
+                        passRestriction: 'afterPrevious',
+                    },
+                    {
+                        slug: 'step3',
+                        name: 'Step 3',
+                        description: 'Third',
+                        passRestriction: 'afterPrevious',
+                    },
+                ],
+            } as any;
+
+            const controller = new Controller(options);
+            await controller.runPreset('restrictedPreset');
+
+            // Attempt to pass step2 without completing step1
+            await controller.passStep('step2');
+
+            // step2 should not be passed (array should be empty or not contain step2)
+            const passedSteps = controller.state.progress?.presetPassedSteps.restrictedPreset || [];
+            expect(passedSteps.includes('step2')).toBe(false);
+        });
+
+        it('should allow passing step with afterPrevious restriction when previous is passed', async () => {
+            const options = getOptions();
+            // @ts-ignore
+            options.config.presets.restrictedPreset = {
+                name: 'Restricted Preset',
+                steps: [
+                    {slug: 'step1', name: 'Step 1', description: 'First'},
+                    {
+                        slug: 'step2',
+                        name: 'Step 2',
+                        description: 'Second',
+                        passRestriction: 'afterPrevious',
+                    },
+                    {
+                        slug: 'step3',
+                        name: 'Step 3',
+                        description: 'Third',
+                        passRestriction: 'afterPrevious',
+                    },
+                ],
+            } as any;
+
+            const controller = new Controller(options);
+            await controller.runPreset('restrictedPreset');
+
+            // Pass step1
+            await controller.passStep('step1');
+            // Now we can pass step2
+            await controller.passStep('step2');
+
+            const passedSteps = controller.state.progress?.presetPassedSteps.restrictedPreset || [];
+            expect(passedSteps.includes('step2')).toBe(true);
+        });
+
+        it('should handle restriction for non-active preset', async () => {
+            const options = getOptions();
+            // @ts-ignore
+            options.config.presets.restrictedPreset = {
+                name: 'Restricted Preset',
+                steps: [
+                    {slug: 'step1', name: 'Step 1', description: 'First'},
+                    {
+                        slug: 'step2',
+                        name: 'Step 2',
+                        description: 'Second',
+                        passRestriction: 'afterPrevious',
+                    },
+                ],
+            } as any;
+
+            const controller = new Controller(options);
+            // Don't activate the preset
+            controller.state.base.availablePresets.push('restrictedPreset');
+
+            // Attempt to pass step2 without activating the preset
+            await controller.passStep('step2');
+
+            // step2 should not be passed
+            const passedSteps = controller.state.progress?.presetPassedSteps.restrictedPreset || [];
+            expect(passedSteps.includes('step2')).toBe(false);
+        });
     });
 
     describe('step hooks', function () {
@@ -340,5 +435,30 @@ describe('find next step', function () {
         const passedSteps = ['createBoard', 'openBoard', 'createIssue', 'changeIssueStatus'];
 
         expect(Controller.findNextUnpassedStep(preset, passedSteps)).toBe(undefined);
+    });
+
+    it('should handle passed steps in wrong order', function () {
+        const presetSteps = ['step1', 'step2', 'step3', 'step4'];
+        const passedSteps = ['step3', 'step1']; // incorrect order
+
+        const result = Controller.findNextUnpassedStep(presetSteps, passedSteps);
+        // Algorithm searches from the end: step4 not passed, step3 passed -> returns step4
+        expect(result).toBe('step4');
+    });
+
+    it('should handle single step preset', function () {
+        const presetSteps = ['step1'];
+        const passedSteps: string[] = [];
+
+        const result = Controller.findNextUnpassedStep(presetSteps, passedSteps);
+        expect(result).toBe('step1');
+    });
+
+    it('should handle single step preset when passed', function () {
+        const presetSteps = ['step1'];
+        const passedSteps = ['step1'];
+
+        const result = Controller.findNextUnpassedStep(presetSteps, passedSteps);
+        expect(result).toBeUndefined();
     });
 });

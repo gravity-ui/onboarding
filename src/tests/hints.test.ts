@@ -249,6 +249,81 @@ describe('Many visible elements on one page', function () {
         expect(snapshot.open).toBe(true);
         expect(snapshot.hint?.step.slug).toBe('createIssue');
     });
+
+    describe('concurrent element appearance and disappearance', () => {
+        let mockElement: Element;
+
+        beforeEach(async () => {
+            mockElement = document.createElement('div');
+            document.body.appendChild(mockElement);
+        });
+
+        afterEach(() => {
+            if (mockElement.parentNode) {
+                mockElement.parentNode.removeChild(mockElement);
+            }
+        });
+
+        it('should handle rapid element appearance and disappearance', async () => {
+            const options = getOptions();
+            const controller = new Controller(options);
+            await controller.runPreset('createProject');
+
+            // Rapid element appearance and disappearance
+            await controller.stepElementReached({stepSlug: 'createSprint', element: mockElement});
+            controller.stepElementDisappeared('createSprint');
+
+            // Check that the state was processed correctly
+            expect(controller.hintStore.state.open).toBe(false);
+        });
+
+        it('should handle element disappearance during hint processing', async () => {
+            const options = getOptions();
+            const controller = new Controller(options);
+            await controller.runPreset('createProject');
+
+            // Start processing element appearance
+            const reachPromise = controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: mockElement,
+            });
+
+            // Immediately remove the element
+            mockElement.remove();
+            controller.stepElementDisappeared('createSprint');
+
+            await reachPromise;
+
+            // Check that the hint did not appear
+            expect(controller.hintStore.state.open).toBe(false);
+        });
+
+        it('should handle multiple rapid element reaches for same step', async () => {
+            const options = getOptions();
+            const controller = new Controller(options);
+            await controller.runPreset('createProject');
+
+            const element1 = document.createElement('div');
+            const element2 = document.createElement('div');
+            document.body.appendChild(element1);
+            document.body.appendChild(element2);
+
+            try {
+                // Rapid sequential calls for one step
+                await Promise.all([
+                    controller.stepElementReached({stepSlug: 'createSprint', element: element1}),
+                    controller.stepElementReached({stepSlug: 'createSprint', element: element2}),
+                ]);
+
+                // Only one hint should remain
+                expect(controller.hintStore.state.open).toBe(true);
+                expect(controller.reachedElements.get('createSprint')).toBe(element2); // last element
+            } finally {
+                element1.remove();
+                element2.remove();
+            }
+        });
+    });
 });
 
 describe('passMode onShowHint', function () {
