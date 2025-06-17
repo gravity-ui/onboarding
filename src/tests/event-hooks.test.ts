@@ -296,6 +296,67 @@ describe('event subscriptions', function () {
             expect(mock1).toHaveBeenCalled();
             expect(mock2).toHaveBeenCalled();
         });
+
+        it('should not trigger beforeShowHint if element is disconnected', async function () {
+            const controller = new Controller(getOptions());
+            const element = getAnchorElement();
+            element.remove(); // Disconnect element from DOM
+
+            const mock = jest.fn();
+            controller.events.subscribe('beforeShowHint', mock);
+
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element,
+            });
+
+            expect(mock).not.toHaveBeenCalled();
+        });
+
+        it('should not trigger beforeShowHint if hint is already open', async function () {
+            const controller = new Controller(getOptions());
+            const element = getAnchorElement();
+
+            // First, show a hint
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element,
+            });
+
+            const mock = jest.fn();
+            controller.events.subscribe('beforeShowHint', mock);
+
+            // Try to show another hint while first one is still open
+            await controller.stepElementReached({
+                stepSlug: 'createIssue',
+                element,
+            });
+
+            expect(mock).not.toHaveBeenCalled();
+        });
+
+        it('should not trigger beforeShowHint if hint was already shown and closed', async function () {
+            const controller = new Controller(getOptions());
+            const element = getAnchorElement();
+
+            // First, show and close a hint
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element,
+            });
+            controller.closeHintByUser('createSprint');
+
+            const mock = jest.fn();
+            controller.events.subscribe('beforeShowHint', mock);
+
+            // Try to show the same hint again
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element,
+            });
+
+            expect(mock).not.toHaveBeenCalled();
+        });
     });
 
     it('showHint', async function () {

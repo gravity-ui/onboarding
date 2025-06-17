@@ -272,15 +272,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     processElementAppearance = async (stepData: ReachElementParams<Presets, Steps>) => {
         const {preset, element, stepSlug} = stepData;
 
-        const allowRun = await this.events.emit('beforeShowHint', {stepData});
-
         if (!this.state.base.enabled) {
             this.logger.debug('Onboarding is not enabled', preset, stepSlug);
-            return;
-        }
-
-        if (!allowRun) {
-            this.logger.debug('Show hint has been canceled', stepData);
             return;
         }
 
@@ -317,6 +310,12 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         if (!stepData.element.isConnected) {
             this.logger.debug('Element disappeared', stepData.element, stepSlug);
+            return;
+        }
+
+        const allowRun = await this.events.emit('beforeShowHint', {stepData});
+        if (!allowRun) {
+            this.logger.debug('Show hint has been canceled by beforeShowHint event', stepData);
             return;
         }
 
