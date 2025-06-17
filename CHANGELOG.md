@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.11.3](https://github.com/gravity-ui/onboarding/compare/v1.11.2...v1.11.3) (2025-06-17)
+
+
+### Bug Fixes
+
+* **onboarding:** resetPresetProgress with removeFromSuggested=true reset only specified presets ([f1c33de](https://github.com/gravity-ui/onboarding/commit/f1c33def7e18d5da115f0feac4297afce5e02506))
+* **onboarding:** trigger beforeShowHint only if hint will show ([d3602ee](https://github.com/gravity-ui/onboarding/commit/d3602ee0be396de0369b61983ad6ab494fd2133f))
+
 ## [1.11.2](https://github.com/gravity-ui/onboarding/compare/v1.11.1...v1.11.2) (2025-05-16)
 
 
