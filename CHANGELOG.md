@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.4](https://github.com/gravity-ui/onboarding/compare/v1.11.3...v1.11.4) (2025-06-20)
+
+
+### Bug Fixes
+
+* **promo-manager:** not duplicate finished promos ([af029ca](https://github.com/gravity-ui/onboarding/commit/af029ca6ee5da7c42aa40dcd495d5c4412686c6a))
+
 ## [1.11.3](https://github.com/gravity-ui/onboarding/compare/v1.11.2...v1.11.3) (2025-06-17)
 
 
