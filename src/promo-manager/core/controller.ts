@@ -206,6 +206,11 @@ export class Controller {
             return;
         }
 
+        const wasAlreadyFinished = this.isFinished(slug);
+        if (wasAlreadyFinished) {
+            return;
+        }
+
         this.stateActions.addPromoToFinished(slug);
         this.stateActions.removeFromQueue(slug);
         this.updateProgressInfo(slug);
@@ -708,7 +713,9 @@ export class Controller {
         addPromoToFinished: (slug: PromoSlug) => {
             this.assertProgressLoaded();
 
-            this.state.progress.finishedPromos.push(slug);
+            if (!this.state.progress.finishedPromos.includes(slug)) {
+                this.state.progress.finishedPromos.push(slug);
+            }
         },
         updateProgressInfoByPromo: (slug: PromoSlug, info: ProgressInfoConfig) => {
             this.assertProgressLoaded();

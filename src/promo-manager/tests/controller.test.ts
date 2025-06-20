@@ -395,3 +395,49 @@ it('reset progress -> default state', function () {
         progressInfoByPromo: {},
     });
 });
+
+describe('finishPromo', () => {
+    let controller: Controller;
+    const promo = 'boardPoll';
+
+    beforeEach(async () => {
+        controller = new Controller(testOptions);
+        await controller.requestStart(promo);
+    });
+
+    it('multiple finishPromo calls -> no duplicates in finishedPromos', async () => {
+        controller.finishPromo(promo);
+        controller.finishPromo(promo);
+        controller.finishPromo(promo);
+
+        expect(controller.state.progress?.finishedPromos).toEqual([promo]);
+        expect(controller.state.progress?.finishedPromos.length).toBe(1);
+    });
+
+    it('finish different promos -> both in finishedPromos', async () => {
+        const secondPromo = 'ganttPoll';
+        await controller.requestStart(secondPromo);
+
+        controller.finishPromo(promo);
+        controller.finishPromo(secondPromo);
+
+        expect(controller.state.progress?.finishedPromos).toContain(promo);
+        expect(controller.state.progress?.finishedPromos).toContain(secondPromo);
+        expect(controller.state.progress?.finishedPromos.length).toBe(2);
+    });
+
+    it('finish repeatable promo multiple times -> only one entry in finishedPromos', async () => {
+        const repeatablePromo = 'boardPollRepeatable';
+
+        await controller.requestStart(repeatablePromo);
+        controller.finishPromo(repeatablePromo);
+
+        await controller.requestStart(repeatablePromo);
+        controller.finishPromo(repeatablePromo);
+
+        expect(
+            controller.state.progress?.finishedPromos.filter((slug) => slug === repeatablePromo)
+                .length,
+        ).toBe(1);
+    });
+});

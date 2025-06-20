@@ -42,6 +42,36 @@ describe('events subscriptions', function () {
         expect(mock.mock.calls[0][0]).toEqual({slug: 'boardPoll'});
     });
 
+    it('finishPromo same promo twice -> emit event only once', async function () {
+        const controller = new Controller(testOptions);
+
+        const mock = jest.fn();
+        controller.events.subscribe('finishPromo', mock);
+
+        await controller.ensureInit();
+
+        controller.finishPromo('boardPoll');
+        expect(mock).toHaveBeenCalledTimes(1);
+
+        controller.finishPromo('boardPoll');
+        expect(mock).toHaveBeenCalledTimes(1); // Still called only once
+    });
+
+    it('finishPromo different promos -> emit for each', async function () {
+        const controller = new Controller(testOptions);
+
+        const mock = jest.fn();
+        controller.events.subscribe('finishPromo', mock);
+
+        await controller.ensureInit();
+
+        controller.finishPromo('boardPoll');
+        expect(mock).toHaveBeenCalledTimes(1);
+
+        controller.finishPromo('ganttPoll');
+        expect(mock).toHaveBeenCalledTimes(2);
+    });
+
     it('cancelPromo', async function () {
         const controller = new Controller(testOptions);
 
