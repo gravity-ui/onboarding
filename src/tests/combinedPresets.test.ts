@@ -111,8 +111,10 @@ describe('combined presets', function () {
             await controller.finishPreset('combinedPreset');
             await controller.finishPreset('combinedPreset');
 
-            const newProgressState = options.onSave.progress.mock.calls[1][0];
+            // При повторном вызове finishPreset сохранение не должно происходить
+            expect(options.onSave.progress).toHaveBeenCalledTimes(1);
 
+            const newProgressState = options.onSave.progress.mock.calls[0][0];
             expect(newProgressState.finishedPresets).toEqual(['internal1']);
         });
 

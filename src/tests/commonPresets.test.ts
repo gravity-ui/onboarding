@@ -204,12 +204,10 @@ describe('preset management', function () {
             await controller.finishPreset('createProject');
             await controller.finishPreset('createProject');
 
-            const newProgressState = options.onSave.progress.mock.calls[1][0];
-
-            expect(newProgressState.finishedPresets).toEqual(['createProject']);
+            expect(controller.state.progress?.finishedPresets).toEqual(['createProject']);
         });
 
-        it('finish preset -> calls enEnd', async function () {
+        it('finish preset -> calls onEnd', async function () {
             const options = getOptions();
             const mock = jest.fn();
             // @ts-ignore
@@ -219,6 +217,38 @@ describe('preset management', function () {
             await controller.finishPreset('createProject');
 
             expect(mock).toHaveBeenCalled();
+        });
+
+        it('finish finished preset -> dont calls onEnd', async function () {
+            const options = getOptions({}, {finishedPresets: ['createProject']});
+            const mock = jest.fn();
+            // @ts-ignore
+            options.config.presets.createProject.hooks = {onEnd: mock};
+
+            const controller = new Controller(options);
+            await controller.finishPreset('createProject');
+
+            expect(mock).not.toHaveBeenCalled();
+        });
+
+        it('finish preset -> call hooks.finishPreset', async function () {
+            const options = getOptionsWithHooks();
+
+            const controller = new Controller(options);
+            await controller.finishPreset('createProject');
+            await controller.finishPreset('createProject');
+
+            expect(options.hooks.finishPreset).toHaveBeenCalledTimes(1);
+        });
+
+        it('finish finished preset -> call hooks.finishPreset', async function () {
+            const options = getOptionsWithHooks({}, {finishedPresets: ['createProject']});
+
+            const controller = new Controller(options);
+            await controller.finishPreset('createProject');
+            await controller.finishPreset('createProject');
+
+            expect(options.hooks.finishPreset).not.toHaveBeenCalled();
         });
 
         it('finish preset -> stay in suggested', async function () {

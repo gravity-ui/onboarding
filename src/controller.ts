@@ -538,6 +538,14 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return false;
         }
 
+        await this.ensureRunning();
+        this.progressLoadedGuard();
+
+        if (this.state.progress.finishedPresets.includes(presetSlug)) {
+            this.logger.debug('Preset already finished', presetToFinish);
+            return true;
+        }
+
         this.logger.debug('Preset finished', presetToFinish);
 
         this.events.emit('finishPreset', {preset: presetSlug});
@@ -548,16 +556,11 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             this.options.config.presets[presetSlug].hooks?.onEnd?.();
         }
 
-        await this.ensureRunning();
-        this.progressLoadedGuard();
-
         this.state.base.activePresets = this.state.base.activePresets.filter(
             (activePresetSlug) => activePresetSlug !== presetSlug,
         );
 
-        if (!this.state.progress.finishedPresets.includes(presetSlug)) {
-            this.state.progress.finishedPresets?.push(presetSlug);
-        }
+        this.state.progress.finishedPresets?.push(presetSlug);
 
         if (shouldSave) {
             await this.updateBaseState();
