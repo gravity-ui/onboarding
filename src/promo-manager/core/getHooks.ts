@@ -36,8 +36,9 @@ export function getHooks(controller: Controller) {
                 cancel: (closeActiveTimeout?: number) =>
                     controller.cancelPromo(promo, closeActiveTimeout),
                 skip: () => controller.skipPromo(promo),
+                metaInfo: controller.getPromoMeta(promo),
             }),
-            [status],
+            [status, promo],
         );
     };
 
