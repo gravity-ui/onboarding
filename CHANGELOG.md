@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.11.5](https://github.com/gravity-ui/onboarding/compare/v1.11.4...v1.11.5) (2025-09-20)
+
+
+### Bug Fixes
+
+* clarify not found preset debug message ([c5c7fea](https://github.com/gravity-ui/onboarding/commit/c5c7fea684a306341cdbc614d3152591860a7a02))
+* dependabot deps update ([#201](https://github.com/gravity-ui/onboarding/issues/201)) ([64756c5](https://github.com/gravity-ui/onboarding/commit/64756c5025e554462bf750b617ac9bdf5428183d))
+* **onboarding:** dont trigger finishPreset event for finished presets ([5ab4f68](https://github.com/gravity-ui/onboarding/commit/5ab4f68b257c9b0c2a81482bf905ff2a4d8ee427))
+
 ## [1.11.4](https://github.com/gravity-ui/onboarding/compare/v1.11.3...v1.11.4) (2025-06-20)
 
 
