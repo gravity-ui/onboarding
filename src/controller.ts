@@ -250,7 +250,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         const preset = this.findActivePresetWithStep(stepSlug);
 
         if (!preset) {
-            this.logger.debug('Not found preset for step', stepSlug);
+            this.logger.debug('Not found active preset for step', stepSlug);
             return;
         }
 
