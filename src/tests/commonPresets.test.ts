@@ -599,4 +599,97 @@ describe('user presets', function () {
             expect(presetSlugs).not.toContain('createProject');
         });
     });
+
+    describe('complex preset visibility logic', () => {
+        beforeEach(() => {
+            // Create temporary options for these tests
+        });
+
+        it('should correctly filter visible presets', () => {
+            const options = getOptions();
+            options.config.presets = {
+                visiblePreset: {
+                    name: 'Visible Preset',
+                    visibility: 'visible',
+                    steps: [{slug: 'step1', name: 'Step 1', description: 'Test'}],
+                },
+                initialHiddenPreset: {
+                    name: 'Initially Hidden Preset',
+                    visibility: 'initialHidden',
+                    steps: [{slug: 'step2', name: 'Step 2', description: 'Test'}],
+                },
+                alwaysHiddenPreset: {
+                    name: 'Always Hidden Preset',
+                    visibility: 'alwaysHidden',
+                    steps: [{slug: 'step3', name: 'Step 3', description: 'Test'}],
+                },
+                internalPreset: {
+                    type: 'internal',
+                    steps: [{slug: 'step4', name: 'Step 4', description: 'Test'}],
+                },
+                combinedPreset: {
+                    name: 'Combined Preset',
+                    type: 'combined',
+                    internalPresets: ['internalPreset'],
+                    pickPreset: () => 'internalPreset',
+                },
+            } as any;
+
+            const controller = new Controller(options);
+            const userPresets = controller.userPresets;
+            const presetSlugs = userPresets.map((p) => p.slug);
+
+            expect(presetSlugs).toContain('visiblePreset');
+            expect(presetSlugs).toContain('combinedPreset');
+            expect(presetSlugs).not.toContain('alwaysHiddenPreset');
+            expect(presetSlugs).not.toContain('internalPreset');
+        });
+
+        it('should show initially hidden preset when user has progress', async () => {
+            const options = getOptions();
+            // @ts-ignore
+            options.config.presets.initialHiddenPreset = {
+                name: 'Initially Hidden Preset',
+                visibility: 'initialHidden',
+                steps: [{slug: 'step2', name: 'Step 2', description: 'Test'}],
+            } as any;
+
+            const controller = new Controller(options);
+            // Add progress for initially hidden preset
+            controller.state.base.availablePresets.push('initialHiddenPreset');
+
+            const userPresets = controller.userPresets;
+            const presetSlugs = userPresets.map((p) => p.slug);
+
+            expect(presetSlugs).toContain('initialHiddenPreset');
+        });
+
+        it('should show initially hidden preset when finished', async () => {
+            const options = getOptions();
+            // @ts-ignore
+            options.config.presets.initialHiddenPreset = {
+                name: 'Initially Hidden Preset',
+                visibility: 'initialHidden',
+                steps: [{slug: 'step2', name: 'Step 2', description: 'Test'}],
+            } as any;
+
+            const controller = new Controller(options);
+
+            // Initialize progress state if it doesn't exist
+            if (!controller.state.progress) {
+                controller.state.progress = {
+                    presetPassedSteps: {},
+                    finishedPresets: [],
+                };
+            }
+
+            // Mark initially hidden preset as completed
+            controller.state.progress.finishedPresets.push('initialHiddenPreset');
+
+            const userPresets = controller.userPresets;
+            const presetSlugs = userPresets.map((p) => p.slug);
+
+            expect(presetSlugs).toContain('initialHiddenPreset');
+        });
+    });
 });

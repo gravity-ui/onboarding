@@ -6,9 +6,37 @@ beforeEach(() => {
     window.localStorage.clear();
 });
 
+describe('init', function () {
+    it('constructor with custom options -> set custom options', () => {
+        const customOptions = {
+            changeStateLSKey: 'custom.changeState',
+            closeHintLSKey: 'custom.closeHint',
+            enableCloseHintSync: false,
+            __unstable_enableStateSync: true,
+        };
+
+        const plugin = new MultiTabSyncPlugin(customOptions);
+
+        expect(plugin.options.changeStateLSKey).toBe('custom.changeState');
+        expect(plugin.options.closeHintLSKey).toBe('custom.closeHint');
+        expect(plugin.options.enableCloseHintSync).toBe(false);
+        expect(plugin.options.__unstable_enableStateSync).toBe(true);
+    });
+
+    it('constructor with no options -> set default options', () => {
+        const plugin = new MultiTabSyncPlugin();
+
+        expect(plugin.options.changeStateLSKey).toBe('onboarding.plugin-sync.changeState');
+        expect(plugin.options.closeHintLSKey).toBe('onboarding.plugin-sync.closeHint');
+        expect(plugin.options.enableCloseHintSync).toBe(true);
+        expect(plugin.options.__unstable_enableStateSync).toBe(false);
+        expect(plugin.isQuotaExceeded).toBe(false);
+    });
+});
+
 describe('close hint sync', function () {
     describe('send event', function () {
-        it('change ls on hint close', async function () {
+        it('hint closed by user -> change ls', async function () {
             const options = getOptions();
             options.plugins = [new MultiTabSyncPlugin()];
 
@@ -135,12 +163,22 @@ describe('close hint sync', function () {
             const snapshot = controller.hintStore.getSnapshot();
             expect(snapshot.open).toBe(true);
         });
+
+        it('handleLSEvent with undefined onboardingInstance -> return undefined', () => {
+            const plugin = new MultiTabSyncPlugin();
+            const event = new StorageEvent('storage', {
+                key: 'test',
+                newValue: 'test',
+            });
+
+            expect(plugin.handleLSEvent(event)).toBeUndefined();
+        });
     });
 });
 
 describe('state sync', function () {
     describe('send event', function () {
-        it('change ls on state change', async function () {
+        it('state changed -> change ls', async function () {
             const options = getOptions();
             options.plugins = [new MultiTabSyncPlugin({__unstable_enableStateSync: true})];
 
@@ -168,7 +206,7 @@ describe('state sync', function () {
             expect(JSON.parse(newStateFromLS).base.activePresets).toContain('createQueue');
         });
 
-        it('disabled state sync -> NOT change ls on hint close', async function () {
+        it('disabled state sync -> NOT change ls on state change', async function () {
             const options = getOptions();
             options.plugins = [
                 new MultiTabSyncPlugin({
@@ -250,6 +288,44 @@ describe('state sync', function () {
 
             expect(controller.state.base.activePresets).not.toContain('createQueue');
         });
+
+        it('get event with non-matching key -> NOT change state', () => {
+            const options = getOptions();
+            const plugin = new MultiTabSyncPlugin({__unstable_enableStateSync: true});
+            const controller = new Controller(options);
+
+            plugin.onboardingInstance = controller;
+            const originalState = controller.state;
+
+            const event = new StorageEvent('storage', {
+                key: 'different.key',
+                newValue: '{"test": "data"}',
+            });
+
+            plugin.handleLSEvent(event);
+
+            // State should not change for non-matching keys
+            expect(controller.state).toBe(originalState);
+        });
+
+        it('localStorage event with null newValue -> NOT change state', () => {
+            const options = getOptions();
+            const plugin = new MultiTabSyncPlugin({__unstable_enableStateSync: true});
+            const controller = new Controller(options);
+
+            plugin.onboardingInstance = controller;
+            const originalState = controller.state;
+
+            const event = new StorageEvent('storage', {
+                key: 'onboarding.plugin-sync.changeState',
+                newValue: null,
+            });
+
+            plugin.handleLSEvent(event);
+
+            // State should not change when newValue is null
+            expect(controller.state).toBe(originalState);
+        });
     });
 });
 
@@ -258,7 +334,7 @@ describe('local storage errors', function () {
         jest.clearAllMocks();
     });
 
-    it('got quota error -> dont write again', async function () {
+    it('quota exceeded error -> dont write again', async function () {
         jest.spyOn(Storage.prototype, 'setItem');
         Storage.prototype.setItem = jest.fn(() => {
             throw new DOMException('', 'QuotaExceededError');
@@ -272,5 +348,21 @@ describe('local storage errors', function () {
         await controller.setWizardState('visible');
 
         expect(Storage.prototype.setItem).toHaveBeenCalledTimes(1);
+    });
+
+    it('non-quota localStorage error -> NOT set quota exceeded flag', async () => {
+        jest.spyOn(Storage.prototype, 'setItem');
+        Storage.prototype.setItem = jest.fn(() => {
+            throw new Error('Different localStorage error');
+        });
+
+        const options = getOptions();
+        options.plugins = [new MultiTabSyncPlugin({__unstable_enableStateSync: true})];
+
+        const controller = new Controller(options);
+        await controller.setWizardState('collapsed');
+        await controller.setWizardState('visible');
+
+        expect(Storage.prototype.setItem).toHaveBeenCalledTimes(2);
     });
 });

@@ -28,6 +28,67 @@ describe('init', function () {
 
         expect(options.getProgressState).toHaveBeenCalled();
     });
+
+    it('onboardingInstance undefined -> return undefined', () => {
+        const plugin = new WizardPlugin();
+        const result = plugin.onInit();
+
+        expect(result).toBeUndefined();
+    });
+
+    it('wizard visible + onboarding enabled -> keep onboarding disabled', () => {
+        const options = getOptions();
+        const plugin = new WizardPlugin();
+        const controller = new Controller(options);
+
+        plugin.onboardingInstance = controller;
+        controller.state.base.wizardState = 'hidden';
+        controller.state.base.enabled = false;
+
+        plugin.onInit();
+
+        expect(controller.state.base.enabled).toBe(false);
+    });
+
+    it('wizard hidden + onboarding disabled + baseState -> keep onboarding disabled', async () => {
+        const options = getOptions();
+        options.baseState = {
+            wizardState: 'hidden',
+            availablePresets: [],
+            activePresets: [],
+            suggestedPresets: [],
+            enabled: false,
+        };
+        const plugin = new WizardPlugin();
+        options.plugins = [plugin];
+
+        const controller = new Controller(options);
+        plugin.onboardingInstance = controller;
+
+        plugin.onInit();
+
+        expect(controller.state.base.enabled).toBe(false);
+    });
+
+    it('wizard visible + onboarding enabled -> keep onboarding enabled', async () => {
+        const options = getOptions();
+        options.baseState = {
+            wizardState: 'visible',
+            availablePresets: [],
+            activePresets: [],
+            suggestedPresets: [],
+            enabled: true,
+        };
+        const plugin = new WizardPlugin();
+        options.plugins = [plugin];
+
+        const controller = new Controller(options);
+        plugin.onboardingInstance = controller;
+
+        plugin.onInit();
+
+        expect(controller.state.base.enabled).toBe(true);
+    });
 });
 
 describe('open wizard', function () {
@@ -79,6 +140,13 @@ describe('open wizard', function () {
         expect(options.getProgressState).toHaveBeenCalled();
     });
 
+    it('onboardingInstance undefined -> return undefined', async () => {
+        const plugin = new WizardPlugin();
+        const result = await plugin.onWizardStateChanged({wizardState: 'visible'} as any);
+
+        expect(result).toBeUndefined();
+    });
+
     describe('repair state', () => {
         it('onboarding disabled, wizard visible -> load progress', async function () {
             const options = getOptions({enabled: false, wizardState: 'visible'});
@@ -107,7 +175,7 @@ describe('open wizard', function () {
 });
 
 describe('close wizard', function () {
-    it('remove progress for common preset', async function () {
+    it('wizard visible -> remove progress for common preset', async function () {
         const options = getOptions({enabled: true, wizardState: 'visible'});
         options.plugins = [new WizardPlugin()];
 
@@ -118,7 +186,7 @@ describe('close wizard', function () {
         expect(controller.state.progress?.presetPassedSteps.createProjest).toBe(undefined);
     });
 
-    it('remove progress for internal preset', async function () {
+    it('wizard visible -> remove progress for internal preset', async function () {
         const options = getOptionsWithCombined({enabled: true, wizardState: 'visible'});
         options.plugins = [new WizardPlugin()];
 
@@ -129,7 +197,7 @@ describe('close wizard', function () {
         expect(controller.state.progress?.presetPassedSteps.internal1).toBe(undefined);
     });
 
-    it('dont remove progress for always hidden preset', async function () {
+    it('wizard visible + always hidden preset -> dont remove progress', async function () {
         const options = getOptions({enabled: true, wizardState: 'visible'});
         // @ts-ignore
         options.config.presets.createProject.visibility = 'alwaysHidden';
@@ -142,7 +210,7 @@ describe('close wizard', function () {
         expect(controller.state.progress?.presetPassedSteps.createProject).toBeDefined();
     });
 
-    it('turn off onboarding', async function () {
+    it('wizard visible -> turn off onboarding', async function () {
         const options = getOptions({wizardState: 'visible'});
         options.plugins = [new WizardPlugin()];
 
@@ -153,7 +221,7 @@ describe('close wizard', function () {
         expect(controller.state.base.enabled).toBe(false);
     });
 
-    it('close hint', async function () {
+    it('wizard visible + hint open -> close hint', async function () {
         const options = getOptions();
         options.plugins = [new WizardPlugin()];
         const controller = new Controller(options);
@@ -169,8 +237,31 @@ describe('close wizard', function () {
     });
 });
 
+describe('eraseCommonPresetsProgress', function () {
+    it('onboardingInstance undefined -> return undefined', async () => {
+        const plugin = new WizardPlugin();
+        const result = await plugin['eraseCommonPresetsProgress']();
+
+        expect(result).toBeUndefined();
+    });
+
+    it('non-existent presets in activePresets -> dont remove', async () => {
+        const options = getOptions();
+        const plugin = new WizardPlugin();
+        options.plugins = [plugin];
+        const controller = new Controller(options);
+
+        controller.state.base.activePresets = ['nonExistentPreset'];
+        plugin.onboardingInstance = controller;
+
+        await plugin['eraseCommonPresetsProgress']();
+
+        expect(controller.state.base.activePresets).toEqual(['nonExistentPreset']);
+    });
+});
+
 describe('run preset', function () {
-    it('close hint', async function () {
+    it('hint open -> close hint', async function () {
         const options = getOptions();
         options.plugins = [new WizardPlugin()];
         const controller = new Controller(options);
@@ -269,6 +360,13 @@ describe('run preset', function () {
 
         expect(controller.state.progress?.presetPassedSteps.createProject).not.toBe(undefined);
     });
+
+    it('onboardingInstance undefined -> return undefined', async () => {
+        const plugin = new WizardPlugin();
+        const result = await plugin.onRunPreset({preset: 'testPreset'} as any);
+
+        expect(result).toBeUndefined();
+    });
 });
 
 describe('finish preset', function () {
@@ -290,5 +388,12 @@ describe('finish preset', function () {
         await controller.finishPreset('coolNewFeature');
 
         expect(controller.state.base.wizardState).toBe('collapsed');
+    });
+
+    it('onboardingInstance undefined -> return undefined', () => {
+        const plugin = new WizardPlugin();
+        const result = plugin.onFinishPreset({preset: 'testPreset'} as any);
+
+        expect(result).toBeUndefined();
     });
 });
