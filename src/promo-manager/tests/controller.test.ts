@@ -440,4 +440,43 @@ describe('finishPromo', () => {
                 .length,
         ).toBe(1);
     });
+
+    it('finish repetable promo again -> save result', async () => {
+        const repeatablePromo = 'boardPollRepeatable';
+
+        const mock = jest.fn();
+        controller.events.subscribe('finishPromo', mock);
+
+        const oldDate = new Date('07-15-2024').valueOf();
+        controller.dateNow = () => oldDate;
+
+        await controller.requestStart(repeatablePromo);
+        controller.finishPromo(repeatablePromo);
+
+        const newDate = new Date('07-16-2024').valueOf();
+        controller.dateNow = () => newDate;
+
+        await controller.requestStart(repeatablePromo);
+        controller.finishPromo(repeatablePromo);
+
+        expect(
+            controller.state.progress?.progressInfoByPromo.boardPollRepeatable.lastCallTime,
+        ).toBe(newDate);
+        expect(mock).toHaveBeenCalledTimes(2);
+    });
+
+    it('finish repetable promo again -> call hooks 2 times', async () => {
+        const repeatablePromo = 'boardPollRepeatable';
+
+        const mock = jest.fn();
+        controller.events.subscribe('finishPromo', mock);
+
+        await controller.requestStart(repeatablePromo);
+        controller.finishPromo(repeatablePromo);
+
+        await controller.requestStart(repeatablePromo);
+        controller.finishPromo(repeatablePromo);
+
+        expect(mock).toHaveBeenCalledTimes(2);
+    });
 });

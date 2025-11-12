@@ -206,8 +206,8 @@ export class Controller {
             return;
         }
 
-        const wasAlreadyFinished = this.isFinished(slug);
-        if (wasAlreadyFinished) {
+        const promoStatus = this.getPromoStatus(slug);
+        if (promoStatus === 'finished') {
             return;
         }
 
@@ -716,7 +716,9 @@ export class Controller {
             this.assertProgressLoaded();
 
             if (!this.state.progress.finishedPromos.includes(slug)) {
-                this.state.progress.finishedPromos.push(slug);
+                this.state.progress.finishedPromos = [
+                    ...new Set([...this.state.progress.finishedPromos, slug]),
+                ];
             }
         },
         updateProgressInfoByPromo: (slug: PromoSlug, info: ProgressInfoConfig) => {
