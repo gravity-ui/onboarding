@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.6](https://github.com/gravity-ui/onboarding/compare/v1.11.5...v1.11.6) (2025-11-12)
+
+
+### Bug Fixes
+
+* fix finish repeatable promos ([18b24ac](https://github.com/gravity-ui/onboarding/commit/18b24ac44960d1279b32babba668a9119c2a7dc0))
+
 ## [1.11.5](https://github.com/gravity-ui/onboarding/compare/v1.11.4...v1.11.5) (2025-09-20)
 
 
