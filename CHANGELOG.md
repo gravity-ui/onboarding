@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.7](https://github.com/gravity-ui/onboarding/compare/v1.11.6...v1.11.7) (2025-12-03)
+
+
+### Bug Fixes
+
+* **hooks:** fix useOnboardingStep ref callback typing to accept DOM elements ([88122bc](https://github.com/gravity-ui/onboarding/commit/88122bc5191b0f864aa07d57c8da2d4759dce45e))
+
 ## [1.11.6](https://github.com/gravity-ui/onboarding/compare/v1.11.5...v1.11.6) (2025-11-12)
 
 
