@@ -12,9 +12,9 @@ type StepBySelectorOptions<Steps> = {
 export function getHooks<HintParams, Presets extends string, Steps extends string>(
     controller: Controller<HintParams, Presets, Steps>,
 ) {
-    const useOnboardingStep = <T extends never>(step: Steps, readyForHint = true) => {
+    const useOnboardingStep = (step: Steps, readyForHint = true) => {
         const onRefChange = useCallback(
-            (node: T) => {
+            (node: Element | null) => {
                 if (!readyForHint) {
                     return;
                 }
