@@ -321,6 +321,55 @@ createOnboarding({
 
  You can find more examples in [test data](https://github.com/gravity-ui/onboarding/blob/main/src/tests/utils.ts#L71)
 
+### Async presets
+
+For large onboardings the text and i18n bundled into presets may not be needed until the user actually reaches a step. You can move heavy preset bodies into a separate chunk using `config.asyncPresets`:
+
+```typescript jsx
+// heavy-presets.ts — lives in its own chunk, pulls i18n with it
+import {createAsyncPresets, createPreset} from '@gravity-ui/onboarding';
+import {i18n} from './i18n';
+
+export default createAsyncPresets({
+  createProject: createPreset({
+    name: i18n('createProject.name'),
+    steps: [/* ... */],
+  }),
+  viewReports: createPreset({
+    name: i18n('viewReports.name'),
+    steps: [/* ... */],
+  }),
+});
+```
+
+Wrap the async map in `createAsyncPresets` — this identity helper preserves the literal map type so `Presets` and `Steps` unions are inferred correctly at the `createOnboarding` call-site.
+
+```typescript jsx
+// lib.ts
+import {createOnboarding, createPreset} from '@gravity-ui/onboarding';
+
+createOnboarding({
+  config: {
+    presets: {
+      // sync presets stay inlined
+      quickTour: createPreset({ /* ... */ }),
+    },
+    // single loader — one import = one code-split chunk = one request
+    asyncPresets: () => import('./heavy-presets').then((m) => m.default),
+  },
+  // ...rest unchanged
+});
+```
+
+Semantics:
+
+- The loader is invoked **at most once** per controller lifecycle, the first time any preset-body-touching method is called (`runPreset`, `addPreset`, `suggestPresetOnce`, `passStep`, `stepElementReached`, `finishPreset`, `resetPresetProgress`, wizard opening, reading `userPresets`). A disabled controller never triggers the loader.
+- While the loader is in-flight, concurrent calls share the same promise — no duplicate requests.
+- If the loader rejects, the error is logged and bubbles up to the caller, and the rejection is cached — subsequent calls surface the same error without re-invoking the loader. To retry after a persistent failure (e.g. user clicks "try again"), recreate the controller.
+- Slugs from the async map are still statically inferred — `useOnboardingStep('slugFromAsyncPreset')` remains type-safe.
+- If an async key collides with a sync key, the sync preset wins and an error is logged.
+- Consumers that destructure `controller.options.config.presets` at module level see only the sync subset until the loader resolves. Read through controller methods or the `userPresets` getter (which re-emits `stateChange` on resolve) instead.
+
 ## Events
 
 You can use event system. Available events: `showHint`, `stepPass`, `addPreset`, `beforeRunPreset`, `runPreset`, `finishPreset`, `beforeSuggestPreset`, `stepElementReached`, `beforeShowHint`, `stateChange`, `hintDataChanged`, `closeHint`, `init`, `wizardStateChange`

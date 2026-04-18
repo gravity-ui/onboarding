@@ -78,6 +78,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     saveBaseState: () => void;
     saveProgressState: () => void;
 
+    private presetsLoadingPromise: Promise<void> | undefined;
+
     constructor(
         options: InitOptions<HintParams, Presets, Steps>,
         hintStore?: HintStore<HintParams, Presets, Steps>,
@@ -160,13 +162,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         for (const [presetKey, preset] of Object.entries<PresetField<HintParams, Steps>>(
             options.config.presets,
         )) {
-            resolvedPresets[presetKey as Presets] =
-                typeof preset === 'function'
-                    ? preset({
-                          goNextStep: this.goNextStep.bind(this, presetKey as Presets),
-                          goPrevStep: this.goPrevStep.bind(this, presetKey as Presets),
-                      })
-                    : preset;
+            resolvedPresets[presetKey as Presets] = this.resolveOnePreset(presetKey, preset);
         }
 
         return {
@@ -182,6 +178,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         if (this.status === 'disabled') {
             return;
         }
+
+        await this.ensurePresetsLoaded();
 
         this.logger.debug('Step passed', stepSlug);
 
@@ -222,6 +220,11 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
+        if (state === 'visible' || state === 'collapsed') {
+            // eslint-disable-next-line no-void
+            void this.ensurePresetsLoaded();
+        }
+
         this.state.base.wizardState = state;
         await this.events.emit('wizardStateChanged', {wizardState: state});
         await this.updateBaseState();
@@ -243,6 +246,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         if (this.status === 'disabled') {
             return;
         }
+
+        await this.ensurePresetsLoaded();
 
         this.logger.debug('Step element reached', stepSlug, element);
         this.reachedElements.set(stepSlug, element);
@@ -380,6 +385,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     };
 
     get userPresets() {
+        if (this.status !== 'disabled') {
+            // eslint-disable-next-line no-void
+            void this.ensurePresetsLoaded();
+        }
         const allUserPresetSlugs = [
             ...new Set([
                 ...Object.keys(this.options.config.presets),
@@ -429,6 +438,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
+        await this.ensurePresetsLoaded();
+
         const presets = this.filterExistedPresets(
             Array.isArray(presetArg) ? presetArg : [presetArg],
         );
@@ -456,6 +467,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return false;
         }
 
+        if (this.status !== 'disabled') {
+            await this.ensurePresetsLoaded();
+        }
+
         const allowRun = await this.events.emit('beforeSuggestPreset', {preset});
 
         if (!allowRun) {
@@ -470,6 +485,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         if (this.status === 'disabled') {
             return false;
         }
+
+        await this.ensurePresetsLoaded();
 
         if (!this.presetExistsGuard(presetToRunSlug)) {
             return false;
@@ -532,6 +549,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return false;
         }
 
+        await this.ensurePresetsLoaded();
+
         // take normal or find internal
         const presetSlug = this.resolvePresetSlug(presetToFinish);
         if (!presetSlug) {
@@ -577,6 +596,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         if (this.status === 'disabled') {
             return;
         }
+
+        await this.ensurePresetsLoaded();
 
         this.logger.debug('Reset progress for', presetArg);
         await this.ensureRunning();
@@ -692,6 +713,58 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             this.stepElementReached({stepSlug, element});
         }
     }
+
+    private resolveOnePreset = (
+        presetKey: string,
+        preset: PresetField<HintParams, Steps>,
+    ): Preset<HintParams, Steps> => {
+        return typeof preset === 'function'
+            ? preset({
+                  goNextStep: this.goNextStep.bind(this, presetKey as Presets),
+                  goPrevStep: this.goPrevStep.bind(this, presetKey as Presets),
+              })
+            : preset;
+    };
+
+    private mergeLoadedPresets = (loaded: Record<string, PresetField<HintParams, Steps>>) => {
+        const presets = this.options.config.presets as Record<string, Preset<HintParams, Steps>>;
+        for (const [presetKey, preset] of Object.entries(loaded)) {
+            if (presets[presetKey]) {
+                this.logger.error(
+                    'Async preset key collides with sync preset, keeping sync entry',
+                    presetKey,
+                );
+                continue;
+            }
+            presets[presetKey] = this.resolveOnePreset(presetKey, preset);
+        }
+    };
+
+    private ensurePresetsLoaded = (): Promise<void> => {
+        if (!this.options.config.asyncPresets) {
+            return Promise.resolve();
+        }
+        if (this.presetsLoadingPromise) {
+            return this.presetsLoadingPromise;
+        }
+
+        const loading = this.options.config
+            .asyncPresets()
+            // catch before then — only loader errors are logged; merge errors propagate as-is
+            .catch((err) => {
+                this.logger.error('Failed to load async presets', err);
+                throw err;
+            })
+            .then((loadedPresets) => {
+                this.mergeLoadedPresets(loadedPresets);
+                this.emitStateChange();
+            });
+        // attach a no-op handler so fire-and-forget callers don't leak an unhandled rejection
+        loading.catch(() => {});
+        this.presetsLoadingPromise = loading;
+
+        return loading;
+    };
 
     private fulfillUserBaseState = (userState: Partial<BaseState>): BaseState => {
         const nowDate = this.getOnboardingDate();
