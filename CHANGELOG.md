@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.12.0](https://github.com/gravity-ui/onboarding/compare/v1.11.7...v1.12.0) (2026-04-24)
+
+
+### Features
+
+* **onboarding:** add asyncPresets loader for code-splitting preset bodies ([a7965b3](https://github.com/gravity-ui/onboarding/commit/a7965b31d54f31e41a03ffd3808bfd0d3c0791ab))
+
+
+### Bug Fixes
+
+* deps alerts fix ([37791c9](https://github.com/gravity-ui/onboarding/commit/37791c9bb4a788f7c6cda4a0524ac52104eed9db))
+
 ## [1.11.7](https://github.com/gravity-ui/onboarding/compare/v1.11.6...v1.11.7) (2025-12-03)
 
 
