@@ -60,6 +60,10 @@ export function createInternalPreset<T>(preset: T) {
     >;
 }
 
+export function createAsyncPresets<T extends Record<string, PresetField<any, any>>>(presets: T): T {
+    return presets;
+}
+
 export function createOnboarding<T extends InitOptions<any, any, any>>(options: T) {
     const controller = new Controller<
         InferHintParamsFromOptions<T>,

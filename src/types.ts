@@ -99,12 +99,18 @@ export type PresetField<HintParams, Steps extends string> =
     | Preset<HintParams, Steps>
     | ((presetFunctions: PresetFunctions) => Preset<HintParams, Steps>);
 
+export type AsyncPresetsLoader<HintParams, Steps extends string> = () => Promise<
+    Record<string, PresetField<HintParams, Steps>>
+>;
+
 export type InitConfig<HintParams, Presets extends string, Steps extends string> = {
     presets: Record<Presets, PresetField<HintParams, Steps>>;
+    asyncPresets?: AsyncPresetsLoader<HintParams, Steps>;
 };
 
 export type ResolvedConfig<HintParams, Presets extends string, Steps extends string> = {
     presets: Record<Presets, Preset<HintParams, Steps>>;
+    asyncPresets?: AsyncPresetsLoader<HintParams, Steps>;
 };
 
 type DateUTC = string;
@@ -233,19 +239,24 @@ export type InferHintParamsFromPreset<T> = T extends {steps: Array<infer U>}
         : never
     : never;
 
-export type InferStepsFromOptions<T extends InitOptions<any, any, any>> =
-    T['config']['presets'] extends Record<any, infer U>
-        ? U extends ContentfulPresets<any, infer Steps>
-            ? Steps
-            : never
-        : never;
+type SyncPresetsMap<T> = T extends {config: {presets: infer R}} ? R : {};
+type AsyncPresetsMap<T> = T extends {config: {asyncPresets?: () => Promise<infer R>}}
+    ? R extends Record<string, any>
+        ? R
+        : {}
+    : {};
+type AllPresetsMap<T> = SyncPresetsMap<T> & AsyncPresetsMap<T>;
+type PresetValuesOf<T> = AllPresetsMap<T>[keyof AllPresetsMap<T>];
 
-export type InferPresetsFromOptions<T> = T extends InitOptions<any, infer U, any> ? U : never;
+// Use a helper with a naked type parameter so that the `extends` check distributes over the union
+type ExtractStepsFromPresetValue<U> = U extends ContentfulPresets<any, infer Steps> ? Steps : never;
+type ExtractHintParamsFromPresetValue<U> =
+    U extends ContentfulPresets<infer HintParams, any> ? HintParams : never;
 
-export type InferHintParamsFromOptions<T extends InitOptions<any, any, any>> = Merge<
-    T['config']['presets'] extends Record<any, infer U>
-        ? U extends ContentfulPresets<infer HintParams, any>
-            ? HintParams
-            : never
-        : never
+export type InferStepsFromOptions<T> = ExtractStepsFromPresetValue<PresetValuesOf<T>>;
+
+export type InferPresetsFromOptions<T> = Extract<keyof AllPresetsMap<T>, string>;
+
+export type InferHintParamsFromOptions<T> = Merge<
+    Extract<ExtractHintParamsFromPresetValue<PresetValuesOf<T>>, object>
 >;
