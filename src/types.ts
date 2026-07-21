@@ -45,9 +45,7 @@ export type PresetStep<Steps extends string, HintParams> = {
 export type PresetVisibility = 'visible' | 'initialHidden' | 'alwaysHidden';
 
 export type Preset<HintParams, Steps extends string> =
-    | CommonPreset<HintParams, Steps>
-    | CombinedPreset<string>
-    | InternalPreset<HintParams, Steps>;
+    CommonPreset<HintParams, Steps> | CombinedPreset<string> | InternalPreset<HintParams, Steps>;
 
 export type PresetHooks = {
     onBeforeStart?: () => Promise<void> | void;
@@ -71,8 +69,7 @@ export type InternalPreset<HintParams, Steps extends string> = {
 };
 
 export type ContentfulPresets<HintParams, Steps extends string> =
-    | CommonPreset<HintParams, Steps>
-    | InternalPreset<HintParams, Steps>;
+    CommonPreset<HintParams, Steps> | InternalPreset<HintParams, Steps>;
 
 export type CombinedPreset<InternalPresets extends string> = {
     name: string;
@@ -96,8 +93,7 @@ export type PresetFunctions = {
     goPrevStep: VoidFn;
 };
 export type PresetField<HintParams, Steps extends string> =
-    | Preset<HintParams, Steps>
-    | ((presetFunctions: PresetFunctions) => Preset<HintParams, Steps>);
+    Preset<HintParams, Steps> | ((presetFunctions: PresetFunctions) => Preset<HintParams, Steps>);
 
 export type AsyncPresetsLoader<HintParams, Steps extends string> = () => Promise<
     Record<string, PresetField<HintParams, Steps>>
