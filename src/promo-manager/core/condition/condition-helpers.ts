@@ -28,9 +28,22 @@ export const ShowOnceForPeriod = (interval: DurationParam) => {
     };
 };
 
+// condition with slugs list limits only listed promos and groups
+const isCurrentPromoOutOfList = (slugs: string[], ctx: ConditionContext) => {
+    const currentPromoInSlugs =
+        (ctx.promoSlug && slugs.includes(ctx.promoSlug)) ||
+        (ctx.promoGroup && slugs.includes(ctx.promoGroup));
+
+    return Boolean(ctx.promoSlug || ctx.promoGroup) && !currentPromoInSlugs;
+};
+
 type SlugsParam = {slugs?: string[]};
 export const ShowOnceForSession = ({slugs: slugsFromParams}: SlugsParam = {}) => {
     return (state: PromoState, ctx: ConditionContext) => {
+        if (slugsFromParams && isCurrentPromoOutOfList(slugsFromParams, ctx)) {
+            return true;
+        }
+
         const targetInterval = dayjs.duration(performance.now());
 
         const slugFromContext = ctx.promoGroup || ctx.promoSlug;
@@ -51,11 +64,7 @@ export const ShowOnceForSession = ({slugs: slugsFromParams}: SlugsParam = {}) =>
 
 export const LimitFrequency = ({slugs, interval}: {slugs: string[]; interval: DurationParam}) => {
     return (state: PromoState, ctx: ConditionContext) => {
-        const currentPromoInSlugs =
-            (ctx.promoSlug && slugs.includes(ctx.promoSlug)) ||
-            (ctx.promoGroup && slugs.includes(ctx.promoGroup));
-
-        if ((ctx.promoSlug || ctx.promoGroup) && !currentPromoInSlugs) {
+        if (isCurrentPromoOutOfList(slugs, ctx)) {
             return true;
         }
 
