@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.12.1](https://github.com/gravity-ui/onboarding/compare/v1.12.0...v1.12.1) (2026-07-24)
+
+
+### Bug Fixes
+
+* **deps:** bump vulnerable transitive deps via overrides ([a053a94](https://github.com/gravity-ui/onboarding/commit/a053a943eeceac66b1a482985feef1e3a6d4752f))
+* **promo-manager:** limit only promos from slugs list in LimitFrequency ([cc01229](https://github.com/gravity-ui/onboarding/commit/cc01229a5a5d5632cf55047b807c51d2c0514c90))
+* **promo-manager:** limit only promos from slugs list in ShowOnceForSession ([408aa40](https://github.com/gravity-ui/onboarding/commit/408aa40a261a08fced64ad12573fdad2e8e27b21))
+
 ## [1.12.0](https://github.com/gravity-ui/onboarding/compare/v1.11.7...v1.12.0) (2026-04-24)
 
 
