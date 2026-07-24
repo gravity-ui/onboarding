@@ -86,3 +86,67 @@ it('LimitFrequency', async function () {
 
     expect(controller.state.base.activePromo).toBe(null);
 });
+
+it('LimitFrequency -> not limit promo out of slugs list', async function () {
+    const progressState = {
+        finishedPromos: ['boardPoll2'],
+        progressInfoByPromo: {
+            boardPoll2: {
+                lastCallTime: new Date('07-15-2024').valueOf(),
+            },
+        },
+    };
+    const controller = new Controller({
+        config: {
+            promoGroups: [pollGroup2],
+            constraints: [
+                LimitFrequency({
+                    slugs: ['boardPoll2', 'ganttPoll2'],
+                    interval: {weeks: 1},
+                }),
+            ],
+        },
+        progressState: progressState,
+        getProgressState: () => new Promise<PromoProgressState>(() => progressState),
+        onSave: {
+            progress: () => new Promise(() => {}),
+        },
+    });
+    controller.dateNow = () => new Date('07-15-2024').valueOf();
+
+    await controller.requestStart('taskPoll2');
+
+    expect(controller.state.base.activePromo).toBe('taskPoll2');
+});
+
+it('LimitFrequency with group slug -> limit promo from group', async function () {
+    const progressState = {
+        finishedPromos: ['boardPoll2'],
+        progressInfoByPromo: {
+            boardPoll2: {
+                lastCallTime: new Date('07-15-2024').valueOf(),
+            },
+        },
+    };
+    const controller = new Controller({
+        config: {
+            promoGroups: [pollGroup2],
+            constraints: [
+                LimitFrequency({
+                    slugs: ['poll2'],
+                    interval: {weeks: 1},
+                }),
+            ],
+        },
+        progressState: progressState,
+        getProgressState: () => new Promise<PromoProgressState>(() => progressState),
+        onSave: {
+            progress: () => new Promise(() => {}),
+        },
+    });
+    controller.dateNow = () => new Date('07-15-2024').valueOf();
+
+    await controller.requestStart('taskPoll2');
+
+    expect(controller.state.base.activePromo).toBe(null);
+});
