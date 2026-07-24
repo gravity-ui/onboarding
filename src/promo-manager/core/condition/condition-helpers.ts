@@ -51,6 +51,14 @@ export const ShowOnceForSession = ({slugs: slugsFromParams}: SlugsParam = {}) =>
 
 export const LimitFrequency = ({slugs, interval}: {slugs: string[]; interval: DurationParam}) => {
     return (state: PromoState, ctx: ConditionContext) => {
+        const currentPromoInSlugs =
+            (ctx.promoSlug && slugs.includes(ctx.promoSlug)) ||
+            (ctx.promoGroup && slugs.includes(ctx.promoGroup));
+
+        if ((ctx.promoSlug || ctx.promoGroup) && !currentPromoInSlugs) {
+            return true;
+        }
+
         // @ts-ignore
         const targetInterval = dayjs.duration(interval);
 

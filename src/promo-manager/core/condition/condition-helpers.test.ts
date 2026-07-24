@@ -408,6 +408,71 @@ describe('LimitFrequency', function () {
         });
     });
 
+    describe('with current promo in context', function () {
+        const state = {
+            base: {
+                activePromo: null,
+                activeQueue: [],
+            },
+            progress: {
+                finishedPromos: ['somePromo1'],
+                progressInfoByPromo: {
+                    somePromo1: {
+                        lastCallTime: new Date('07-15-2024').valueOf(),
+                    },
+                },
+            },
+        };
+
+        it('current promo not in slugs -> true', function () {
+            const helper = LimitFrequency({
+                slugs: ['somePromo1', 'somePromo2'],
+                interval: {weeks: 1},
+            });
+
+            expect(
+                helper(state, {
+                    currentDate,
+                    config,
+                    promoSlug: 'otherPromo',
+                    promoGroup: 'otherGroup',
+                }),
+            ).toBe(true);
+        });
+
+        it('current promo in slugs -> false', function () {
+            const helper = LimitFrequency({
+                slugs: ['somePromo1', 'somePromo2'],
+                interval: {weeks: 1},
+            });
+
+            expect(
+                helper(state, {
+                    currentDate,
+                    config,
+                    promoSlug: 'somePromo2',
+                    promoGroup: 'otherGroup',
+                }),
+            ).toBe(false);
+        });
+
+        it('current promo group in slugs -> false', function () {
+            const helper = LimitFrequency({
+                slugs: ['promoGroup1', 'somePromo2'],
+                interval: {weeks: 1},
+            });
+
+            expect(
+                helper(state, {
+                    currentDate,
+                    config,
+                    promoSlug: 'somePromo1',
+                    promoGroup: 'promoGroup1',
+                }),
+            ).toBe(false);
+        });
+    });
+
     it('not enough time has passed to start. Type and slug', function () {
         const helper = LimitFrequency({
             slugs: ['someType1', 'somePromo1'],

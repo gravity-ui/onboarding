@@ -388,14 +388,14 @@ export class Controller {
 
     private checkPromoConditions = (slug: PromoSlug): boolean => {
         this.logger.debug('Promo', slug, 'Check conditions');
-        if (!this.checkConstraints()) {
-            this.logger.debug(`Not pass constraints`);
-            return false;
-        }
-
         const group = this.getGroupBySlug(slug);
 
         if (!group) {
+            return false;
+        }
+
+        if (!this.checkConstraints(slug, group)) {
+            this.logger.debug(`Not pass constraints`);
             return false;
         }
 
@@ -547,7 +547,7 @@ export class Controller {
         this.logger.debug('Onboarding integration applied');
     };
 
-    private checkConstraints() {
+    private checkConstraints(slug: PromoSlug, group: PromoGroupSlug) {
         if (!this.options.config.constraints) {
             return true;
         }
@@ -555,6 +555,8 @@ export class Controller {
         return checkCondition(
             this.state,
             {
+                promoSlug: slug,
+                promoGroup: group,
                 currentDate: this.dateNow(),
                 helpers: this.conditionHelpers,
                 config: this.options.config,
