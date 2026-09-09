@@ -16,6 +16,7 @@ updates:
           - patch
       security:
         applies-to: security-updates
+        dependency-type: development
         patterns:
           - '*'
         update-types:

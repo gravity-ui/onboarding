@@ -49,7 +49,8 @@ jobs:
                 const accepted = new Set(['version-update:semver-patch', 'version-update:semver-minor']);
                 if (!Array.isArray(dependencies) || !dependencies.length || !dependencies.every((dependency) =>
                     accepted.has(dependency.updateType) && dependency.packageEcosystem === 'npm_and_yarn' &&
-                    dependency.directory === '/' && (dependency.dependencyGroup === 'security' ||
+                    dependency.directory === '/' && ((dependency.dependencyGroup === 'security' &&
+                    ['direct:development', 'indirect'].includes(dependency.dependencyType)) ||
                     (dependency.dependencyGroup === 'development' && dependency.dependencyType === 'direct:development'))
                 )) return skip('update metadata is outside automatic policy');
                 const commits = await github.paginate(github.rest.pulls.listCommits, request);
@@ -69,14 +70,13 @@ jobs:
                 const {data: commit} = await github.rest.repos.getCommit({...context.repo, ref: head});
                 if (commit.parents.length !== 1) return skip('unexpected commit parents');
                 const [before, after] = await Promise.all([readPackage(commit.parents[0].sha), readPackage(head)]);
-                for (const field of ['dependencies', 'devDependencies']) {
-                    if (!isDeepStrictEqual(Object.keys(before[field] || {}).sort(), Object.keys(after[field] || {}).sort())) {
-                        return skip('dependencies added or removed');
-                    }
-                    delete before[field];
-                    delete after[field];
+                if (!isDeepStrictEqual(Object.keys(before.devDependencies || {}).sort(),
+                    Object.keys(after.devDependencies || {}).sort())) {
+                    return skip('development dependencies added or removed');
                 }
-                if (!isDeepStrictEqual(before, after)) return skip('scripts, peers, overrides or other manifest fields changed');
+                delete before.devDependencies;
+                delete after.devDependencies;
+                if (!isDeepStrictEqual(before, after)) return skip('runtime dependencies, scripts, peers, overrides or other manifest fields changed');
 
                 const required = ['Verify Files', 'Tests', 'Audit'];
                 for (let attempt = 0; attempt < attempts; attempt += 1) {

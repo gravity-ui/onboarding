@@ -42,11 +42,13 @@ function fixture() {
         ],
         before: {
             scripts: {test: 'jest'},
+            dependencies: {dayjs: '^1.11.0'},
             devDependencies: {jest: '^30.0.0'},
             peerDependencies: {react: '^18'},
         },
         after: {
             scripts: {test: 'jest'},
+            dependencies: {dayjs: '^1.11.0'},
             devDependencies: {jest: '^30.1.0'},
             peerDependencies: {react: '^18'},
         },
@@ -194,6 +196,12 @@ const rejected = {
     'new dependency': (s) => {
         s.after.devDependencies.evil = '1.0.0';
     },
+    'runtime dependency version change': (s) => {
+        s.after.dependencies.dayjs = '^1.11.1';
+    },
+    'runtime dependency added': (s) => {
+        s.after.dependencies.other = '^1.0.0';
+    },
     'foreign repository': (s) => {
         s.pr.head.repo.full_name = 'attacker/onboarding';
     },
@@ -252,12 +260,31 @@ for (const [name, mutate] of Object.entries({
         assert.deepEqual(state.actions, []);
     });
 }
-test('security group permits production patch/minor updates', async () => {
+test('security group requires manual review for production patch/minor updates', async () => {
     const {state, run} = fixture();
     Object.assign(state.dependencies[0], {
         dependencyGroup: 'security',
         dependencyType: 'direct:production',
     });
+    await run();
+    assert.deepEqual(state.actions, []);
+});
+
+test('security group permits development patch/minor updates', async () => {
+    const {state, run} = fixture();
+    state.dependencies[0].dependencyGroup = 'security';
+    await run();
+    assert.equal(state.actions.at(-1)[0], 'merge');
+});
+
+test('security group permits indirect lockfile updates without runtime manifest changes', async () => {
+    const {state, run} = fixture();
+    Object.assign(state.dependencies[0], {
+        dependencyGroup: 'security',
+        dependencyType: 'indirect',
+    });
+    state.files = [{filename: 'package-lock.json', status: 'modified'}];
+    state.after = structuredClone(state.before);
     await run();
     assert.equal(state.actions.at(-1)[0], 'merge');
 });
