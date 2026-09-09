@@ -42,7 +42,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/jest": "^30.0.0",
-    "@types/react": "^18.0.0",
+    "@types/react": "^19.2.18",
     "@types/react-dom": "^18.0.0",
     "@typescript-eslint/eslint-plugin": "^8.70.0",
     "@typescript-eslint/parser": "^8.70.0",
@@ -58,14 +58,14 @@
     "jsdom": "^26.0.0",
     "nano-staged": "^1.0.2",
     "prettier": "^3.9.6",
-    "react": "^18.0.0",
+    "react": "^19.2.8",
     "react-dom": "^18.0.0",
     "size-limit": "^12.1.0",
     "ts-jest": "^29.4.11",
     "typescript": "^5.8.3"
   },
   "peerDependencies": {
-    "react": "^18.0.0",
+    "react": "^19.2.8",
     "react-dom": "^18.0.0"
   },
   "nano-staged": {
