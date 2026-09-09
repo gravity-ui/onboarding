@@ -37,7 +37,7 @@
     "@eslint/js": "^10.0.1",
     "@gravity-ui/prettier-config": "^1.1.1",
     "@gravity-ui/tsconfig": "^1.0.0",
-    "@size-limit/esbuild-why": "^12.1.0",
+    "@size-limit/esbuild-why": "^13.0.3",
     "@size-limit/preset-small-lib": "^12.1.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
