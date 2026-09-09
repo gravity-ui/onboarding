@@ -1,0 +1,129 @@
+name: Dependabot Auto-merge
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions: {}
+
+concurrency:
+  group: dependabot-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  auto-merge:
+    if: >-
+      github.repository == 'gravity-ui/onboarding' &&
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: read
+    steps:
+      - name: Read verified Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3
+
+      - name: Validate, wait for CI and merge the exact update
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          UPDATED_DEPENDENCIES: ${{ steps.metadata.outputs.updated-dependencies-json }}
+        with:
+          script: |
+            const mergeDependabot = async function mergeDependabot({github, context, core, dependencies, pause, attempts = 90}) {
+                const {isDeepStrictEqual} = require('node:util');
+                const sleep = pause || ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+                const request = {...context.repo, pull_number: context.payload.pull_request.number};
+                const head = context.payload.pull_request.head.sha;
+                const skip = (reason) => core.info(`Manual review: ${reason}`);
+                const validPull = (pr) => pr.state === 'open' && !pr.draft && pr.head.sha === head &&
+                    pr.base.ref === 'main' && pr.user.login === 'dependabot[bot]' &&
+                    pr.head.repo?.full_name === 'gravity-ui/onboarding';
+                const {data: pr} = await github.rest.pulls.get(request);
+                if (!validPull(pr)) return skip('pull request changed');
+                const accepted = new Set(['version-update:semver-patch', 'version-update:semver-minor']);
+                if (!Array.isArray(dependencies) || !dependencies.length || !dependencies.every((dependency) =>
+                    accepted.has(dependency.updateType) && dependency.packageEcosystem === 'npm_and_yarn' &&
+                    dependency.directory === '/' && (dependency.dependencyGroup === 'security' ||
+                    (dependency.dependencyGroup === 'development' && dependency.dependencyType === 'direct:development'))
+                )) return skip('update metadata is outside automatic policy');
+                const commits = await github.paginate(github.rest.pulls.listCommits, request);
+                if (commits.length !== 1 || commits[0].sha !== head ||
+                    commits[0].author?.login !== 'dependabot[bot]' || !commits[0].commit.verification?.verified) {
+                    return skip('expected one verified Dependabot commit');
+                }
+                const files = await github.paginate(github.rest.pulls.listFiles, request);
+                if (!files.length || !files.every((file) =>
+                    ['package.json', 'package-lock.json'].includes(file.filename) && file.status === 'modified'
+                )) return skip('changes outside dependency manifests');
+                const readPackage = async (ref) => {
+                    const {data} = await github.rest.repos.getContent({...context.repo, path: 'package.json', ref});
+                    if (Array.isArray(data) || data.type !== 'file') throw new Error('Not a package file');
+                    return JSON.parse(Buffer.from(data.content, 'base64').toString('utf8'));
+                };
+                const {data: commit} = await github.rest.repos.getCommit({...context.repo, ref: head});
+                if (commit.parents.length !== 1) return skip('unexpected commit parents');
+                const [before, after] = await Promise.all([readPackage(commit.parents[0].sha), readPackage(head)]);
+                for (const field of ['dependencies', 'devDependencies']) {
+                    if (!isDeepStrictEqual(Object.keys(before[field] || {}).sort(), Object.keys(after[field] || {}).sort())) {
+                        return skip('dependencies added or removed');
+                    }
+                    delete before[field];
+                    delete after[field];
+                }
+                if (!isDeepStrictEqual(before, after)) return skip('scripts, peers, overrides or other manifest fields changed');
+
+                const required = ['Verify Files', 'Tests', 'Audit'];
+                for (let attempt = 0; attempt < attempts; attempt += 1) {
+                    const {data: current} = await github.rest.pulls.get(request);
+                    if (!validPull(current)) return skip('pull request changed while waiting for CI');
+                    // Workflow-run head_sha is the PR head even when Actions tests refs/pull/N/merge.
+                    const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
+                        ...context.repo, workflow_id: 'ci.yml', event: 'pull_request', head_sha: head, per_page: 100,
+                    });
+                    const run = runs.filter((candidate) => candidate.head_sha === head &&
+                        candidate.event === 'pull_request' && candidate.path === '.github/workflows/ci.yml' &&
+                        candidate.head_branch === current.head.ref &&
+                        candidate.head_repository?.full_name === current.head.repo.full_name
+                    ).sort((a, b) => b.id - a.id)[0];
+                    if (run?.status === 'completed') {
+                        if (run.conclusion !== 'success') throw new Error(`CI concluded ${run.conclusion}; merge stopped`);
+                        const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+                            ...context.repo, run_id: run.id, filter: 'latest', per_page: 100,
+                        });
+                        if (!required.every((name) => jobs.some((job) => job.name === name &&
+                            job.status === 'completed' && job.conclusion === 'success'))) {
+                            throw new Error('CI must run and pass Verify Files, Tests and Audit');
+                        }
+                        const {data: latest} = await github.rest.pulls.get(request);
+                        if (!validPull(latest)) return skip('pull request changed after CI');
+                        const reviews = await github.paginate(github.rest.pulls.listReviews, request);
+                        if (!reviews.some((review) => review.user?.login === 'github-actions[bot]' &&
+                            review.state === 'APPROVED' && review.commit_id === head)) {
+                            await github.rest.pulls.createReview({
+                                ...request, commit_id: head, event: 'APPROVE',
+                                body: 'Verified Dependabot patch/minor update; lint, types, build, tests and audit passed.',
+                            });
+                        }
+                        // Exact-SHA merge, never leave a standing auto-merge request for future commits.
+                        // GitHub enforces branch protection again atomically during this call.
+                        const {data: result} = await github.rest.pulls.merge({
+                            ...request, sha: head, merge_method: 'squash',
+                            commit_title: latest.title, commit_message: '',
+                        });
+                        if (!result.merged) throw new Error(`Merge refused: ${result.message}`);
+                        core.info('Verified Dependabot update merged after CI');
+                        return;
+                    }
+                    core.info('Waiting for CI on the unchanged Dependabot head');
+                    await sleep(10000);
+                }
+                throw new Error('Timed out waiting for CI; no approval or merge performed');
+            };
+
+            await mergeDependabot({github, context, core, dependencies: JSON.parse(process.env.UPDATED_DEPENDENCIES)});
