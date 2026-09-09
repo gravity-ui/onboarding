@@ -60,7 +60,6 @@ const {controller} = createOnboarding({
     },
 });
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
 describe('type infering', () => {
     it('should infer preset params', () => {
         // infer preset params
