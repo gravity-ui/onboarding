@@ -17,7 +17,7 @@ const asyncPresetsMap = () => ({
 
 const getAsyncOptions = () => {
     const base = getOptions();
-    const loader = jest.fn(() => Promise.resolve(asyncPresetsMap()));
+    const loader = vi.fn(() => Promise.resolve(asyncPresetsMap()));
     const options = {
         ...base,
         config: {
@@ -136,7 +136,7 @@ describe('async presets — reactive userPresets', () => {
     it('userPresets getter triggers loader (fire-and-forget) and emits stateChange on resolve', async () => {
         const {options, loader} = getAsyncOptions();
         const controller = new Controller(options);
-        const listener = jest.fn();
+        const listener = vi.fn();
         controller.events.subscribe('stateChange', listener);
 
         const firstRead = controller.userPresets;
@@ -169,7 +169,7 @@ describe('async presets — wizard prefetch', () => {
 describe('async presets — error handling', () => {
     it('rejected loader is surfaced and cached — subsequent calls do not retry', async () => {
         const base = getOptions();
-        const loader = jest.fn().mockRejectedValue(new Error('network'));
+        const loader = vi.fn().mockRejectedValue(new Error('network'));
         const controller = new Controller({
             ...base,
             config: {...base.config, asyncPresets: loader},
@@ -184,7 +184,7 @@ describe('async presets — error handling', () => {
 
     it('does not issue repeated requests across all preset-touching entrypoints when loader keeps failing', async () => {
         const base = getOptions();
-        const loader = jest.fn().mockRejectedValue(new Error('offline'));
+        const loader = vi.fn().mockRejectedValue(new Error('offline'));
         const controller = new Controller({
             ...base,
             baseState: {
@@ -211,8 +211,8 @@ describe('async presets — error handling', () => {
 
     it('logs error via controller logger on loader failure', async () => {
         const base = getOptions();
-        const loader = jest.fn().mockRejectedValue(new Error('boom'));
-        const errorLog = jest.fn();
+        const loader = vi.fn().mockRejectedValue(new Error('boom'));
+        const errorLog = vi.fn();
         const controller = new Controller({
             ...base,
             config: {...base.config, asyncPresets: loader},
@@ -233,9 +233,9 @@ describe('async presets — error handling', () => {
 describe('async presets — key collisions', () => {
     it('keeps sync preset and logs error when async loader returns colliding key', async () => {
         const base = getOptions();
-        const errorLog = jest.fn();
+        const errorLog = vi.fn();
         const syncCreateProject = (base.config.presets as any).createProject;
-        const loader = jest.fn().mockResolvedValue({
+        const loader = vi.fn().mockResolvedValue({
             createProject: {
                 name: 'From async — should be ignored',
                 steps: [{slug: 'differentStep', name: '', description: ''}],
@@ -275,7 +275,7 @@ describe('async presets — combined presets', () => {
                 pickPreset: () => 'innerAsync',
             },
         };
-        const loader = jest.fn().mockResolvedValue({
+        const loader = vi.fn().mockResolvedValue({
             innerAsync: {
                 name: 'Inner',
                 type: 'internal' as const,
@@ -303,7 +303,7 @@ describe('async presets — combined presets', () => {
                 steps: [{slug: 'innerStep', name: '', description: ''}],
             },
         };
-        const loader = jest.fn().mockResolvedValue({
+        const loader = vi.fn().mockResolvedValue({
             comboAsync: {
                 name: 'Combo',
                 type: 'combined' as const,
@@ -328,7 +328,7 @@ describe('async presets — reach before load', () => {
     it('stepElementReached during pending load resolves and shows hint', async () => {
         const base = getOptions();
         let resolveLoader!: (v: Record<string, any>) => void;
-        const loader = jest.fn(
+        const loader = vi.fn(
             () =>
                 new Promise<Record<string, any>>((res) => {
                     resolveLoader = res;
@@ -364,7 +364,7 @@ describe('async presets — reach before load', () => {
     it('element unmounts before load resolves — no hint shown', async () => {
         const base = getOptions();
         let resolveLoader!: (v: Record<string, any>) => void;
-        const loader = jest.fn(
+        const loader = vi.fn(
             () =>
                 new Promise<Record<string, any>>((res) => {
                     resolveLoader = res;
@@ -419,13 +419,13 @@ describe('async presets — suggestPresetOnce', () => {
 describe('async presets — unhandled rejection safety', () => {
     it('fire-and-forget loader failure does not leak unhandledRejection (userPresets getter)', async () => {
         const base = getOptions();
-        const loader = jest.fn().mockRejectedValue(new Error('offline'));
+        const loader = vi.fn().mockRejectedValue(new Error('offline'));
         const controller = new Controller({
             ...base,
             config: {...base.config, asyncPresets: loader},
         } as any);
 
-        const unhandled = jest.fn();
+        const unhandled = vi.fn();
         process.on('unhandledRejection', unhandled);
         try {
             // eslint-disable-next-line @typescript-eslint/no-unused-expressions
@@ -440,14 +440,14 @@ describe('async presets — unhandled rejection safety', () => {
 
     it('fire-and-forget loader failure does not leak unhandledRejection (setWizardState)', async () => {
         const base = getOptions();
-        const loader = jest.fn().mockRejectedValue(new Error('offline'));
+        const loader = vi.fn().mockRejectedValue(new Error('offline'));
         const controller = new Controller({
             ...base,
             baseState: {...base.baseState, wizardState: 'hidden'},
             config: {...base.config, asyncPresets: loader},
         } as any);
 
-        const unhandled = jest.fn();
+        const unhandled = vi.fn();
         process.on('unhandledRejection', unhandled);
         try {
             await controller.setWizardState('visible');

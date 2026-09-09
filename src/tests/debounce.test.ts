@@ -42,15 +42,15 @@ describe('createControlledPromise', () => {
 
 describe('createDebounceHandler', () => {
     beforeEach(() => {
-        jest.useFakeTimers();
+        vi.useFakeTimers();
     });
 
     afterEach(() => {
-        jest.useRealTimers();
+        vi.useRealTimers();
     });
 
     it('should debounce function calls', () => {
-        const mockFn = jest.fn();
+        const mockFn = vi.fn();
         const debouncedFn = createDebounceHandler(mockFn, 100);
 
         debouncedFn();
@@ -59,27 +59,27 @@ describe('createDebounceHandler', () => {
 
         expect(mockFn).not.toHaveBeenCalled();
 
-        jest.advanceTimersByTime(100);
+        vi.advanceTimersByTime(100);
         expect(mockFn).toHaveBeenCalledTimes(1);
     });
 
     it('should reset timeout on subsequent calls within timeout period', () => {
-        const mockFn = jest.fn();
+        const mockFn = vi.fn();
         const debouncedFn = createDebounceHandler(mockFn, 100);
 
         debouncedFn();
-        jest.advanceTimersByTime(50);
+        vi.advanceTimersByTime(50);
         debouncedFn();
-        jest.advanceTimersByTime(50);
+        vi.advanceTimersByTime(50);
 
         expect(mockFn).not.toHaveBeenCalled();
 
-        jest.advanceTimersByTime(50);
+        vi.advanceTimersByTime(50);
         expect(mockFn).toHaveBeenCalledTimes(1);
     });
 
     it('should return promise that resolves when function executes', async () => {
-        const mockFn = jest.fn();
+        const mockFn = vi.fn();
         const debouncedFn = createDebounceHandler(mockFn, 100);
 
         const promise = debouncedFn();
@@ -90,18 +90,18 @@ describe('createDebounceHandler', () => {
         });
 
         expect(resolved).toBe(false);
-        jest.advanceTimersByTime(100);
+        vi.advanceTimersByTime(100);
         await promise;
         expect(resolved).toBe(true);
         expect(mockFn).toHaveBeenCalledTimes(1);
     });
 
     it('should handle multiple calls with different promises', async () => {
-        const mockFn = jest.fn();
+        const mockFn = vi.fn();
         const debouncedFn = createDebounceHandler(mockFn, 100);
 
         const promise1 = debouncedFn();
-        jest.advanceTimersByTime(50);
+        vi.advanceTimersByTime(50);
         const promise2 = debouncedFn();
 
         let resolved1 = false;
@@ -114,7 +114,7 @@ describe('createDebounceHandler', () => {
             resolved2 = true;
         });
 
-        jest.advanceTimersByTime(100);
+        vi.advanceTimersByTime(100);
         await Promise.all([promise1, promise2]);
 
         expect(resolved1).toBe(true);
@@ -123,27 +123,27 @@ describe('createDebounceHandler', () => {
     });
 
     it('should handle calls separated by more than timeout period', () => {
-        const mockFn = jest.fn();
+        const mockFn = vi.fn();
         const debouncedFn = createDebounceHandler(mockFn, 100);
 
         debouncedFn();
-        jest.advanceTimersByTime(100);
+        vi.advanceTimersByTime(100);
         expect(mockFn).toHaveBeenCalledTimes(1);
 
         debouncedFn();
-        jest.advanceTimersByTime(100);
+        vi.advanceTimersByTime(100);
         expect(mockFn).toHaveBeenCalledTimes(2);
     });
 
     it('should create new controlled promise for calls after timeout', async () => {
-        const mockFn = jest.fn();
+        const mockFn = vi.fn();
         const debouncedFn = createDebounceHandler(mockFn, 100);
 
         const promise1 = debouncedFn();
-        jest.advanceTimersByTime(150);
+        vi.advanceTimersByTime(150);
         const promise2 = debouncedFn();
 
-        jest.advanceTimersByTime(100);
+        vi.advanceTimersByTime(100);
 
         await promise1;
         await promise2;
@@ -152,13 +152,13 @@ describe('createDebounceHandler', () => {
     });
 
     it('should handle zero timeout', () => {
-        const mockFn = jest.fn();
+        const mockFn = vi.fn();
         const debouncedFn = createDebounceHandler(mockFn, 0);
 
         debouncedFn();
         expect(mockFn).not.toHaveBeenCalled();
 
-        jest.advanceTimersByTime(0);
+        vi.advanceTimersByTime(0);
         expect(mockFn).toHaveBeenCalledTimes(1);
     });
 });

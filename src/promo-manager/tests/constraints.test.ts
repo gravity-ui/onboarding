@@ -62,7 +62,7 @@ it('can use json helpers', async function () {
             helper: 'someConstraint',
         },
     ];
-    const mock = jest.fn(() => () => false);
+    const mock = vi.fn(() => () => false);
     options.conditionHelpers = {someConstraint: mock};
     const controller = new Controller(options);
 
@@ -80,7 +80,7 @@ it('can pass arg to helper', async function () {
             args: [123],
         },
     ];
-    const mock = jest.fn(() => () => false);
+    const mock = vi.fn(() => () => false);
     options.conditionHelpers = {someConstraint: mock};
     const controller = new Controller(options);
 

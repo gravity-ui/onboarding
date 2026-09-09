@@ -49,7 +49,7 @@ export const getOptions = (
             enabled: true,
             ...baseState,
         },
-        getProgressState: jest.fn(() =>
+        getProgressState: vi.fn(() =>
             Promise.resolve({
                 presetPassedSteps: {
                     createProject: ['openBoard'],
@@ -59,17 +59,17 @@ export const getOptions = (
             }),
         ),
         onSave: {
-            state: jest.fn(),
-            progress: jest.fn(),
+            state: vi.fn(),
+            progress: vi.fn(),
         },
-        showHint: jest.fn(),
+        showHint: vi.fn(),
         debugMode: false,
         ignoreUnknownPresets: false as boolean,
         logger: {
             level: 'error' as const,
             logger: {
                 debug: () => {},
-                error: jest.fn(),
+                error: vi.fn(),
             },
         },
         plugins: [] as OnboardingPlugin[],
@@ -136,7 +136,7 @@ export const getSameStepsOptions = (
             enabled: true,
             ...baseState,
         },
-        getProgressState: jest.fn(() =>
+        getProgressState: vi.fn(() =>
             Promise.resolve({
                 presetPassedSteps: {},
                 finishedPresets: [],
@@ -144,17 +144,17 @@ export const getSameStepsOptions = (
             }),
         ),
         onSave: {
-            state: jest.fn(),
-            progress: jest.fn(),
+            state: vi.fn(),
+            progress: vi.fn(),
         },
-        showHint: jest.fn(),
+        showHint: vi.fn(),
         debugMode: false,
         ignoreUnknownPresets: false as boolean,
         logger: {
             level: 'error' as const,
             logger: {
                 debug: () => {},
-                error: jest.fn(),
+                error: vi.fn(),
             },
         },
         plugins: [] as OnboardingPlugin[],
@@ -231,7 +231,7 @@ export const getOptionsWithCombined = (
             enabled: true,
             ...baseState,
         },
-        getProgressState: jest.fn(() =>
+        getProgressState: vi.fn(() =>
             Promise.resolve({
                 presetPassedSteps: {},
                 finishedPresets: [],
@@ -239,10 +239,10 @@ export const getOptionsWithCombined = (
             }),
         ),
         onSave: {
-            state: jest.fn(),
-            progress: jest.fn(),
+            state: vi.fn(),
+            progress: vi.fn(),
         },
-        showHint: jest.fn(),
+        showHint: vi.fn(),
         debugMode: false,
         logger: {
             level: 'error' as const,
@@ -303,8 +303,8 @@ export const getOptionsWithPromo = (baseState: Partial<BaseState> = {}) => {
         },
         getProgressState: async () => ({}),
         onSave: {
-            state: jest.fn(),
-            progress: jest.fn(),
+            state: vi.fn(),
+            progress: vi.fn(),
         },
         logger: {
             level: 'error' as const,
@@ -320,15 +320,15 @@ export const getOptionsWithPromo = (baseState: Partial<BaseState> = {}) => {
 export const getOptionsWithHooks = (...args: Parameters<typeof getOptions>) => ({
     ...getOptions(...args),
     hooks: {
-        showHint: jest.fn(),
-        stepPass: jest.fn(),
-        addPreset: jest.fn(),
-        runPreset: jest.fn(),
-        beforeRunPreset: jest.fn(),
-        finishPreset: jest.fn(),
-        beforeSuggestPreset: jest.fn(),
-        beforeShowHint: jest.fn(async () => true),
-        applyDefaultState: jest.fn(),
+        showHint: vi.fn(),
+        stepPass: vi.fn(),
+        addPreset: vi.fn(),
+        runPreset: vi.fn(),
+        beforeRunPreset: vi.fn(),
+        finishPreset: vi.fn(),
+        beforeSuggestPreset: vi.fn(),
+        beforeShowHint: vi.fn(async () => true),
+        applyDefaultState: vi.fn(),
     },
 });
 

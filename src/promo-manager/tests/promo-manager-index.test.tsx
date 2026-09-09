@@ -8,9 +8,9 @@ describe('PromoManager Core Index', () => {
                     promoGroups: [],
                 },
                 progressState: {},
-                getProgressState: jest.fn(() => Promise.resolve({})),
+                getProgressState: vi.fn(() => Promise.resolve({})),
                 onSave: {
-                    progress: jest.fn(),
+                    progress: vi.fn(),
                 },
             };
 

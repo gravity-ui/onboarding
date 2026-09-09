@@ -20,7 +20,7 @@ it('empty store snapshot', function () {
 });
 
 it('show hint -> emit callback', function () {
-    const fn = jest.fn();
+    const fn = vi.fn();
 
     const emitter = new EventEmitter();
     const store = new HintStore(emitter);
@@ -31,7 +31,7 @@ it('show hint -> emit callback', function () {
 });
 
 it('show hint -> state for open hint', function () {
-    const fn = jest.fn();
+    const fn = vi.fn();
 
     const emitter = new EventEmitter();
     const store = new HintStore(emitter);
@@ -49,7 +49,7 @@ it('show hint -> state for open hint', function () {
 });
 
 it('close hint -> state for closed hint', function () {
-    const fn = jest.fn();
+    const fn = vi.fn();
 
     const emitter = new EventEmitter();
     const store = new HintStore(emitter);
@@ -61,7 +61,7 @@ it('close hint -> state for closed hint', function () {
 });
 
 it('unsubscribe -> no emit callback', function () {
-    const fn = jest.fn();
+    const fn = vi.fn();
 
     const emitter = new EventEmitter();
     const store = new HintStore(emitter);
@@ -74,7 +74,7 @@ it('unsubscribe -> no emit callback', function () {
 });
 
 it('update -> new state object', function () {
-    const fn = jest.fn();
+    const fn = vi.fn();
 
     const emitter = new EventEmitter();
     const store = new HintStore(emitter);
@@ -99,7 +99,7 @@ describe('works with different context', function () {
     const runner = new Runner();
 
     it('subscribe, show hint, close hint', function () {
-        const fn = jest.fn();
+        const fn = vi.fn();
 
         const emitter = new EventEmitter();
         const store = new HintStore(emitter);

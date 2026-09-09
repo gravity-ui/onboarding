@@ -49,8 +49,8 @@ jobs:
         cache: 'npm'
     - name: Install Packages
       run: npm ci
-    - name: Unit Tests
-      run: npm run test
+    - name: Unit Tests and Coverage
+      run: npm run test:coverage
 
   audit:
     name: Audit

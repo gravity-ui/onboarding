@@ -85,7 +85,7 @@ describe('store api', function () {
         const options = getOptions();
 
         const controller = new Controller(options);
-        const cb = jest.fn();
+        const cb = vi.fn();
 
         controller.subscribe(cb);
 
@@ -96,7 +96,7 @@ describe('store api', function () {
         const options = getOptions();
 
         const controller = new Controller(options);
-        const cb = jest.fn();
+        const cb = vi.fn();
         controller.subscribe(cb);
 
         await controller.stepElementReached({
@@ -112,7 +112,7 @@ describe('store api', function () {
 
         const controller = new Controller(options);
 
-        const cb = jest.fn();
+        const cb = vi.fn();
         controller.subscribe(cb);
 
         await controller.addPreset('createQueue');
@@ -155,7 +155,7 @@ describe('store api', function () {
 
         const controller = new Controller(options);
 
-        const cb = jest.fn();
+        const cb = vi.fn();
         controller.subscribe(cb);
 
         await controller.passStep('createSprint');
@@ -197,7 +197,7 @@ describe('store api', function () {
 
         const controller = new Controller(options);
 
-        const cb = jest.fn();
+        const cb = vi.fn();
         const unsubscribe = controller.subscribe(cb);
         unsubscribe();
 
@@ -247,6 +247,7 @@ describe('wrong data', function () {
     it('add not existed preset', async function () {
         const options = getOptions();
         const controller = new Controller(options);
+        options.logger.logger.error.mockClear();
 
         await controller.addPreset('unknownPreset');
 
@@ -258,6 +259,7 @@ describe('wrong data', function () {
 
         const options = getOptions();
         const controller = new Controller(options);
+        options.logger.logger.error.mockClear();
 
         try {
             await controller.suggestPresetOnce('unknownPreset');
@@ -274,6 +276,7 @@ describe('wrong data', function () {
 
         const options = getOptions();
         const controller = new Controller(options);
+        options.logger.logger.error.mockClear();
 
         try {
             await controller.runPreset('unknownPreset');
@@ -285,6 +288,7 @@ describe('wrong data', function () {
     it('reach not existed step', async function () {
         const options = getOptions();
         const controller = new Controller(options);
+        options.logger.logger.error.mockClear();
 
         await controller.stepElementReached({
             element: getAnchorElement(),
@@ -297,6 +301,7 @@ describe('wrong data', function () {
     it('pass not existed step', async function () {
         const options = getOptions();
         const controller = new Controller(options);
+        options.logger.logger.error.mockClear();
 
         await controller.passStep('unknownStep');
 
@@ -328,6 +333,7 @@ describe('wrong data', function () {
 
         it('suggest not existed preset -> false', async function () {
             const controller = new Controller(options);
+            options.logger.logger.error.mockClear();
 
             const result = await controller.suggestPresetOnce('unknownPreset');
 
@@ -337,6 +343,7 @@ describe('wrong data', function () {
 
         it('run not existed preset -> return false', async function () {
             const controller = new Controller(options);
+            options.logger.logger.error.mockClear();
 
             const result = await controller.runPreset('unknownPreset');
 

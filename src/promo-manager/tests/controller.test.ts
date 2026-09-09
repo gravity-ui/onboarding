@@ -349,14 +349,14 @@ describe('close with timeout', () => {
     });
 
     it('cancel and save time', async () => {
-        jest.useFakeTimers();
+        vi.useFakeTimers();
         controller.cancelPromo(promo, clearActiveTimeout);
 
         expect(controller.state.progress?.progressInfoByPromo[promo]?.lastCallTime).toBeDefined();
         expect(controller.state.base.activePromo).toBe(promo);
 
-        jest.advanceTimersByTime(clearActiveTimeout);
-        jest.useRealTimers();
+        vi.advanceTimersByTime(clearActiveTimeout);
+        vi.useRealTimers();
 
         expect(controller.state.base.activePromo).toBe(null);
     });
@@ -444,7 +444,7 @@ describe('finishPromo', () => {
     it('finish repetable promo again -> save result', async () => {
         const repeatablePromo = 'boardPollRepeatable';
 
-        const mock = jest.fn();
+        const mock = vi.fn();
         controller.events.subscribe('finishPromo', mock);
 
         const oldDate = new Date('07-15-2024').valueOf();
@@ -468,7 +468,7 @@ describe('finishPromo', () => {
     it('finish repetable promo again -> call hooks 2 times', async () => {
         const repeatablePromo = 'boardPollRepeatable';
 
-        const mock = jest.fn();
+        const mock = vi.fn();
         controller.events.subscribe('finishPromo', mock);
 
         await controller.requestStart(repeatablePromo);

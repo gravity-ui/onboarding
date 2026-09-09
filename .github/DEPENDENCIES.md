@@ -58,3 +58,27 @@ Import checks use `eslint-plugin-import-x`; JSDoc checks replace the removed cor
 TypeScript imports. Add a matching resolver if TypeScript path aliases are introduced.
 Preserve effective rules when updating this config, including explicit options whose
 defaults changed between ESLint majors.
+
+## Tests and coverage
+
+Tests run on Vitest with jsdom. `npm test` first checks all test and helper types
+with TypeScript, then runs the tests and size checks. This includes compile-time
+assertions such as `@ts-expect-error`; Vitest transpilation alone cannot verify them.
+`npm run typecheck` checks the library, and `npm run typecheck:tests` checks the
+complete test project and its Vitest configuration.
+
+`npm run test-watch` uses Vitest's built-in watch type checker. The regular test
+and CI commands use standalone TypeScript so they also catch errors in helpers.
+
+`npm run test:coverage` runs the same checks with V8 coverage and writes text, JSON,
+LCOV/HTML and Clover reports to `coverage/`. CI runs this command. Coverage includes
+runtime source files and excludes tests, helpers and stories; percentages therefore
+measure the library that is published.
+
+Builds clear `dist` before compiling so previously emitted test helpers cannot
+remain in a package. Test-only globals are configured for test files, not the
+library. Controller diagnostics use the configured logger in every environment.
+
+Vitest and Vite bundle some internal dependencies. Their lockfile entries do not
+enumerate all bundled code; keep the parent tools updated when assessing security
+advisories.

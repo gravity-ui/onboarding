@@ -269,7 +269,7 @@ describe('pass step', function () {
         describe('onStepPass', () => {
             it('pass step -> call onPass hook', async function () {
                 const options = getOptions();
-                const mock = jest.fn();
+                const mock = vi.fn();
 
                 options.config.presets.createProject.steps[1].hooks = {onStepPass: mock};
 
@@ -281,7 +281,7 @@ describe('pass step', function () {
 
             it('passed step -> dont call hook', async function () {
                 const options = getOptions();
-                const mock = jest.fn();
+                const mock = vi.fn();
 
                 options.config.presets.createProject.steps[0].hooks = {onStepPass: mock};
 
@@ -295,8 +295,8 @@ describe('pass step', function () {
         describe('closeHint hooks', () => {
             it('user close hint -> call onCloseHintByUser and onCloseHint', async function () {
                 const options = getOptions();
-                const onCloseHintByUserMock = jest.fn();
-                const onCloseHintMock = jest.fn();
+                const onCloseHintByUserMock = vi.fn();
+                const onCloseHintMock = vi.fn();
 
                 options.config.presets.createProject.steps[1].hooks = {
                     onCloseHintByUser: onCloseHintByUserMock,
@@ -316,8 +316,8 @@ describe('pass step', function () {
 
             it('element disappear -> call only onCloseHint', async function () {
                 const options = getOptions();
-                const onCloseHintByUserMock = jest.fn();
-                const onCloseHintMock = jest.fn();
+                const onCloseHintByUserMock = vi.fn();
+                const onCloseHintMock = vi.fn();
 
                 options.config.presets.createProject.steps[1].hooks = {
                     onCloseHintByUser: onCloseHintByUserMock,
@@ -337,8 +337,8 @@ describe('pass step', function () {
 
             it('pass step -> call onCloseHint + onCloseByUser', async function () {
                 const options = getOptions();
-                const onCloseHintByUserMock = jest.fn();
-                const onCloseHintMock = jest.fn();
+                const onCloseHintByUserMock = vi.fn();
+                const onCloseHintMock = vi.fn();
 
                 options.config.presets.createProject.steps[1].hooks = {
                     onCloseHintByUser: onCloseHintByUserMock,
@@ -358,8 +358,8 @@ describe('pass step', function () {
 
             it('call closeHint -> call onCloseHint with eventSource=externalEvent', async function () {
                 const options = getOptions();
-                const onCloseHintByUserMock = jest.fn();
-                const onCloseHintMock = jest.fn();
+                const onCloseHintByUserMock = vi.fn();
+                const onCloseHintMock = vi.fn();
 
                 options.config.presets.createProject.steps[1].hooks = {
                     onCloseHintByUser: onCloseHintByUserMock,

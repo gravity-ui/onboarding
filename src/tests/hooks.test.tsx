@@ -15,7 +15,7 @@ describe('React Hooks', () => {
 
     describe('useOnboardingStep', () => {
         it('should call passStep when pass is called', async () => {
-            const spy = jest.spyOn(controller, 'passStep').mockResolvedValue();
+            const spy = vi.spyOn(controller, 'passStep').mockResolvedValue();
             const {result} = renderHook(() => hooks.useOnboardingStep('openBoard'));
 
             await act(async () => {
@@ -26,7 +26,7 @@ describe('React Hooks', () => {
         });
 
         it('should call closeHintByUser when closeHint is called', () => {
-            const spy = jest.spyOn(controller, 'closeHintByUser');
+            const spy = vi.spyOn(controller, 'closeHintByUser');
             const {result} = renderHook(() => hooks.useOnboardingStep('openBoard'));
 
             act(() => {
@@ -39,7 +39,7 @@ describe('React Hooks', () => {
 
     describe('useOnboardingStepBySelector', () => {
         it('should call stepElementReached when element with selector is found', () => {
-            const spy = jest.spyOn(controller, 'stepElementReached');
+            const spy = vi.spyOn(controller, 'stepElementReached');
             const container = document.createElement('div');
             const targetElement = document.createElement('button');
             targetElement.className = 'test-button';
@@ -57,7 +57,7 @@ describe('React Hooks', () => {
         });
 
         it('should call stepElementDisappeared when element with selector is not found', () => {
-            const spy = jest.spyOn(controller, 'stepElementDisappeared');
+            const spy = vi.spyOn(controller, 'stepElementDisappeared');
             const container = document.createElement('div');
 
             renderHook(() =>
@@ -72,7 +72,7 @@ describe('React Hooks', () => {
         });
 
         it('should work with ref instead of element', () => {
-            const spy = jest.spyOn(controller, 'stepElementReached');
+            const spy = vi.spyOn(controller, 'stepElementReached');
             const container = document.createElement('div');
             const targetElement = document.createElement('button');
             targetElement.className = 'test-button';
@@ -92,7 +92,7 @@ describe('React Hooks', () => {
         });
 
         it('should call passStep when pass is called', async () => {
-            const spy = jest.spyOn(controller, 'passStep').mockResolvedValue();
+            const spy = vi.spyOn(controller, 'passStep').mockResolvedValue();
             const {result} = renderHook(() =>
                 hooks.useOnboardingStepBySelector({
                     selector: '.test',
@@ -108,7 +108,7 @@ describe('React Hooks', () => {
         });
 
         it('should call closeHintByUser when closeHint is called', () => {
-            const spy = jest.spyOn(controller, 'closeHintByUser');
+            const spy = vi.spyOn(controller, 'closeHintByUser');
             const {result} = renderHook(() =>
                 hooks.useOnboardingStepBySelector({
                     selector: '.test',

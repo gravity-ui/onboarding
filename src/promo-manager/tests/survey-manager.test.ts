@@ -3,10 +3,10 @@ import {createSurveyManager} from '../setups/survey-manager';
 describe('Survey Manager', () => {
     describe('createSurveyManager', () => {
         it('should call onProgressSave when provided', () => {
-            const onProgressSave = jest.fn(() => Promise.resolve());
+            const onProgressSave = vi.fn(() => Promise.resolve());
             const options = {
                 progressState: {},
-                getProgressState: jest.fn(() => Promise.resolve({})),
+                getProgressState: vi.fn(() => Promise.resolve({})),
                 onProgressSave,
             };
 
@@ -40,8 +40,8 @@ describe('Survey Manager', () => {
             const options = {
                 group: surveyGroup,
                 progressState: {},
-                getProgressState: jest.fn(() => Promise.resolve({})),
-                onProgressSave: jest.fn(() => Promise.resolve()),
+                getProgressState: vi.fn(() => Promise.resolve({})),
+                onProgressSave: vi.fn(() => Promise.resolve()),
             };
 
             const surveyManager = createSurveyManager(options);

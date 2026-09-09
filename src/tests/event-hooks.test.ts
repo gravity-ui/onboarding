@@ -238,7 +238,7 @@ describe('event subscriptions', function () {
         it('element reached -> trigger event', async function () {
             const controller = new Controller(getOptions());
 
-            const mock = jest.fn();
+            const mock = vi.fn();
             controller.events.subscribe('beforeShowHint', mock);
 
             await controller.stepElementReached({
@@ -252,7 +252,7 @@ describe('event subscriptions', function () {
         it('element reached -> hint shown', async function () {
             const controller = new Controller(getOptions());
 
-            const mock = jest.fn();
+            const mock = vi.fn();
             controller.events.subscribe('beforeShowHint', mock);
 
             await controller.stepElementReached({
@@ -267,7 +267,7 @@ describe('event subscriptions', function () {
             const controller = new Controller(getOptions());
 
             // return false to cancel hint show
-            const mock = jest.fn(() => false);
+            const mock = vi.fn(() => false);
             controller.events.subscribe('beforeShowHint', mock);
 
             await controller.stepElementReached({
@@ -282,8 +282,8 @@ describe('event subscriptions', function () {
             const controller = new Controller(getOptions());
 
             // return false to cancel hint show
-            const mock1 = jest.fn(() => false);
-            const mock2 = jest.fn();
+            const mock1 = vi.fn(() => false);
+            const mock2 = vi.fn();
 
             controller.events.subscribe('beforeShowHint', mock1);
             controller.events.subscribe('beforeShowHint', mock2);
@@ -302,7 +302,7 @@ describe('event subscriptions', function () {
             const element = getAnchorElement();
             element.remove(); // Disconnect element from DOM
 
-            const mock = jest.fn();
+            const mock = vi.fn();
             controller.events.subscribe('beforeShowHint', mock);
 
             await controller.stepElementReached({
@@ -323,7 +323,7 @@ describe('event subscriptions', function () {
                 element,
             });
 
-            const mock = jest.fn();
+            const mock = vi.fn();
             controller.events.subscribe('beforeShowHint', mock);
 
             // Try to show another hint while first one is still open
@@ -346,7 +346,7 @@ describe('event subscriptions', function () {
             });
             controller.closeHintByUser('createSprint');
 
-            const mock = jest.fn();
+            const mock = vi.fn();
             controller.events.subscribe('beforeShowHint', mock);
 
             // Try to show the same hint again
@@ -362,7 +362,7 @@ describe('event subscriptions', function () {
     it('showHint', async function () {
         const controller = new Controller(getOptions());
 
-        const mock = jest.fn();
+        const mock = vi.fn();
         controller.events.subscribe('showHint', mock);
 
         await controller.stepElementReached({
@@ -383,7 +383,7 @@ describe('event subscriptions', function () {
         it('pass step -> trigger event', async function () {
             const controller = new Controller(getOptions());
 
-            const mock = jest.fn();
+            const mock = vi.fn();
             controller.events.subscribe('closeHint', mock);
 
             await controller.stepElementReached({
@@ -411,7 +411,7 @@ describe('event subscriptions', function () {
         it('element disappeared -> trigger event', async function () {
             const controller = new Controller(getOptions());
 
-            const mock = jest.fn();
+            const mock = vi.fn();
             controller.events.subscribe('closeHint', mock);
 
             await controller.stepElementReached({
@@ -439,7 +439,7 @@ describe('event subscriptions', function () {
         it('user close hint -> trigger event', async function () {
             const controller = new Controller(getOptions());
 
-            const mock = jest.fn();
+            const mock = vi.fn();
             controller.events.subscribe('closeHint', mock);
 
             await controller.stepElementReached({
@@ -467,7 +467,7 @@ describe('event subscriptions', function () {
         it('call closeHint -> trigger with eventSource=externalEvent', async function () {
             const controller = new Controller(getOptions());
 
-            const mock = jest.fn();
+            const mock = vi.fn();
             controller.events.subscribe('closeHint', mock);
 
             await controller.stepElementReached({
@@ -495,7 +495,7 @@ describe('event subscriptions', function () {
         it('no open hint -> NOT trigger event', async function () {
             const controller = new Controller(getOptions());
 
-            const mock = jest.fn();
+            const mock = vi.fn();
             controller.events.subscribe('closeHint', mock);
 
             controller.closeHint();
@@ -506,7 +506,7 @@ describe('event subscriptions', function () {
         it('try close other hint -> NOT trigger event', async function () {
             const controller = new Controller(getOptions());
 
-            const mock = jest.fn();
+            const mock = vi.fn();
             controller.events.subscribe('closeHint', mock);
 
             await controller.stepElementReached({
@@ -523,7 +523,7 @@ describe('event subscriptions', function () {
         it('pass step -> trigger event', async function () {
             const controller = new Controller(getOptions());
 
-            const mock = jest.fn();
+            const mock = vi.fn();
             controller.events.subscribe('closeHintByUser', mock);
 
             await controller.stepElementReached({
@@ -551,7 +551,7 @@ describe('event subscriptions', function () {
         it('element disappeared -> NOT trigger event', async function () {
             const controller = new Controller(getOptions());
 
-            const mock = jest.fn();
+            const mock = vi.fn();
             controller.events.subscribe('closeHintByUser', mock);
 
             await controller.stepElementReached({
@@ -566,7 +566,7 @@ describe('event subscriptions', function () {
         it('user close hint -> trigger event', async function () {
             const controller = new Controller(getOptions());
 
-            const mock = jest.fn();
+            const mock = vi.fn();
             controller.events.subscribe('closeHintByUser', mock);
 
             await controller.stepElementReached({
@@ -594,7 +594,7 @@ describe('event subscriptions', function () {
         it('no open hint -> NOT trigger event', async function () {
             const controller = new Controller(getOptions());
 
-            const mock = jest.fn();
+            const mock = vi.fn();
             controller.events.subscribe('closeHintByUser', mock);
 
             controller.closeHintByUser();
@@ -605,7 +605,7 @@ describe('event subscriptions', function () {
         it('try close other hint -> NOT trigger event', async function () {
             const controller = new Controller(getOptions());
 
-            const mock = jest.fn();
+            const mock = vi.fn();
             controller.events.subscribe('closeHintByUser', mock);
 
             await controller.stepElementReached({
@@ -621,7 +621,7 @@ describe('event subscriptions', function () {
     it('passStep', async function () {
         const controller = new Controller(getOptions());
 
-        const mock = jest.fn();
+        const mock = vi.fn();
         controller.events.subscribe('stepPass', mock);
 
         await controller.passStep('createSprint');
@@ -638,7 +638,7 @@ describe('event subscriptions', function () {
     it('addPreset', async function () {
         const controller = new Controller(getOptions());
 
-        const mock = jest.fn();
+        const mock = vi.fn();
         controller.events.subscribe('addPreset', mock);
 
         await controller.addPreset('createQueue');
@@ -654,7 +654,7 @@ describe('event subscriptions', function () {
     it('beforeRunPreset', async function () {
         const controller = new Controller(getOptions());
 
-        const mock = jest.fn();
+        const mock = vi.fn();
         controller.events.subscribe('beforeRunPreset', mock);
 
         await controller.runPreset('createQueue');
@@ -670,7 +670,7 @@ describe('event subscriptions', function () {
     it('runPreset', async function () {
         const controller = new Controller(getOptions());
 
-        const mock = jest.fn();
+        const mock = vi.fn();
         controller.events.subscribe('runPreset', mock);
 
         await controller.runPreset('createQueue');
@@ -686,7 +686,7 @@ describe('event subscriptions', function () {
     it('finishPreset', async function () {
         const controller = new Controller(getOptions());
 
-        const mock = jest.fn();
+        const mock = vi.fn();
         controller.events.subscribe('finishPreset', mock);
 
         await controller.finishPreset('createProject');
@@ -702,7 +702,7 @@ describe('event subscriptions', function () {
     it('beforeSuggestPreset', async function () {
         const controller = new Controller(getOptions());
 
-        const mock = jest.fn();
+        const mock = vi.fn();
         controller.events.subscribe('beforeSuggestPreset', mock);
 
         await controller.suggestPresetOnce('createQueue');
@@ -718,7 +718,7 @@ describe('event subscriptions', function () {
     it('resetPresetProgress', async function () {
         const controller = new Controller(getOptions());
 
-        const mock = jest.fn();
+        const mock = vi.fn();
         controller.events.subscribe('resetPresetProgress', mock);
 
         await controller.resetPresetProgress('createProject');

@@ -11,12 +11,12 @@ const globals = require('globals');
 module.exports = [
     {ignores: ['dist/**', '**/.*']},
     {
-        files: ['**/*.{js,cjs,mjs,jsx,ts,tsx}'],
+        files: ['**/*.{js,cjs,mjs,jsx,ts,tsx,mts}'],
         languageOptions: {
             ecmaVersion: 'latest',
             sourceType: 'module',
             parserOptions: {ecmaFeatures: {jsx: true}},
-            globals: {...globals['shared-node-browser'], ...globals.node, ...globals.jest},
+            globals: {...globals['shared-node-browser'], ...globals.node},
         },
         plugins: {'import-x': importX, jsdoc},
         settings: {
@@ -110,7 +110,7 @@ module.exports = [
         },
     },
     {
-        files: ['**/*.{ts,tsx}'],
+        files: ['**/*.{ts,tsx,mts}'],
         languageOptions: {parser: tsParser},
         plugins: {'@typescript-eslint': tsPlugin},
         rules: {
@@ -172,6 +172,10 @@ module.exports = [
             'jsdoc/require-param-type': 'off',
             'jsdoc/require-returns-type': 'off',
         },
+    },
+    {
+        files: ['src/**/*.test.{ts,tsx}', 'src/**/tests/**/*.{ts,tsx}'],
+        languageOptions: {globals: globals.vitest},
     },
     {
         files: ['**/*.{js,cjs}'],

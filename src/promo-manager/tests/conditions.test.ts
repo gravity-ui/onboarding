@@ -74,7 +74,7 @@ describe('json conditions', function () {
     });
 
     it('can use arguments', async function () {
-        const mock = jest.fn(() => () => true);
+        const mock = vi.fn(() => () => true);
         const controller = new Controller({
             ...testOptions,
             config: {
