@@ -90,7 +90,6 @@ it('update -> new state object', function () {
 });
 
 describe('works with different context', function () {
-    // eslint-disable-next-line
     class Runner<T extends (...args: any) => any> {
         run(cb: T, param?: Parameters<T>[0]): ReturnType<T> {
             return cb(param);

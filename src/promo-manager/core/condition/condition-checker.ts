@@ -26,12 +26,10 @@ export const checkCondition = (
     logger: Logger,
 ) => {
     for (const condition of conditions) {
-        let result = false;
-        if (typeof condition === 'function') {
-            result = condition(state, ctx);
-        } else {
-            result = resolveConditionObject(condition, state, ctx, logger);
-        }
+        const result =
+            typeof condition === 'function'
+                ? condition(state, ctx)
+                : resolveConditionObject(condition, state, ctx, logger);
 
         if (!result) {
             return false;

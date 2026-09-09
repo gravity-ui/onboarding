@@ -42,3 +42,19 @@ be a temporary exception scoped to its parent, with an upstream issue and a clea
 removal condition. Do not force one transitive major across incompatible consumers.
 Recheck whether a patched version is available in the original major before
 retaining an override.
+
+## Development tooling
+
+`.nvmrc` defines the development Node version used by CI and the release action.
+Keep local checks on that version when changing tools or their lockfile.
+
+`eslint.config.js` preserves the base, TypeScript and Prettier rules previously
+enabled through Gravity's shared configuration. The local config lets this project
+use supported ESLint versions without installing the shared preset's unused plugin
+trees. React, accessibility and security presets were never enabled here.
+
+Import checks use `eslint-plugin-import-x`; JSDoc checks replace the removed core
+`valid-jsdoc` rule. The built-in import resolver covers this project's relative
+TypeScript imports. Add a matching resolver if TypeScript path aliases are introduced.
+Preserve effective rules when updating this config, including explicit options whose
+defaults changed between ESLint majors.
