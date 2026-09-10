@@ -19,11 +19,14 @@
   "scripts": {
     "prepare": "husky install",
     "lint:js": "eslint .",
-    "lint": "npm run lint:js",
+    "lint": "npm run lint:js && npm run format:check",
+    "format:check": "prettier --check \"**/*.{js,cjs,mjs,jsx,ts,tsx,mts}\" \"!**/.*\" \"!**/.*/**\"",
+    "format": "prettier --write \"**/*.{js,cjs,mjs,jsx,ts,tsx,mts}\" \"!**/.*\" \"!**/.*/**\"",
     "typecheck": "tsc --noEmit",
     "typecheck:tests": "tsc --project tsconfig.test.json",
     "test": "npm run typecheck:tests && vitest run && npm run size",
     "test:coverage": "npm run typecheck:tests && vitest run --coverage && npm run size",
+    "test:tooling": "node --test .github/tests/*.test.cjs scripts/*.test.mjs",
     "test-watch": "vitest --typecheck",
     "build": "node -e \"require('node:fs').rmSync('dist', {recursive: true, force: true})\" && tsc",
     "size": "size-limit",
@@ -34,12 +37,9 @@
     "dayjs": "^1.11.21"
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.5.3",
-    "@commitlint/config-conventional": "^20.5.3",
     "@eslint/js": "^10.0.1",
     "@gravity-ui/prettier-config": "^1.1.1",
     "@gravity-ui/tsconfig": "^1.0.0",
-    "@size-limit/esbuild-why": "^12.1.0",
     "@size-limit/preset-small-lib": "^12.1.0",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^24.0.0",
@@ -52,7 +52,6 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import-x": "^4.17.1",
     "eslint-plugin-jsdoc": "^64.3.8",
-    "eslint-plugin-prettier": "^5.5.5",
     "globals": "^17.4.0",
     "husky": "^8.0.3",
     "jsdom": "^30.0.1",
@@ -70,8 +69,9 @@
     "react-dom": "^18.0.0"
   },
   "nano-staged": {
-    "*.{js,jsx,ts,tsx}": [
-      "eslint --fix --quiet"
+    "*.{js,cjs,mjs,jsx,ts,tsx,mts}": [
+      "eslint --fix --quiet --no-warn-ignored",
+      "prettier --write"
     ],
     "*.md": [
       "prettier --write"

@@ -3,13 +3,13 @@ const tsParser = require('@typescript-eslint/parser');
 const tsPlugin = require('@typescript-eslint/eslint-plugin');
 const importX = require('eslint-plugin-import-x');
 const jsdoc = require('eslint-plugin-jsdoc');
-const prettier = require('eslint-plugin-prettier/recommended');
+const prettier = require('eslint-config-prettier/flat');
 const globals = require('globals');
 
 // Preserve the active rules from @gravity-ui/eslint-config 3.3 base + prettier.
 // React, accessibility and security presets were never enabled in this project.
 module.exports = [
-    {ignores: ['dist/**', '**/.*']},
+    {ignores: ['dist/**', 'coverage/**', '**/.*']},
     {
         files: ['**/*.{js,cjs,mjs,jsx,ts,tsx,mts}'],
         languageOptions: {

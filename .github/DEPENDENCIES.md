@@ -48,16 +48,45 @@ retaining an override.
 `.nvmrc` defines the development Node version used by CI and the release action.
 Keep local checks on that version when changing tools or their lockfile.
 
-`eslint.config.js` preserves the base, TypeScript and Prettier rules previously
+`eslint.config.js` preserves the base and TypeScript rules previously
 enabled through Gravity's shared configuration. The local config lets this project
 use supported ESLint versions without installing the shared preset's unused plugin
 trees. React, accessibility and security presets were never enabled here.
+
+`npm run lint` runs ESLint and a separate Prettier check over the same maintained
+JavaScript/TypeScript files. `eslint-config-prettier` disables conflicting style
+rules; no formatter plugin is loaded into ESLint. `npm run format` applies formatting,
+and the staged-file hook runs ESLint fixes followed by Prettier. Generated `dist`
+and `coverage` files stay outside these checks.
 
 Import checks use `eslint-plugin-import-x`; JSDoc checks replace the removed core
 `valid-jsdoc` rule. The built-in import resolver covers this project's relative
 TypeScript imports. Add a matching resolver if TypeScript path aliases are introduced.
 Preserve effective rules when updating this config, including explicit options whose
 defaults changed between ESLint majors.
+
+## Commit headers
+
+The commit hook and CI pull-request title check use the dependency-free
+`scripts/check-commit-message.mjs`. The supported format is one header, at most 100
+UTF-16 code units: `type(scope)!: subject`. Scope and `!` are optional; type, scope
+when present, and subject must be nonempty. Types are `build`, `chore`, `ci`, `docs`,
+`feat`, `fix`, `perf`, `refactor`, `revert`, `style` and `test`.
+
+The file mode removes Git's verbose/scissors block, uses Git's comment/whitespace
+cleanup, validates the result and writes back the accepted single-line message.
+This supports the normal Git editor template and the configured comment character.
+Pull-request titles are checked as supplied.
+Bodies, footers, multiline messages and control characters are rejected. Other
+extended commitlint rules and exemptions for generated merge/revert/fixup messages
+are not part of this smaller contract.
+
+CI also reruns after pull-request edits, so correcting a title refreshes the check.
+`npm run test:tooling` checks this CLI and the Dependabot merge policy with Node's
+built-in test runner.
+
+`npm run size` retains bundle-size checks using size-limit. The optional `--why`
+visualizer is not installed.
 
 ## Tests and coverage
 
