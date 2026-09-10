@@ -5,15 +5,9 @@ updates:
     schedule:
       interval: weekly
       day: monday
-    cooldown:
-      default-days: 7
-    open-pull-requests-limit: 3
+    # Disable version-update PRs; security updates are not subject to this limit.
+    open-pull-requests-limit: 0
     groups:
-      development:
-        dependency-type: development
-        update-types:
-          - minor
-          - patch
       security:
         applies-to: security-updates
         dependency-type: development
@@ -30,14 +24,7 @@ updates:
     schedule:
       interval: weekly
       day: monday
-    cooldown:
-      default-days: 7
-    open-pull-requests-limit: 3
-    groups:
-      actions:
-        update-types:
-          - minor
-          - patch
+    open-pull-requests-limit: 0
     commit-message:
       prefix: ci
       include: scope

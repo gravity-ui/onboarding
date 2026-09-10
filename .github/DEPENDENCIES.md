@@ -1,13 +1,16 @@
 # Dependency maintenance
 
-Dependabot checks npm packages and GitHub Actions weekly. Development patch/minor
-updates are grouped; development security patch/minor updates have their own group. The seven-day
-cooldown applies only to ordinary version updates, never security updates.
+Dependabot opens pull requests only for security fixes. Both npm and GitHub Actions
+set `open-pull-requests-limit: 0`, which disables ordinary version-update PRs without
+disabling security updates. The schedule remains because GitHub requires it in the
+configuration; it does not enable version-update PRs while that limit is zero.
+Development security patch/minor updates are grouped. Security fixes that require a
+major upgrade still receive a PR for manual review.
 
-Eligible npm groups are merged automatically after the CI workflow passes. The
+Eligible npm security updates are merged automatically after the CI workflow passes. The
 merge workflow reads GitHub API data without checking out or executing PR code. It
 accepts one signed Dependabot commit changing only the dependency manifests, with
-patch/minor metadata for every update. Security metadata must identify development
+patch/minor metadata in the security group for every update. Metadata must identify development
 or indirect dependencies. Only existing `devDependencies` version ranges may change;
 runtime `dependencies`, scripts, peer ranges, overrides, dependency names, and other
 package fields require manual review. GitHub Actions updates and major upgrades
