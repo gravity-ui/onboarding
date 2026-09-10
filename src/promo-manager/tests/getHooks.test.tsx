@@ -25,9 +25,9 @@ describe('PromoManager Hooks', () => {
                 ],
             },
             progressState: {},
-            getProgressState: jest.fn(() => Promise.resolve({})),
+            getProgressState: vi.fn(() => Promise.resolve({})),
             onSave: {
-                progress: jest.fn(),
+                progress: vi.fn(),
             },
         };
 
@@ -48,7 +48,7 @@ describe('PromoManager Hooks', () => {
 
     describe('usePromo', () => {
         it('should call controller requestStart with promo slug', () => {
-            const spy = jest.spyOn(controller, 'requestStart');
+            const spy = vi.spyOn(controller, 'requestStart');
             const {result} = renderHook(() => hooks.usePromo('testPromo'));
 
             act(() => {
@@ -59,7 +59,7 @@ describe('PromoManager Hooks', () => {
         });
 
         it('should call controller finishPromo with promo slug', () => {
-            const spy = jest.spyOn(controller, 'finishPromo');
+            const spy = vi.spyOn(controller, 'finishPromo');
             const {result} = renderHook(() => hooks.usePromo('testPromo'));
 
             act(() => {
@@ -70,7 +70,7 @@ describe('PromoManager Hooks', () => {
         });
 
         it('should call controller finishPromo with timeout', () => {
-            const spy = jest.spyOn(controller, 'finishPromo');
+            const spy = vi.spyOn(controller, 'finishPromo');
             const {result} = renderHook(() => hooks.usePromo('testPromo'));
 
             act(() => {
@@ -81,7 +81,7 @@ describe('PromoManager Hooks', () => {
         });
 
         it('should call controller cancelPromo with promo slug', () => {
-            const spy = jest.spyOn(controller, 'cancelPromo');
+            const spy = vi.spyOn(controller, 'cancelPromo');
             const {result} = renderHook(() => hooks.usePromo('testPromo'));
 
             act(() => {
@@ -92,7 +92,7 @@ describe('PromoManager Hooks', () => {
         });
 
         it('should call controller skipPromo with promo slug', () => {
-            const spy = jest.spyOn(controller, 'skipPromo');
+            const spy = vi.spyOn(controller, 'skipPromo');
             const {result} = renderHook(() => hooks.usePromo('testPromo'));
 
             act(() => {
@@ -105,7 +105,7 @@ describe('PromoManager Hooks', () => {
 
     describe('useActivePromo', () => {
         it('should call controller finishPromo for active promo', () => {
-            const spy = jest.spyOn(controller, 'finishPromo');
+            const spy = vi.spyOn(controller, 'finishPromo');
             const {result} = renderHook(() => hooks.useActivePromo());
 
             act(() => {
@@ -116,7 +116,7 @@ describe('PromoManager Hooks', () => {
         });
 
         it('should call controller cancelPromo for active promo', () => {
-            const spy = jest.spyOn(controller, 'cancelPromo');
+            const spy = vi.spyOn(controller, 'cancelPromo');
             const {result} = renderHook(() => hooks.useActivePromo());
 
             act(() => {
@@ -127,7 +127,7 @@ describe('PromoManager Hooks', () => {
         });
 
         it('should call controller skipPromo for active promo', () => {
-            const spy = jest.spyOn(controller, 'skipPromo');
+            const spy = vi.spyOn(controller, 'skipPromo');
             const {result} = renderHook(() => hooks.useActivePromo());
 
             act(() => {
@@ -138,7 +138,7 @@ describe('PromoManager Hooks', () => {
         });
 
         it('should call controller updateProgressInfo for active promo', () => {
-            const spy = jest.spyOn(controller, 'updateProgressInfo');
+            const spy = vi.spyOn(controller, 'updateProgressInfo');
             const {result} = renderHook(() => hooks.useActivePromo());
 
             act(() => {

@@ -102,7 +102,7 @@ describe('Main API', () => {
 
         describe('closeHint', () => {
             it('should call controller closeHintByUser', () => {
-                const spy = jest.spyOn(onboarding.controller, 'closeHintByUser');
+                const spy = vi.spyOn(onboarding.controller, 'closeHintByUser');
 
                 closeHint();
 
@@ -112,7 +112,7 @@ describe('Main API', () => {
 
         describe('passStep', () => {
             it('should call controller passStep with step name', () => {
-                const spy = jest.spyOn(onboarding.controller, 'passStep');
+                const spy = vi.spyOn(onboarding.controller, 'passStep');
 
                 passStep('openBoard');
 
@@ -122,7 +122,7 @@ describe('Main API', () => {
 
         describe('finishPreset', () => {
             it('should call controller finishPreset with preset name', async () => {
-                const spy = jest
+                const spy = vi
                     .spyOn(onboarding.controller, 'finishPreset')
                     .mockResolvedValue(undefined);
 
@@ -134,7 +134,7 @@ describe('Main API', () => {
 
         describe('setWizardState', () => {
             it('should call controller setWizardState with state', async () => {
-                const spy = jest.spyOn(onboarding.controller, 'setWizardState');
+                const spy = vi.spyOn(onboarding.controller, 'setWizardState');
 
                 await setWizardState('visible');
 

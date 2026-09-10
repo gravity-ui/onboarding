@@ -4,11 +4,11 @@ import {testOptions} from './options';
 it('plugins in config -> call apply', async function () {
     const plugin = {
         name: 'some plugin',
-        apply: jest.fn(),
+        apply: vi.fn(),
     };
     const controller = new Controller({...testOptions, plugins: [plugin]});
 
-    const mock = jest.fn();
+    const mock = vi.fn();
     controller.events.subscribe('init', mock);
 
     await controller.ensureInit();
@@ -20,7 +20,7 @@ describe('events subscriptions', function () {
     it('init ', async function () {
         const controller = new Controller(testOptions);
 
-        const mock = jest.fn();
+        const mock = vi.fn();
         controller.events.subscribe('init', mock);
 
         await controller.ensureInit();
@@ -31,7 +31,7 @@ describe('events subscriptions', function () {
     it('finishPromo', async function () {
         const controller = new Controller(testOptions);
 
-        const mock = jest.fn();
+        const mock = vi.fn();
         controller.events.subscribe('finishPromo', mock);
 
         await controller.ensureInit();
@@ -45,7 +45,7 @@ describe('events subscriptions', function () {
     it('finishPromo same promo twice -> emit event only once', async function () {
         const controller = new Controller(testOptions);
 
-        const mock = jest.fn();
+        const mock = vi.fn();
         controller.events.subscribe('finishPromo', mock);
 
         await controller.ensureInit();
@@ -60,7 +60,7 @@ describe('events subscriptions', function () {
     it('finishPromo different promos -> emit for each', async function () {
         const controller = new Controller(testOptions);
 
-        const mock = jest.fn();
+        const mock = vi.fn();
         controller.events.subscribe('finishPromo', mock);
 
         await controller.ensureInit();
@@ -75,7 +75,7 @@ describe('events subscriptions', function () {
     it('cancelPromo', async function () {
         const controller = new Controller(testOptions);
 
-        const mock = jest.fn();
+        const mock = vi.fn();
         controller.events.subscribe('cancelPromo', mock);
 
         await controller.ensureInit();

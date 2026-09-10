@@ -35,7 +35,7 @@ describe('init', function () {
     it('no group -> error', async function () {
         const onboardingController = new OnboardingController(getOptionsWithPromo());
 
-        const errorLoggerMock = jest.fn();
+        const errorLoggerMock = vi.fn();
 
         const controller = new Controller({
             ...testOptions,
@@ -50,7 +50,7 @@ describe('init', function () {
                 level: 'error',
                 logger: {
                     error: errorLoggerMock,
-                    debug: jest.fn(),
+                    debug: vi.fn(),
                 },
             },
         });

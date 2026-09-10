@@ -3,9 +3,9 @@ import {Controller} from '../controller';
 import {PresetStep} from '../types';
 
 const addStepHookMocks = (step: PresetStep<any, any>) => {
-    const onCloseHintByUserMock = jest.fn();
-    const onCloseHintMock = jest.fn();
-    const onStepPassMock = jest.fn();
+    const onCloseHintByUserMock = vi.fn();
+    const onCloseHintMock = vi.fn();
+    const onStepPassMock = vi.fn();
     // eslint-disable-next-line no-param-reassign
     step.hooks = {
         onCloseHintByUser: onCloseHintByUserMock,

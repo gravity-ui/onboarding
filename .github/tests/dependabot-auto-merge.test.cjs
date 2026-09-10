@@ -57,7 +57,7 @@ function fixture() {
                 updateType: 'version-update:semver-minor',
                 packageEcosystem: 'npm_and_yarn',
                 directory: '/',
-                dependencyGroup: 'development',
+                dependencyGroup: 'security',
                 dependencyType: 'direct:development',
             },
         ],
@@ -135,7 +135,7 @@ function fixture() {
     };
 }
 
-test('valid grouped minor update merges only its validated SHA after all CI jobs succeed', async () => {
+test('valid grouped security update merges only its validated SHA after all CI jobs succeed', async () => {
     const {state, run} = fixture();
     await run();
     assert.deepEqual(
@@ -148,6 +148,9 @@ test('valid grouped minor update merges only its validated SHA after all CI jobs
 });
 
 const rejected = {
+    'ordinary version update': (s) => {
+        s.dependencies[0].dependencyGroup = 'development';
+    },
     major: (s) => {
         s.dependencies[0].updateType = 'version-update:semver-major';
     },

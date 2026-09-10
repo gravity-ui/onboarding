@@ -49,9 +49,8 @@ jobs:
                 const accepted = new Set(['version-update:semver-patch', 'version-update:semver-minor']);
                 if (!Array.isArray(dependencies) || !dependencies.length || !dependencies.every((dependency) =>
                     accepted.has(dependency.updateType) && dependency.packageEcosystem === 'npm_and_yarn' &&
-                    dependency.directory === '/' && ((dependency.dependencyGroup === 'security' &&
-                    ['direct:development', 'indirect'].includes(dependency.dependencyType)) ||
-                    (dependency.dependencyGroup === 'development' && dependency.dependencyType === 'direct:development'))
+                    dependency.directory === '/' && dependency.dependencyGroup === 'security' &&
+                    ['direct:development', 'indirect'].includes(dependency.dependencyType)
                 )) return skip('update metadata is outside automatic policy');
                 const commits = await github.paginate(github.rest.pulls.listCommits, request);
                 if (commits.length !== 1 || commits[0].sha !== head ||

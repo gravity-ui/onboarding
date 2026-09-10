@@ -72,7 +72,7 @@ describe('preset management', function () {
         it('preset not from config -> nothing', async function () {
             const controller = new Controller(options);
 
-            expect(controller.runPreset('createQueue123')).rejects.toThrow();
+            await expect(controller.runPreset('createQueue123')).rejects.toThrow();
             expect(options.onSave.state).not.toHaveBeenCalled();
             expect(options.onSave.progress).not.toHaveBeenCalled();
         });
@@ -135,7 +135,7 @@ describe('preset management', function () {
 
         it('start preset -> calls onStart', async function () {
             const options = getOptionsWithHooks();
-            const mock = jest.fn();
+            const mock = vi.fn();
             // @ts-ignore
             options.config.presets.createQueue.hooks = {onStart: mock};
 
@@ -149,7 +149,7 @@ describe('preset management', function () {
             const options = getOptionsWithHooks();
 
             const controller = new Controller(options);
-            const mock = jest.fn(() => {
+            const mock = vi.fn(() => {
                 expect(controller.state.base.activePresets).toContain('createQueue');
             });
             // @ts-ignore
@@ -194,7 +194,7 @@ describe('preset management', function () {
 
             const newProgressState = options.onSave.progress.mock.calls[0][0];
 
-            expect(newProgressState.finishedPresets).toContain('createProject');
+            expect(newProgressState?.finishedPresets).toContain('createProject');
         });
 
         it('finish same preset -> not duplicate', async function () {
@@ -209,7 +209,7 @@ describe('preset management', function () {
 
         it('finish preset -> calls onEnd', async function () {
             const options = getOptions();
-            const mock = jest.fn();
+            const mock = vi.fn();
             // @ts-ignore
             options.config.presets.createProject.hooks = {onEnd: mock};
 
@@ -221,7 +221,7 @@ describe('preset management', function () {
 
         it('finish finished preset -> dont calls onEnd', async function () {
             const options = getOptions({}, {finishedPresets: ['createProject']});
-            const mock = jest.fn();
+            const mock = vi.fn();
             // @ts-ignore
             options.config.presets.createProject.hooks = {onEnd: mock};
 
@@ -271,7 +271,7 @@ describe('preset management', function () {
             const newProgressState = options.onSave.progress.mock.calls[0][0];
 
             expect(newBaseState.activePresets).not.toContain(['createQueue']);
-            expect(newProgressState.finishedPresets).toContain('createQueue');
+            expect(newProgressState?.finishedPresets).toContain('createQueue');
         });
     });
 
@@ -289,7 +289,7 @@ describe('preset management', function () {
             const newProgressState = options.onSave.progress.mock.calls[0][0];
 
             expect(newBaseState.activePresets).not.toContain(['createQueue']);
-            expect(newProgressState.finishedPresets).toContain('createProject');
+            expect(newProgressState?.finishedPresets).toContain('createProject');
             expect(options.onSave.progress).toHaveBeenCalledTimes(1);
         });
 
@@ -300,9 +300,9 @@ describe('preset management', function () {
             await controller.passStep('createSprint');
             await controller.passStep('createIssue');
 
-            const newProgressState = options.onSave.progress.mock.lastCall[0];
+            const newProgressState = options.onSave.progress.mock.lastCall?.[0];
 
-            expect(newProgressState.finishedPresets).toContain('createProject');
+            expect(newProgressState?.finishedPresets).toContain('createProject');
         });
 
         it('pass last steps for NOT active preset -> finish preset', async function () {
@@ -314,9 +314,9 @@ describe('preset management', function () {
             const controller = new Controller(options);
             await controller.passStep('createIssue');
 
-            const newProgressState = options.onSave.progress.mock.lastCall[0];
+            const newProgressState = options.onSave.progress.mock.lastCall?.[0];
 
-            expect(newProgressState.finishedPresets).toContain('createProject');
+            expect(newProgressState?.finishedPresets).toContain('createProject');
         });
 
         it('finish preset by pass step -> hide hint', async function () {
@@ -448,7 +448,7 @@ describe('suggest once', function () {
 
     it('onBeforeSuggestPreset returns false -> dont suggest', async function () {
         const options = getOptionsWithHooks();
-        options.hooks.beforeSuggestPreset = jest.fn(() => false);
+        options.hooks.beforeSuggestPreset = vi.fn(() => false);
 
         const controller = new Controller(options);
         await controller.suggestPresetOnce('createQueue');

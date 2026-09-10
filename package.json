@@ -19,11 +19,16 @@
   "scripts": {
     "prepare": "husky install",
     "lint:js": "eslint .",
-    "lint": "npm run lint:js",
+    "lint": "npm run lint:js && npm run format:check",
+    "format:check": "prettier --check \"**/*.{js,cjs,mjs,jsx,ts,tsx,mts}\" \"!**/.*\" \"!**/.*/**\"",
+    "format": "prettier --write \"**/*.{js,cjs,mjs,jsx,ts,tsx,mts}\" \"!**/.*\" \"!**/.*/**\"",
     "typecheck": "tsc --noEmit",
-    "test": "jest && npm run size",
-    "test-watch": "jest --watchAll",
-    "build": "tsc",
+    "typecheck:tests": "tsc --project tsconfig.test.json",
+    "test": "npm run typecheck:tests && vitest run && npm run size",
+    "test:coverage": "npm run typecheck:tests && vitest run --coverage && npm run size",
+    "test:tooling": "node --test .github/tests/*.test.cjs scripts/*.test.mjs",
+    "test-watch": "vitest --typecheck",
+    "build": "node -e \"require('node:fs').rmSync('dist', {recursive: true, force: true})\" && tsc",
     "size": "size-limit",
     "prepublishOnly": "npm run build",
     "force-release": "echo 43"
@@ -32,45 +37,41 @@
     "dayjs": "^1.11.21"
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.5.3",
-    "@commitlint/config-conventional": "^20.5.3",
     "@eslint/js": "^10.0.1",
     "@gravity-ui/prettier-config": "^1.1.1",
     "@gravity-ui/tsconfig": "^1.0.0",
-    "@size-limit/esbuild-why": "^12.1.0",
     "@size-limit/preset-small-lib": "^12.1.0",
-    "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
-    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.0",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "@typescript-eslint/eslint-plugin": "^8.70.0",
     "@typescript-eslint/parser": "^8.70.0",
+    "@vitest/coverage-v8": "^5.0.0",
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import-x": "^4.17.1",
     "eslint-plugin-jsdoc": "^64.3.8",
-    "eslint-plugin-prettier": "^5.5.5",
     "globals": "^17.4.0",
     "husky": "^8.0.3",
-    "jest": "^30.4.2",
-    "jest-environment-jsdom": "^30.4.1",
-    "jsdom": "^26.0.0",
+    "jsdom": "^30.0.1",
     "nano-staged": "^1.0.2",
     "prettier": "^3.9.6",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "size-limit": "^12.1.0",
-    "ts-jest": "^29.4.11",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vite": "^8.0.0",
+    "vitest": "^5.0.0"
   },
   "peerDependencies": {
     "react": "^18.0.0",
     "react-dom": "^18.0.0"
   },
   "nano-staged": {
-    "*.{js,jsx,ts,tsx}": [
-      "eslint --fix --quiet"
+    "*.{js,cjs,mjs,jsx,ts,tsx,mts}": [
+      "eslint --fix --quiet --no-warn-ignored",
+      "prettier --write"
     ],
     "*.md": [
       "prettier --write"

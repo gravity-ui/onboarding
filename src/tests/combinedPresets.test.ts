@@ -33,8 +33,8 @@ describe('combined presets', function () {
         });
 
         it('start preset -> calls onBeforeStart on combined and internal preset', async function () {
-            const mock1 = jest.fn();
-            const mock2 = jest.fn();
+            const mock1 = vi.fn();
+            const mock2 = vi.fn();
             // @ts-ignore
             options.config.presets.combinedPreset.hooks = {onBeforeStart: mock1};
             // @ts-ignore
@@ -48,8 +48,8 @@ describe('combined presets', function () {
         });
 
         it('start preset -> calls onStart on combined and internal preset', async function () {
-            const mock1 = jest.fn();
-            const mock2 = jest.fn();
+            const mock1 = vi.fn();
+            const mock2 = vi.fn();
             // @ts-ignore
             options.config.presets.combinedPreset.hooks = {onStart: mock1};
             // @ts-ignore
@@ -121,8 +121,8 @@ describe('combined presets', function () {
         it('finish preset -> on combined and internal preset', async function () {
             const options = getOptionsWithCombined();
 
-            const mock1 = jest.fn();
-            const mock2 = jest.fn();
+            const mock1 = vi.fn();
+            const mock2 = vi.fn();
             // @ts-ignore
             options.config.presets.combinedPreset.hooks = {onEnd: mock1};
             // @ts-ignore

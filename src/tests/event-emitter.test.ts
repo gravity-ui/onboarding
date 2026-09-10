@@ -17,7 +17,7 @@ describe('EventEmitter', () => {
         it('should work without extra argument', () => {
             const emitterWithoutArg = new EventEmitter<keyof TestEvents, TestEvents, undefined>();
             // Test behavior, not internal state
-            const listener = jest.fn();
+            const listener = vi.fn();
             emitterWithoutArg.subscribe('testEvent', listener);
             emitterWithoutArg.emit('testEvent', {data: 'test'});
             expect(listener).toHaveBeenCalledWith({data: 'test'}, undefined);
@@ -26,7 +26,7 @@ describe('EventEmitter', () => {
 
     describe('subscribe and unsubscribe behavior', () => {
         it('should call subscribed listeners when event is emitted', async () => {
-            const listener = jest.fn();
+            const listener = vi.fn();
             emitter.subscribe('testEvent', listener);
 
             await emitter.emit('testEvent', {data: 'test'});
@@ -34,8 +34,8 @@ describe('EventEmitter', () => {
         });
 
         it('should call multiple listeners for same event', async () => {
-            const listener1 = jest.fn();
-            const listener2 = jest.fn();
+            const listener1 = vi.fn();
+            const listener2 = vi.fn();
 
             emitter.subscribe('testEvent', listener1);
             emitter.subscribe('testEvent', listener2);
@@ -47,7 +47,7 @@ describe('EventEmitter', () => {
         });
 
         it('should not call duplicate listeners twice', async () => {
-            const listener = jest.fn();
+            const listener = vi.fn();
 
             emitter.subscribe('testEvent', listener);
             emitter.subscribe('testEvent', listener);
@@ -57,7 +57,7 @@ describe('EventEmitter', () => {
         });
 
         it('should not call unsubscribed listeners', async () => {
-            const listener = jest.fn();
+            const listener = vi.fn();
             emitter.subscribe('testEvent', listener);
             emitter.unsubscribe('testEvent', listener);
 
@@ -66,13 +66,13 @@ describe('EventEmitter', () => {
         });
 
         it('should handle unsubscribe from non-existent event type', () => {
-            const listener = jest.fn();
+            const listener = vi.fn();
             expect(() => emitter.unsubscribe('testEvent', listener)).not.toThrow();
         });
 
         it('should handle unsubscribe of non-existent listener', () => {
-            const listener1 = jest.fn();
-            const listener2 = jest.fn();
+            const listener1 = vi.fn();
+            const listener2 = vi.fn();
 
             emitter.subscribe('testEvent', listener1);
             expect(() => emitter.unsubscribe('testEvent', listener2)).not.toThrow();
@@ -86,7 +86,7 @@ describe('EventEmitter', () => {
         });
 
         it('should return true when all listeners return undefined/void', async () => {
-            const listener = jest.fn();
+            const listener = vi.fn();
             emitter.subscribe('testEvent', listener);
 
             const result = await emitter.emit('testEvent', {data: 'test'});
@@ -94,9 +94,9 @@ describe('EventEmitter', () => {
         });
 
         it('should return false when any listener returns false', async () => {
-            const listener1 = jest.fn().mockReturnValue(true);
-            const listener2 = jest.fn().mockReturnValue(false);
-            const listener3 = jest.fn().mockReturnValue(true);
+            const listener1 = vi.fn().mockReturnValue(true);
+            const listener2 = vi.fn().mockReturnValue(false);
+            const listener3 = vi.fn().mockReturnValue(true);
 
             emitter.subscribe('cancelEvent', listener1);
             emitter.subscribe('cancelEvent', listener2);
@@ -107,7 +107,7 @@ describe('EventEmitter', () => {
         });
 
         it('should handle async listeners', async () => {
-            const asyncListener = jest.fn().mockResolvedValue(true);
+            const asyncListener = vi.fn().mockResolvedValue(true);
             emitter.subscribe('asyncEvent', asyncListener);
 
             const result = await emitter.emit('asyncEvent', {value: 42});
@@ -116,8 +116,8 @@ describe('EventEmitter', () => {
         });
 
         it('should handle mix of sync and async listeners', async () => {
-            const syncListener = jest.fn().mockReturnValue(true);
-            const asyncListener = jest.fn().mockResolvedValue(false);
+            const syncListener = vi.fn().mockReturnValue(true);
+            const asyncListener = vi.fn().mockResolvedValue(false);
 
             emitter.subscribe('asyncEvent', syncListener);
             emitter.subscribe('asyncEvent', asyncListener);
@@ -127,9 +127,9 @@ describe('EventEmitter', () => {
         });
 
         it('should call all listeners even when one returns false', async () => {
-            const listener1 = jest.fn().mockReturnValue(true);
-            const listener2 = jest.fn().mockReturnValue(false);
-            const listener3 = jest.fn().mockReturnValue(true);
+            const listener1 = vi.fn().mockReturnValue(true);
+            const listener2 = vi.fn().mockReturnValue(false);
+            const listener3 = vi.fn().mockReturnValue(true);
 
             emitter.subscribe('cancelEvent', listener1);
             emitter.subscribe('cancelEvent', listener2);
@@ -144,10 +144,10 @@ describe('EventEmitter', () => {
         });
 
         it('should handle listener throwing error', async () => {
-            const errorListener = jest.fn().mockImplementation(() => {
+            const errorListener = vi.fn().mockImplementation(() => {
                 throw new Error('Test error');
             });
-            const normalListener = jest.fn().mockReturnValue(true);
+            const normalListener = vi.fn().mockReturnValue(true);
 
             emitter.subscribe('testEvent', errorListener);
             emitter.subscribe('testEvent', normalListener);
@@ -156,7 +156,7 @@ describe('EventEmitter', () => {
         });
 
         it('should pass correct extra argument to listeners', async () => {
-            const listener = jest.fn();
+            const listener = vi.fn();
             const customEmitter = new EventEmitter<keyof TestEvents, TestEvents, {custom: string}>({
                 custom: 'value',
             });
@@ -168,7 +168,7 @@ describe('EventEmitter', () => {
         });
 
         it('should handle listeners that return Promise<false>', async () => {
-            const asyncFalseListener = jest.fn().mockResolvedValue(false);
+            const asyncFalseListener = vi.fn().mockResolvedValue(false);
             emitter.subscribe('asyncEvent', asyncFalseListener);
 
             const result = await emitter.emit('asyncEvent', {value: 42});
@@ -176,7 +176,7 @@ describe('EventEmitter', () => {
         });
 
         it('should handle listeners that return Promise<undefined>', async () => {
-            const asyncUndefinedListener = jest.fn().mockResolvedValue(undefined);
+            const asyncUndefinedListener = vi.fn().mockResolvedValue(undefined);
             emitter.subscribe('asyncEvent', asyncUndefinedListener);
 
             const result = await emitter.emit('asyncEvent', {value: 42});

@@ -331,12 +331,12 @@ describe('state sync', function () {
 
 describe('local storage errors', function () {
     afterAll(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     it('quota exceeded error -> dont write again', async function () {
-        jest.spyOn(Storage.prototype, 'setItem');
-        Storage.prototype.setItem = jest.fn(() => {
+        vi.spyOn(Storage.prototype, 'setItem');
+        Storage.prototype.setItem = vi.fn(() => {
             throw new DOMException('', 'QuotaExceededError');
         });
 
@@ -351,8 +351,8 @@ describe('local storage errors', function () {
     });
 
     it('non-quota localStorage error -> NOT set quota exceeded flag', async () => {
-        jest.spyOn(Storage.prototype, 'setItem');
-        Storage.prototype.setItem = jest.fn(() => {
+        vi.spyOn(Storage.prototype, 'setItem');
+        Storage.prototype.setItem = vi.fn(() => {
             throw new Error('Different localStorage error');
         });
 

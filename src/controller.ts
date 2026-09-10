@@ -121,7 +121,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         this.logger.debug('Initialized');
 
-        if (instanceCounter > 0 && typeof jest === 'undefined') {
+        if (instanceCounter > 0) {
             this.logger.error(
                 'Should be only one Controller instance for page. Multiple instances can cause inconsistent state and race conditions',
             );

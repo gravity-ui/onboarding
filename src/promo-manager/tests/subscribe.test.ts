@@ -12,7 +12,7 @@ describe('trigger subscribe', () => {
     it('finish with timeout => update progress info, close active', async () => {
         await controller.requestStart('boardPoll');
 
-        const callback = jest.fn();
+        const callback = vi.fn();
         controller.subscribe(callback);
 
         await controller.finishPromo('boardPoll', 100);
@@ -30,7 +30,7 @@ describe('trigger subscribe', () => {
     it('cancel with timeout => update progress info, close active', async () => {
         await controller.requestStart('boardPoll');
 
-        const callback = jest.fn();
+        const callback = vi.fn();
         controller.subscribe(callback);
 
         await controller.cancelPromo('boardPoll', 100);
@@ -54,7 +54,7 @@ describe('optimize subscribe', () => {
     });
 
     it('request start -> 1 update', async () => {
-        const callback = jest.fn();
+        const callback = vi.fn();
 
         controller.subscribe(callback);
 
@@ -66,7 +66,7 @@ describe('optimize subscribe', () => {
     it('finish -> 2 updates', async () => {
         await controller.requestStart('boardPoll');
 
-        const callback = jest.fn();
+        const callback = vi.fn();
         controller.subscribe(callback);
 
         await controller.finishPromo('boardPoll');
@@ -77,7 +77,7 @@ describe('optimize subscribe', () => {
     it('cancel -> 2 updates', async () => {
         await controller.requestStart('boardPoll');
 
-        const callback = jest.fn();
+        const callback = vi.fn();
         controller.subscribe(callback);
 
         await controller.cancelPromo('boardPoll');
@@ -88,7 +88,7 @@ describe('optimize subscribe', () => {
     it('skipPromo -> 1 update', async () => {
         await controller.requestStart('boardPoll');
 
-        const callback = jest.fn();
+        const callback = vi.fn();
         controller.subscribe(callback);
 
         await controller.skipPromo('boardPoll');
@@ -97,7 +97,7 @@ describe('optimize subscribe', () => {
     });
 
     it('start and finish -> 3 updates', async () => {
-        const callback = jest.fn();
+        const callback = vi.fn();
 
         controller.subscribe(callback);
 
@@ -108,7 +108,7 @@ describe('optimize subscribe', () => {
     });
 
     it('start, finish and has next -> 4 updates', async () => {
-        const callback = jest.fn();
+        const callback = vi.fn();
 
         controller.subscribe(callback);
 
@@ -122,7 +122,7 @@ describe('optimize subscribe', () => {
     });
 
     it('start and cancel -> 3 updates', async () => {
-        const callback = jest.fn();
+        const callback = vi.fn();
 
         controller.subscribe(callback);
 
@@ -133,7 +133,7 @@ describe('optimize subscribe', () => {
     });
 
     it('double start and cancel -> 3 updates', async () => {
-        const callback = jest.fn();
+        const callback = vi.fn();
 
         controller.subscribe(callback);
 

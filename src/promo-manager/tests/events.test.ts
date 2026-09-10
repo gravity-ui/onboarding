@@ -47,15 +47,15 @@ it('can use timeout in event', async () => {
         },
     });
 
-    jest.useFakeTimers();
+    vi.useFakeTimers();
 
     controller.sendEvent('someCustomEvent');
-    jest.advanceTimersByTime(TIMEOUT / 2);
+    vi.advanceTimersByTime(TIMEOUT / 2);
 
     expect(controller.state.base.activePromo).toBe(null);
 
-    jest.advanceTimersByTime(TIMEOUT / 2);
-    jest.useRealTimers();
+    vi.advanceTimersByTime(TIMEOUT / 2);
+    vi.useRealTimers();
 
     await waitForNextTick();
 
@@ -88,15 +88,15 @@ it('can handle several timeouts in event', async () => {
         },
     });
 
-    jest.useFakeTimers();
+    vi.useFakeTimers();
 
     controller.sendEvent('someCustomEvent');
-    jest.advanceTimersByTime(TIMEOUT / 2);
+    vi.advanceTimersByTime(TIMEOUT / 2);
 
     expect(controller.state.base.activePromo).toBe(null);
 
-    jest.advanceTimersByTime(TIMEOUT / 2);
-    jest.useRealTimers();
+    vi.advanceTimersByTime(TIMEOUT / 2);
+    vi.useRealTimers();
 
     await waitForNextTick();
 
