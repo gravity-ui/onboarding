@@ -324,11 +324,22 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
+        // The anchor may be replaced while asynchronous checks are pending.
+        const currentElement = this.reachedElements.get(stepSlug);
+        if (!currentElement?.isConnected) {
+            this.logger.debug('Element disappeared while preparing hint', currentElement, stepSlug);
+            return;
+        }
+
+        if (this.hintStore.state.open) {
+            return;
+        }
+
         this.logger.debug(`Display hint for step ${stepSlug}`);
         this.events.emit('showHint', {preset, step: stepSlug});
 
-        this.options.showHint?.({preset, element, step});
-        this.hintStore.showHint({preset, element, step});
+        this.options.showHint?.({preset, element: currentElement, step});
+        this.hintStore.showHint({preset, element: currentElement, step});
 
         if (step.passMode === 'onShowHint') {
             await this.passStep(stepSlug);

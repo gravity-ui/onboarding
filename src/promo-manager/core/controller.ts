@@ -515,8 +515,10 @@ export class Controller {
                 }
 
                 const result = await this.requestStart(stepData.preset);
-                if (!result) {
+                const currentElement = instance.reachedElements.get(stepData.stepSlug);
+                if (!result || !currentElement?.isConnected) {
                     this.skipPromo(stepData.preset);
+                    return false;
                 }
                 return result;
             },

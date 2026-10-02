@@ -318,6 +318,97 @@ describe('promos behavior', function () {
         expect(controller.state.progress?.finishedPromos).not.toContain('coolNewFeature');
     });
 
+    it('anchor disappears during initialization -> skip promo and allow another attempt', async function () {
+        vi.useFakeTimers();
+        try {
+            const {options, onboardingController} = getData();
+            const controller = new Controller({
+                ...options,
+                config: {
+                    ...options.config,
+                    init: {initType: 'timeout', timeout: 3000},
+                },
+            });
+            const element = getAnchorElement();
+            const appearance = onboardingController.stepElementReached({
+                stepSlug: 'showCoolFeature',
+                element,
+            });
+            await vi.advanceTimersByTimeAsync(0);
+            expect(controller.state.base.activeQueue).toEqual(['coolNewFeature']);
+            expect(onboardingController.hintStore.state.open).toBe(false);
+
+            element.remove();
+            onboardingController.stepElementDisappeared('showCoolFeature');
+            await vi.advanceTimersByTimeAsync(3000);
+            await appearance;
+
+            expect(controller.state.base.activePromo).toBe(null);
+            expect(controller.state.base.activeQueue).toEqual([]);
+            expect(controller.state.progress?.finishedPromos).toEqual([]);
+            expect(controller.state.progress?.progressInfoByPromo).toEqual({});
+            expect(onboardingController.hintStore.state.open).toBe(false);
+            expect(onboardingController.state.progress?.finishedPresets).toEqual([]);
+            expect(onboardingController.state.progress?.presetPassedSteps).toEqual({});
+
+            await onboardingController.stepElementReached({
+                stepSlug: 'showCoolFeature',
+                element: getAnchorElement(),
+            });
+
+            expect(controller.state.base.activePromo).toBe('coolNewFeature');
+            expect(onboardingController.hintStore.state.open).toBe(true);
+            expect(onboardingController.hintStore.state.hint?.step.slug).toBe('showCoolFeature');
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('anchor replaced during initialization -> show hint on the replacement', async function () {
+        vi.useFakeTimers();
+        try {
+            const {options, onboardingController} = getData();
+            const controller = new Controller({
+                ...options,
+                config: {
+                    ...options.config,
+                    init: {initType: 'timeout', timeout: 3000},
+                },
+            });
+            const showHint = vi.fn();
+            onboardingController.events.subscribe('showHint', showHint);
+            const element = getAnchorElement();
+            const originalAppearance = onboardingController.stepElementReached({
+                stepSlug: 'showCoolFeature',
+                element,
+            });
+            await vi.advanceTimersByTimeAsync(0);
+            expect(controller.state.base.activeQueue).toEqual(['coolNewFeature']);
+
+            element.remove();
+            onboardingController.stepElementDisappeared('showCoolFeature');
+            const replacement = getAnchorElement();
+            const replacementAppearance = onboardingController.stepElementReached({
+                stepSlug: 'showCoolFeature',
+                element: replacement,
+            });
+            await vi.advanceTimersByTimeAsync(0);
+            expect(onboardingController.reachedElements.get('showCoolFeature')).toBe(replacement);
+            expect(onboardingController.hintStore.state.open).toBe(false);
+
+            await vi.advanceTimersByTimeAsync(3000);
+            await Promise.all([originalAppearance, replacementAppearance]);
+
+            expect(controller.state.base.activePromo).toBe('coolNewFeature');
+            expect(onboardingController.hintStore.state.open).toBe(true);
+            expect(onboardingController.hintStore.state.anchorRef.current).toBe(replacement);
+            expect(showHint).toHaveBeenCalledOnce();
+            expect(controller.state.progress?.finishedPromos).toEqual([]);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
     it('cant run promo preset now -> delete from queue', async function () {
         const onboardingController = new OnboardingController(
             getOptionsWithPromo({wizardState: 'hidden'}),

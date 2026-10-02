@@ -313,6 +313,95 @@ describe('event subscriptions', function () {
             expect(mock).not.toHaveBeenCalled();
         });
 
+        it('should not show a hint when its anchor disappears during beforeShowHint', async function () {
+            const options = getOptionsWithHooks();
+            options.config.presets.createProject.steps[1].passMode = 'onShowHint';
+            const controller = new Controller(options);
+            const element = getAnchorElement();
+            let allowHint!: (value: boolean) => void;
+            options.hooks.beforeShowHint.mockImplementationOnce(
+                () =>
+                    new Promise<boolean>((resolve) => {
+                        allowHint = resolve;
+                    }),
+            );
+
+            const appearance = controller.stepElementReached({stepSlug: 'createSprint', element});
+            await waitForNextTick();
+            expect(options.hooks.beforeShowHint).toHaveBeenCalledOnce();
+
+            element.remove();
+            controller.stepElementDisappeared('createSprint');
+            allowHint(true);
+            await appearance;
+
+            expect(controller.hintStore.state.open).toBe(false);
+            expect(options.showHint).not.toHaveBeenCalled();
+            expect(options.hooks.showHint).not.toHaveBeenCalled();
+            expect(options.hooks.stepPass).not.toHaveBeenCalled();
+            expect(controller.state.progress?.presetPassedSteps.createProject).toEqual([
+                'openBoard',
+            ]);
+
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+
+            expect(controller.hintStore.state.open).toBe(true);
+            expect(options.showHint).toHaveBeenCalledOnce();
+        });
+
+        it.each([0, 1])(
+            'uses the replacement anchor once when request %i finishes first',
+            async (firstToFinish) => {
+                const options = getOptionsWithHooks();
+                options.config.presets.createProject.steps[1].passMode = 'onShowHint';
+                const allowHints: Array<(value: boolean) => void> = [];
+                options.hooks.beforeShowHint.mockImplementation(
+                    () =>
+                        new Promise<boolean>((resolve) => {
+                            allowHints.push(resolve);
+                        }),
+                );
+                const controller = new Controller(options);
+                const element = getAnchorElement();
+                const originalAppearance = controller.stepElementReached({
+                    stepSlug: 'createSprint',
+                    element,
+                });
+                await waitForNextTick();
+                expect(allowHints).toHaveLength(1);
+
+                element.remove();
+                controller.stepElementDisappeared('createSprint');
+                const replacement = getAnchorElement();
+                const replacementAppearance = controller.stepElementReached({
+                    stepSlug: 'createSprint',
+                    element: replacement,
+                });
+                await waitForNextTick();
+                expect(allowHints).toHaveLength(2);
+
+                const appearances = [originalAppearance, replacementAppearance];
+                allowHints[firstToFinish](true);
+                await appearances[firstToFinish];
+
+                expect(controller.hintStore.state.open).toBe(true);
+                expect(controller.hintStore.state.anchorRef.current).toBe(replacement);
+
+                allowHints[1 - firstToFinish](true);
+                await appearances[1 - firstToFinish];
+
+                expect(controller.hintStore.state.anchorRef.current).toBe(replacement);
+                expect(options.showHint).toHaveBeenCalledExactlyOnceWith(
+                    expect.objectContaining({element: replacement}),
+                );
+                expect(options.hooks.showHint).toHaveBeenCalledOnce();
+                expect(options.hooks.stepPass).toHaveBeenCalledOnce();
+            },
+        );
+
         it('should not trigger beforeShowHint if hint is already open', async function () {
             const controller = new Controller(getOptions());
             const element = getAnchorElement();
