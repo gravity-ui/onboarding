@@ -313,6 +313,45 @@ describe('event subscriptions', function () {
             expect(mock).not.toHaveBeenCalled();
         });
 
+        it('should not show a hint when its anchor disappears during beforeShowHint', async function () {
+            const options = getOptionsWithHooks();
+            options.config.presets.createProject.steps[1].passMode = 'onShowHint';
+            const controller = new Controller(options);
+            const element = getAnchorElement();
+            let allowHint!: (value: boolean) => void;
+            options.hooks.beforeShowHint.mockImplementationOnce(
+                () =>
+                    new Promise<boolean>((resolve) => {
+                        allowHint = resolve;
+                    }),
+            );
+
+            const appearance = controller.stepElementReached({stepSlug: 'createSprint', element});
+            await waitForNextTick();
+            expect(options.hooks.beforeShowHint).toHaveBeenCalledOnce();
+
+            element.remove();
+            controller.stepElementDisappeared('createSprint');
+            allowHint(true);
+            await appearance;
+
+            expect(controller.hintStore.state.open).toBe(false);
+            expect(options.showHint).not.toHaveBeenCalled();
+            expect(options.hooks.showHint).not.toHaveBeenCalled();
+            expect(options.hooks.stepPass).not.toHaveBeenCalled();
+            expect(controller.state.progress?.presetPassedSteps.createProject).toEqual([
+                'openBoard',
+            ]);
+
+            await controller.stepElementReached({
+                stepSlug: 'createSprint',
+                element: getAnchorElement(),
+            });
+
+            expect(controller.hintStore.state.open).toBe(true);
+            expect(options.showHint).toHaveBeenCalledOnce();
+        });
+
         it('should not trigger beforeShowHint if hint is already open', async function () {
             const controller = new Controller(getOptions());
             const element = getAnchorElement();

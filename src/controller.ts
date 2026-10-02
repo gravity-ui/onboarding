@@ -324,6 +324,12 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
+        // A redirect can remove the anchor while asynchronous promo checks are pending.
+        if (!element.isConnected) {
+            this.logger.debug('Element disappeared while preparing hint', element, stepSlug);
+            return;
+        }
+
         this.logger.debug(`Display hint for step ${stepSlug}`);
         this.events.emit('showHint', {preset, step: stepSlug});
 

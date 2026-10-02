@@ -515,8 +515,9 @@ export class Controller {
                 }
 
                 const result = await this.requestStart(stepData.preset);
-                if (!result) {
+                if (!result || !stepData.element.isConnected) {
                     this.skipPromo(stepData.preset);
+                    return false;
                 }
                 return result;
             },
