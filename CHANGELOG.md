@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.12.2](https://github.com/gravity-ui/onboarding/compare/v1.12.1...v1.12.2) (2026-10-05)
+
+
+### Bug Fixes
+
+* avoid reusing resolved debounce promises ([1832323](https://github.com/gravity-ui/onboarding/commit/1832323098d95c231b2efc9f4f6b04f0c83f7639))
+* **deps:** update brace-expansion to resolve audit vulnerabilities ([a3fb2a1](https://github.com/gravity-ui/onboarding/commit/a3fb2a1b0ac6e92837814fa688e171c5aaef7573))
+* preserve onboarding hints when anchors remount ([4b06967](https://github.com/gravity-ui/onboarding/commit/4b06967146922ca1f3a80eb73309c2a10a452fab))
+* prevent onboarding hints after anchor removal ([d1af570](https://github.com/gravity-ui/onboarding/commit/d1af570683fa4f2a91912be089d1f113dc3ba8af))
+
 ## [1.12.1](https://github.com/gravity-ui/onboarding/compare/v1.12.0...v1.12.1) (2026-07-24)
 
 
