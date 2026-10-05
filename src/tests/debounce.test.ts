@@ -135,6 +135,30 @@ describe('createDebounceHandler', () => {
         expect(mockFn).toHaveBeenCalledTimes(2);
     });
 
+    it('should await a new call when the clock has not advanced after execution', async () => {
+        const mockFn = vi.fn();
+        const debouncedFn = createDebounceHandler(mockFn, 100);
+        const start = Date.now();
+        const first = debouncedFn();
+        await vi.advanceTimersByTimeAsync(100);
+        await first;
+
+        vi.setSystemTime(start + 99);
+        const second = debouncedFn();
+        expect(second).not.toBe(first);
+        let resolved = false;
+        second.then(() => {
+            resolved = true;
+        });
+        await vi.advanceTimersByTimeAsync(99);
+        expect(resolved).toBe(false);
+        expect(mockFn).toHaveBeenCalledTimes(1);
+        await vi.advanceTimersByTimeAsync(1);
+        await second;
+        expect(resolved).toBe(true);
+        expect(mockFn).toHaveBeenCalledTimes(2);
+    });
+
     it('should create new controlled promise for calls after timeout', async () => {
         const mockFn = vi.fn();
         const debouncedFn = createDebounceHandler(mockFn, 100);

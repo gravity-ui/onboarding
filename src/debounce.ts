@@ -8,24 +8,21 @@ export const createControlledPromise = () => {
 };
 
 export const createDebounceHandler = (targetFn: () => void, timeout: number) => {
-    let lastCallTime = 0;
-    let currentCallTime = 0;
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: NodeJS.Timeout | undefined;
     let controlledPromise = createControlledPromise();
 
     return function trigger() {
-        lastCallTime = currentCallTime;
-        currentCallTime = Date.now();
-
-        if (currentCallTime - lastCallTime < timeout) {
-            clearTimeout(timeoutId);
-        } else {
+        if (timeoutId === undefined) {
             controlledPromise = createControlledPromise();
+        } else {
+            clearTimeout(timeoutId);
         }
 
         timeoutId = setTimeout(() => {
+            timeoutId = undefined;
+            const pending = controlledPromise;
             targetFn();
-            controlledPromise.resolve();
+            pending.resolve();
         }, timeout);
 
         return controlledPromise.promise;
