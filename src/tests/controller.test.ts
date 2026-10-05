@@ -532,32 +532,38 @@ describe('goNextStep and goNextStep', function () {
             });
 
             it('pass step, goPrevStep -> show previous hint', async function () {
-                const options = getOptions(
-                    {},
-                    {
-                        presetPassedSteps: {
-                            createProject: ['openBoard'],
+                // Timers can finish before Date.now advances by the debounce interval.
+                const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now());
+                try {
+                    const options = getOptions(
+                        {},
+                        {
+                            presetPassedSteps: {
+                                createProject: ['openBoard'],
+                            },
                         },
-                    },
-                );
-                const controller = new Controller(options);
+                    );
+                    const controller = new Controller(options);
 
-                await controller.stepElementReached({
-                    stepSlug: 'createSprint',
-                    element: getAnchorElement(),
-                });
-                await controller.stepElementReached({
-                    stepSlug: 'createIssue',
-                    element: getAnchorElement(),
-                });
+                    await controller.stepElementReached({
+                        stepSlug: 'createSprint',
+                        element: getAnchorElement(),
+                    });
+                    await controller.stepElementReached({
+                        stepSlug: 'createIssue',
+                        element: getAnchorElement(),
+                    });
 
-                await controller.passStep('createSprint');
+                    await controller.passStep('createSprint');
 
-                await controller.ensureRunning();
-                await controller['goPrevStep']('createProject');
+                    await controller.ensureRunning();
+                    await controller['goPrevStep']('createProject');
 
-                expect(controller.hintStore.state.open).toBe(true);
-                expect(controller.hintStore.state.hint?.step.slug).toBe('createSprint');
+                    expect(controller.hintStore.state.open).toBe(true);
+                    expect(controller.hintStore.state.hint?.step.slug).toBe('createSprint');
+                } finally {
+                    clock.mockRestore();
+                }
             });
 
             it('goPrevStep, pass step -> show initial hint', async function () {
