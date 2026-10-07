@@ -514,6 +514,71 @@ if(status === 'active') {
 }
 ```
 
+## Promo priority groups
+
+Set `priorityGroup` on a promo to order the activation queue across message groups
+(`promoGroups`). Higher numbers are selected first; the default is `0`. Within
+the same priority group, `priority: 'high'` moves a promo ahead of regular promos,
+and regular promos follow their configuration order. Promos with the same group
+and `priority: 'high'` keep their request order. An already active promo is not
+interrupted. Omitting `priorityGroup` preserves the existing order.
+
+Conditions and constraints are checked again before activation. If a promo has
+reached its limit, the manager tries the next eligible promo in the same priority
+group, then proceeds to lower priority groups.
+
+Use existing conditions and `LimitFrequency` constraints for limits. For example,
+profiling and CSAT surveys can have independent daily limits within priority group
+`2`, with hints in group `1` as a fallback:
+
+```typescript
+import {
+    LimitFrequency,
+    type PromoOptions,
+} from '@gravity-ui/onboarding/dist/promo-manager';
+
+const config: PromoOptions['config'] = {
+    promoGroups: [
+        {
+            slug: 'profiling',
+            promos: [
+                {slug: 'profilingPrimary', priorityGroup: 2},
+                {slug: 'profilingFollowup', priorityGroup: 2},
+                {slug: 'profilingRegular'},
+            ],
+        },
+        {
+            slug: 'csat',
+            promos: [
+                {slug: 'csatPrimary', priorityGroup: 2},
+                {slug: 'csatFollowup', priorityGroup: 2},
+            ],
+        },
+        {
+            slug: 'hints',
+            promos: [{slug: 'featureHint', priorityGroup: 1}],
+        },
+    ],
+    constraints: [
+        LimitFrequency({
+            slugs: ['profilingPrimary', 'profilingFollowup'],
+            interval: {days: 1},
+        }),
+        LimitFrequency({
+            slugs: ['csatPrimary', 'csatFollowup'],
+            interval: {days: 1},
+        }),
+    ],
+};
+```
+
+After a profiling survey finishes or is cancelled, another eligible CSAT survey
+in group `2` can still activate. Once both limits are reached, the queued hint in
+group `1` can activate. `profilingRegular` belongs to group `0` and is outside these
+limits. To share a limit across the whole priority group, list all its promo slugs
+in one constraint. Using a message-group slug such as `profiling` instead applies
+the limit to every promo in that message group, across all priority groups.
+
 ## Condition and constraints
 You can use conditions for each promo. Or use constraints to set limitations between promos.
 

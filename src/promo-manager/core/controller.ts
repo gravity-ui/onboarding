@@ -662,6 +662,8 @@ export class Controller {
         this.state.base.activeQueue.push(slug);
         this.state.base.activeQueue.sort(
             (a, b) =>
+                (this.helpers.promoBySlug[b]?.priorityGroup ?? 0) -
+                    (this.helpers.promoBySlug[a]?.priorityGroup ?? 0) ||
                 (this.helpers.prioritiesBySlug[a] ?? 0) - (this.helpers.prioritiesBySlug[b] ?? 0),
         );
     };
