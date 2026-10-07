@@ -226,6 +226,7 @@ export class Controller {
             return;
         }
 
+        this.stateActions.removeFromQueue(slug);
         this.updateProgressInfo(slug);
         this.closePromoWithTimeout(slug, closeActiveTimeout);
 
