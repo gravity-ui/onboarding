@@ -74,6 +74,31 @@ it('ShowOnceForSession only limits the promo with the condition', async function
 });
 
 describe('json conditions', function () {
+    it.each(['ShowOnceForSession', 'alwaysTrue'])(
+        'resolves %s helper in group conditions',
+        async function (helper) {
+            const controller = new Controller({
+                ...testOptions,
+                config: {
+                    promoGroups: [
+                        {
+                            slug: 'jsonGroup',
+                            conditions: [{helper}],
+                            promos: [{slug: 'jsonPromo'}],
+                        },
+                    ],
+                },
+                conditionHelpers: {
+                    alwaysTrue: () => () => true,
+                },
+            });
+
+            await controller.requestStart('jsonPromo');
+
+            expect(controller.state.base.activePromo).toBe('jsonPromo');
+        },
+    );
+
     it('take custom helper from config', async function () {
         const controller = new Controller({
             ...testOptions,
