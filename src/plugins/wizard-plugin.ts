@@ -3,13 +3,23 @@ import type {Controller} from '../controller';
 export class WizardPlugin implements OnboardingPlugin {
     name = 'wizardPlugin';
     onboardingInstance?: Controller<any, any, any>;
+    private runningPresets = new Set<string>();
+
     apply: OnboardingPlugin['apply'] = ({onboarding}) => {
         this.onboardingInstance = onboarding;
+        this.runningPresets = new Set(onboarding.state.base.activePresets);
 
         onboarding.events.subscribe('init', this.onInit);
         onboarding.events.subscribe('wizardStateChanged', this.onWizardStateChanged);
         onboarding.events.subscribe('beforeRunPreset', this.onRunPreset);
         onboarding.events.subscribe('finishPreset', this.onFinishPreset);
+        onboarding.events.subscribe('skipPreset', this.onSkipPreset);
+        onboarding.events.subscribe(
+            'resetPresetProgress',
+            ({presets}: EventsMap['resetPresetProgress']) => {
+                presets.forEach((preset) => this.runningPresets.delete(preset));
+            },
+        );
     };
 
     onInit = () => {
@@ -67,12 +77,16 @@ export class WizardPlugin implements OnboardingPlugin {
         if (presetVisibility !== 'alwaysHidden') {
             await this.eraseCommonPresetsProgress([preset]);
         }
+
+        this.runningPresets.add(preset);
     };
 
     onFinishPreset = ({preset}: EventsMap['finishPreset']) => {
         if (!this.onboardingInstance) {
             return;
         }
+
+        this.runningPresets.delete(preset);
 
         const presets = this.onboardingInstance?.options.config.presets;
         const currentPreset = presets[preset];
@@ -82,6 +96,13 @@ export class WizardPlugin implements OnboardingPlugin {
 
         if (presetVisibility !== 'alwaysHidden') {
             this.onboardingInstance.setWizardState('visible');
+        }
+    };
+
+    onSkipPreset = ({preset}: EventsMap['skipPreset']) => {
+        // A skip inferred from existing data can finish a preset before it is started.
+        if (this.runningPresets.has(preset)) {
+            this.onFinishPreset({preset});
         }
     };
 
@@ -104,9 +125,9 @@ export class WizardPlugin implements OnboardingPlugin {
             },
         );
 
-        await this.onboardingInstance.resetPresetProgress([
-            ...presetToEraseProgress,
-            ...extraPresetsToReset,
-        ]);
+        await this.onboardingInstance.resetPresetProgress(
+            [...presetToEraseProgress, ...extraPresetsToReset],
+            {preserveSkippedSteps: true},
+        );
     };
 }

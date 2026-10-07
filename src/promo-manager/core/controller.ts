@@ -519,8 +519,20 @@ export class Controller {
 
                 const result = await this.requestStart(stepData.preset);
                 const currentElement = instance.reachedElements.get(stepData.stepSlug);
-                if (!result || !currentElement?.isConnected) {
-                    this.skipPromo(stepData.preset);
+                const progress = instance.state.progress;
+                const presetFinished = progress?.finishedPresets.includes(stepData.preset);
+                const stepResolved =
+                    progress?.presetPassedSteps[stepData.preset]?.includes(stepData.stepSlug) ||
+                    progress?.presetSkippedSteps?.[stepData.preset]?.includes(stepData.stepSlug);
+
+                if (!result || !currentElement?.isConnected || presetFinished || stepResolved) {
+                    if (
+                        !presetFinished &&
+                        !stepResolved &&
+                        (this.isActive(stepData.preset) || this.isPending(stepData.preset))
+                    ) {
+                        this.skipPromo(stepData.preset);
+                    }
                     return false;
                 }
                 return result;
@@ -531,16 +543,56 @@ export class Controller {
             'finishPreset',
             async ({preset}: OnboardingEventsMap['finishPreset']) => {
                 if (this.promoPresets.has(preset)) {
+                    await this.ensureInit();
+                    if (!this.state.progress) {
+                        await this.fetchProgressState();
+                    }
+                    if (
+                        !instance.state.progress?.finishedPresets.includes(preset) ||
+                        instance.getPresetOutcome(preset) !== 'finished'
+                    ) {
+                        return;
+                    }
                     this.finishPromo(preset);
                 }
             },
         );
 
-        instance.events.subscribe('closeHint', async ({hint}: OnboardingEventsMap['closeHint']) => {
-            if (this.promoPresets.has(hint.preset)) {
-                this.skipPromo(hint.preset);
-            }
-        });
+        instance.events.subscribe(
+            'skipPreset',
+            async ({preset}: OnboardingEventsMap['skipPreset']) => {
+                if (this.promoPresets.has(preset)) {
+                    await this.ensureInit();
+                    if (!this.state.progress) {
+                        await this.fetchProgressState();
+                    }
+                    if (
+                        !instance.state.progress?.finishedPresets.includes(preset) ||
+                        instance.getPresetOutcome(preset) !== 'skipped' ||
+                        (this.isCancelled(preset) &&
+                            !this.isActive(preset) &&
+                            !this.isPending(preset))
+                    ) {
+                        return;
+                    }
+                    this.stateActions.removeFromQueue(preset);
+                    this.cancelPromo(preset);
+                }
+            },
+        );
+
+        instance.events.subscribe(
+            'closeHint',
+            async ({hint, eventSource}: OnboardingEventsMap['closeHint']) => {
+                if (
+                    this.promoPresets.has(hint.preset) &&
+                    eventSource !== 'stepSkipped' &&
+                    eventSource !== 'progressSynced'
+                ) {
+                    this.skipPromo(hint.preset);
+                }
+            },
+        );
 
         instance.events.subscribe(
             'resetPresetProgress',

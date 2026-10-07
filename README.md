@@ -165,6 +165,82 @@ return (
 
 </details>
 
+## Actions completed before a hint
+
+Use `skipStep` when the application knows that a target action was completed before
+its hint was displayed. A skip is stored in `progress.presetSkippedSteps`, separately
+from `presetPassedSteps`, and emits `stepSkip` and the optional step hook `onStepSkip`.
+It never emits `stepPass` or calls `onStepPass` or `onCloseHintByUser`.
+
+To choose automatically when handling a target action, use `passOrSkipStep`:
+it passes the step if its hint is open at the time of the call, otherwise it skips
+the step. Both methods are available on the controller and as package exports.
+Both `useOnboardingStep` and `useOnboardingStepBySelector` expose `skip` and
+`passOrSkip` alongside the existing `pass`:
+
+```typescript jsx
+const {ref, passOrSkip} = useOnboardingStep('createTodoList');
+
+const handleCreate = async () => {
+  await createTodoList();
+  await passOrSkip();
+};
+
+// When existing application data already confirms the target action:
+await controller.skipStep('createTodoList');
+```
+
+A skipped step is no longer shown. For presets with skipped steps, hints continue
+at the first unresolved step; skipping a future step does not skip earlier pending
+steps. The scenario ends when all of its steps are either passed or skipped:
+
+- At least one configured step was passed: emit `finishPreset`; the integrated
+  promo manager finishes the promo successfully.
+- Every configured step was skipped: emit `skipPreset`; the integrated promo
+  manager cancels the promo without adding it to `finishedPromos`.
+- Unresolved steps remain: continue the scenario without finishing or cancelling
+  the promo.
+
+Thus a one-step promo skipped before its hint is cancelled, while a mix of passed
+and skipped steps can finish successfully. `finishedPresets` records closed
+onboarding scenarios in both cases; successful promo attribution is recorded in
+the promo manager's `finishedPromos`. Subscribe to `stepSkip` and `skipPreset` for
+analytics that distinguish skipped actions and entirely skipped scenarios.
+
+The existing `passStep` behavior is unchanged for presets without skipped steps,
+including completion by passing only the last step. Old progress without
+`presetSkippedSteps` remains valid. Persist the optional field alongside the other
+onboarding progress fields; `resetPresetProgress` clears it for the selected presets.
+
+For steps shared by several presets, `controller.skipStep(step, preset)` selects
+the preset explicitly. Without the second argument it prefers the current hint's
+preset, then an active preset, then an available preset, and finally a configured
+preset; finished presets are excluded.
+
+`WizardPlugin` preserves skipped actions when automatically resetting a scenario
+on start or hide. A preset completed entirely from existing data does not open the
+wizard until that scenario has actually been started. An explicit
+`resetPresetProgress` clears skipped actions; pass `{preserveSkippedSteps: true}`
+to retain them and keep entirely skipped presets closed.
+
+`MultiTabSyncPlugin` synchronizes skipped progress whenever `enableCloseHintSync`
+is enabled, including skips made before a hint appears. It merges passed and
+skipped steps for the affected preset and processes its completion in each tab,
+without replacing unrelated local state or emitting `stepPass` for imported
+actions. Skip messages use the separate `skipStepLSKey` channel; the existing
+close channel keeps its plain step-slug format for older tabs. Custom close keys
+also isolate the skip channel unless `skipStepLSKey` is supplied explicitly.
+Closing a locally displayed hint for an imported resolved action uses
+`onCloseHint({eventSource: 'progressSynced'})`, without calling user-close hooks.
+An incoming snapshot is merged before skip callbacks run. Only newly skipped
+steps emit skip notifications; completion is checked and progress is saved once
+per snapshot.
+
+Step and terminal skip notifications finish processing and persist resolved
+progress even if a hook fails; the returned promise still rejects with the hook
+error. A failed terminal observer does not prevent the remaining observers,
+including the promo manager, from receiving the result.
+
 ## Onboarding configuration
 
 
@@ -200,10 +276,12 @@ const onboardingOptions = {
   hooks: {
     showHint: ({preset, step}) => {/**/},
     stepPass: ({preset, step}) => {/**/},
+    stepSkip: ({preset, step}) => {/**/},
     addPreset: ({preset}) => {/**/},
     beforeRunPreset: ({preset}) => {/**/},
     runPreset: ({preset}) => {/**/},
     finishPreset: ({preset}) => {/**/},
+    skipPreset: ({preset}) => {/**/},
     beforeSuggestPreset: ({preset}) => {/**/},
     beforeShowHint: ({stepData}) => {/**/},
     stateChange: ({state}) => {/**/},
@@ -262,6 +340,7 @@ const onboardingOptions = {
             hooks: {
               // optional
               onStepPass: () => {/**/},
+              onStepSkip: () => {/**/},
               onCloseHint: () => {/**/},
               onCloseHintByUser: () => {/**/},
             },
@@ -363,7 +442,7 @@ createOnboarding({
 
 Semantics:
 
-- The loader is invoked **at most once** per controller lifecycle, the first time any preset-body-touching method is called (`runPreset`, `addPreset`, `suggestPresetOnce`, `passStep`, `stepElementReached`, `finishPreset`, `resetPresetProgress`, wizard opening, reading `userPresets`). A disabled controller never triggers the loader.
+- The loader is invoked **at most once** per controller lifecycle, the first time any preset-body-touching method is called (`runPreset`, `addPreset`, `suggestPresetOnce`, `passStep`, `skipStep`, `passOrSkipStep`, `stepElementReached`, `finishPreset`, `resetPresetProgress`, wizard opening, reading `userPresets`). A disabled controller never triggers the loader.
 - While the loader is in-flight, concurrent calls share the same promise — no duplicate requests.
 - If the loader rejects, the error is logged and bubbles up to the caller, and the rejection is cached — subsequent calls surface the same error without re-invoking the loader. To retry after a persistent failure (e.g. user clicks "try again"), recreate the controller.
 - Slugs from the async map are still statically inferred — `useOnboardingStep('slugFromAsyncPreset')` remains type-safe.
@@ -372,7 +451,7 @@ Semantics:
 
 ## Events
 
-You can use event system. Available events: `showHint`, `stepPass`, `addPreset`, `beforeRunPreset`, `runPreset`, `finishPreset`, `beforeSuggestPreset`, `stepElementReached`, `beforeShowHint`, `stateChange`, `hintDataChanged`, `closeHint`, `init`, `wizardStateChange`
+You can use event system. Available events: `showHint`, `stepPass`, `stepSkip`, `addPreset`, `beforeRunPreset`, `runPreset`, `finishPreset`, `skipPreset`, `beforeSuggestPreset`, `stepElementReached`, `beforeShowHint`, `stateChange`, `hintDataChanged`, `closeHint`, `init`, `wizardStateChange`
 
 ```typescript jsx
 controller.events.subscribe('beforeShowHint', callback);

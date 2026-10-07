@@ -25,6 +25,27 @@ describe('React Hooks', () => {
             expect(spy).toHaveBeenCalledWith('openBoard');
         });
 
+        it.each([
+            ['skip', 'skipStep'],
+            ['passOrSkip', 'passOrSkipStep'],
+        ] as const)('should call %s for the current step', async (action, method) => {
+            const spy = vi.spyOn(controller, method).mockResolvedValue();
+            const {result, rerender} = renderHook(({step}) => hooks.useOnboardingStep(step), {
+                initialProps: {step: 'openBoard'},
+            });
+
+            await act(async () => {
+                await result.current[action]();
+            });
+
+            rerender({step: 'createSprint'});
+            await act(async () => {
+                await result.current[action]();
+            });
+
+            expect(spy.mock.calls).toEqual([['openBoard'], ['createSprint']]);
+        });
+
         it('should call closeHintByUser when closeHint is called', () => {
             const spy = vi.spyOn(controller, 'closeHintByUser');
             const {result} = renderHook(() => hooks.useOnboardingStep('openBoard'));
@@ -105,6 +126,28 @@ describe('React Hooks', () => {
             });
 
             expect(spy).toHaveBeenCalledWith('openBoard');
+        });
+
+        it.each([
+            ['skip', 'skipStep'],
+            ['passOrSkip', 'passOrSkipStep'],
+        ] as const)('should call %s for the current selected step', async (action, method) => {
+            const spy = vi.spyOn(controller, method).mockResolvedValue();
+            const {result, rerender} = renderHook(
+                ({step}) => hooks.useOnboardingStepBySelector({selector: '.test', step}),
+                {initialProps: {step: 'openBoard'}},
+            );
+
+            await act(async () => {
+                await result.current[action]();
+            });
+
+            rerender({step: 'createSprint'});
+            await act(async () => {
+                await result.current[action]();
+            });
+
+            expect(spy.mock.calls).toEqual([['openBoard'], ['createSprint']]);
         });
 
         it('should call closeHintByUser when closeHint is called', () => {
