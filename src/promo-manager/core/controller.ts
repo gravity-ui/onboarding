@@ -239,7 +239,8 @@ export class Controller {
         }
 
         if (this.isActive(slug)) {
-            this.stateActions.clearActive();
+            this.closePromo(slug);
+            return;
         }
 
         if (this.isPending(slug)) {
