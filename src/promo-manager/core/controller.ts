@@ -409,6 +409,7 @@ export class Controller {
             {
                 promoGroup: group,
                 currentDate: this.dateNow(),
+                helpers: this.conditionHelpers,
                 config: this.options.config,
             },
             conditionsForType,
