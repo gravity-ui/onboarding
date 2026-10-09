@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.4](https://github.com/gravity-ui/onboarding/compare/v1.12.3...v1.12.4) (2026-10-09)
+
+
+### Bug Fixes
+
+* STARTREK-74772: prevent promo startup races ([b65efe8](https://github.com/gravity-ui/onboarding/commit/b65efe8189e853ec8e3b2ef871a73f858324e7ca))
+
 ## [1.12.3](https://github.com/gravity-ui/onboarding/compare/v1.12.2...v1.12.3) (2026-10-09)
 
 
