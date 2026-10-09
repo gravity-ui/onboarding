@@ -41,7 +41,8 @@ export const PromoWrapper = ({children, showOnPromo}: Props) => {
         controllerRef.requestStart(showOnPromo);
 
         return () => {
-            controllerRef.cancelPromo(showOnPromo);
+            // Unmount is not a user dismissal: drop the request without recording progress.
+            controllerRef.skipPromo(showOnPromo);
         };
     }, []);
 
