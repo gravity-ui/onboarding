@@ -1,4 +1,5 @@
 import {Controller} from '../core/controller';
+import {ShowOnceForSession} from '../core/condition/condition-helpers';
 
 import {testOptions} from './options';
 
@@ -39,6 +40,36 @@ it('promo with false condition -> dont run', async function () {
 
     await controller.requestStart('someConditionPromo');
 
+    expect(controller.state.base.activePromo).toBe(null);
+});
+
+it('ShowOnceForSession only limits the promo with the condition', async function () {
+    const currentDate = Date.now();
+    const controller = new Controller({
+        ...testOptions,
+        dateNow: () => currentDate,
+        config: {
+            promoGroups: [
+                {
+                    slug: 'group',
+                    promos: [
+                        {slug: 'p1'},
+                        {slug: 'p2', repeatable: true, conditions: [ShowOnceForSession()]},
+                    ],
+                },
+            ],
+        },
+    });
+
+    await controller.requestStart('p1');
+    expect(controller.state.base.activePromo).toBe('p1');
+    controller.finishPromo('p1');
+
+    await controller.requestStart('p2');
+    expect(controller.state.base.activePromo).toBe('p2');
+    controller.finishPromo('p2');
+
+    await controller.requestStart('p2');
     expect(controller.state.base.activePromo).toBe(null);
 });
 
