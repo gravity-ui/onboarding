@@ -73,6 +73,8 @@ export class Controller {
     dateNow: () => number;
 
     private status: PromoManagerStatus;
+    private initializationPromise?: Promise<void>;
+    private startRequestVersions = new Map<PromoSlug, number>();
 
     constructor(options: PromoOptions) {
         this.options = options;
@@ -120,7 +122,9 @@ export class Controller {
 
         if (this.options.config.init.initType === 'timeout') {
             this.initPromise = delay(this.options.config.init.timeout);
-            this.ensureInit();
+            this.ensureInit().catch((error) => {
+                this.logger.error(error);
+            });
         }
 
         if (options.debugMode) {
@@ -164,12 +168,18 @@ export class Controller {
             return;
         }
 
-        await this.initPromise;
-        this.status = 'initialized';
-        this.events.emit('init', {});
-        this.logger.debug('Initialized');
+        if (!this.initializationPromise) {
+            this.initializationPromise = (async () => {
+                await this.initPromise;
+                this.status = 'initialized';
+                this.events.emit('init', {});
+                this.logger.debug('Initialized');
 
-        await this.triggerNextPromo();
+                await this.triggerNextPromo();
+            })();
+        }
+
+        await this.initializationPromise;
     };
 
     requestStart = async (slug: Nullable<PromoSlug>) => {
@@ -178,8 +188,15 @@ export class Controller {
             return false;
         }
 
+        // Skip, finish and cancel invalidate requests suspended on progress loading or init.
+        const requestVersion = this.startRequestVersions.get(slug);
+
         if (!this.state.progress) {
             await this.fetchProgressState();
+        }
+
+        if (requestVersion !== this.startRequestVersions.get(slug)) {
+            return false;
         }
 
         if (this.state.base.activePromo === slug) {
@@ -195,9 +212,16 @@ export class Controller {
 
         await this.ensureInit();
 
+        if (requestVersion !== this.startRequestVersions.get(slug)) {
+            return false;
+        }
+
         await this.triggerNextPromo();
 
-        return this.state.base.activePromo === slug;
+        return (
+            requestVersion === this.startRequestVersions.get(slug) &&
+            this.state.base.activePromo === slug
+        );
     };
 
     finishPromo = (slug: Nullable<PromoSlug>, closeActiveTimeout = 0) => {
@@ -206,18 +230,20 @@ export class Controller {
             return;
         }
 
-        const promoStatus = this.getPromoStatus(slug);
-        if (promoStatus === 'finished') {
-            return;
-        }
-
-        this.stateActions.addPromoToFinished(slug);
+        this.invalidateStartRequests(slug);
         this.stateActions.removeFromQueue(slug);
-        this.updateProgressInfo(slug);
 
-        this.closePromoWithTimeout(slug, closeActiveTimeout);
+        this.runWithProgress(() => {
+            if (this.getPromoStatus(slug) === 'finished') {
+                return;
+            }
 
-        this.events.emit('finishPromo', {slug});
+            this.stateActions.addPromoToFinished(slug);
+            this.updateProgressInfo(slug);
+            this.closePromoWithTimeout(slug, closeActiveTimeout);
+
+            this.events.emit('finishPromo', {slug});
+        });
     };
 
     cancelPromo = (slug: Nullable<PromoSlug>, closeActiveTimeout = 0) => {
@@ -226,11 +252,15 @@ export class Controller {
             return;
         }
 
+        this.invalidateStartRequests(slug);
         this.stateActions.removeFromQueue(slug);
-        this.updateProgressInfo(slug);
-        this.closePromoWithTimeout(slug, closeActiveTimeout);
 
-        this.events.emit('cancelPromo', {slug});
+        this.runWithProgress(() => {
+            this.updateProgressInfo(slug);
+            this.closePromoWithTimeout(slug, closeActiveTimeout);
+
+            this.events.emit('cancelPromo', {slug});
+        });
     };
 
     skipPromo = (slug: Nullable<PromoSlug>) => {
@@ -238,6 +268,8 @@ export class Controller {
         if (!slug) {
             return;
         }
+
+        this.invalidateStartRequests(slug);
 
         if (this.isActive(slug)) {
             this.closePromo(slug);
@@ -453,6 +485,23 @@ export class Controller {
         }
     }
 
+    private invalidateStartRequests = (slug: PromoSlug) => {
+        this.startRequestVersions.set(slug, (this.startRequestVersions.get(slug) ?? 0) + 1);
+    };
+
+    private runWithProgress = (action: () => void) => {
+        if (this.state.progress) {
+            action();
+            return;
+        }
+
+        this.fetchProgressState()
+            .then(action)
+            .catch((error) => {
+                this.logger.error(error);
+            });
+    };
+
     private initEventMap = () => {
         for (const group of this.options.config.promoGroups) {
             for (const promo of group.promos) {
@@ -517,7 +566,13 @@ export class Controller {
                     return true;
                 }
 
+                const requestVersion = this.startRequestVersions.get(stepData.preset);
                 const result = await this.requestStart(stepData.preset);
+                // An obsolete hint attempt must not skip a newer run of the same promo.
+                if (requestVersion !== this.startRequestVersions.get(stepData.preset)) {
+                    return false;
+                }
+
                 const currentElement = instance.reachedElements.get(stepData.stepSlug);
                 if (!result || !currentElement?.isConnected) {
                     this.skipPromo(stepData.preset);
