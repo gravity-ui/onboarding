@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.12.3](https://github.com/gravity-ui/onboarding/compare/v1.12.2...v1.12.3) (2026-10-09)
+
+
+### Bug Fixes
+
+* **promo-manager:** remove cancelled pending promos from queue ([529265f](https://github.com/gravity-ui/onboarding/commit/529265fe864385ac2386d40d878bd6512548283f))
+* **promo-manager:** scope session limit to current promo ([3ce4c70](https://github.com/gravity-ui/onboarding/commit/3ce4c70ec0f17fb8a786b67d9e0b5faf822351c8))
+* **promo-manager:** trigger next queued promo after skip ([15db1a7](https://github.com/gravity-ui/onboarding/commit/15db1a7f6c8d74d3439e8a24236bc87141d06b44))
+* resolve helpers in group-level promo conditions ([#216](https://github.com/gravity-ui/onboarding/issues/216)) ([0abf875](https://github.com/gravity-ui/onboarding/commit/0abf875b9f34f885a704c06bc558fa9ca624ae37))
+
 ## [1.12.2](https://github.com/gravity-ui/onboarding/compare/v1.12.1...v1.12.2) (2026-10-05)
 
 
