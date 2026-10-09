@@ -120,7 +120,9 @@ export class Controller {
 
         if (this.options.config.init.initType === 'timeout') {
             this.initPromise = delay(this.options.config.init.timeout);
-            this.ensureInit();
+            this.ensureInit().catch((error) => {
+                this.logger.error(error);
+            });
         }
 
         if (options.debugMode) {
@@ -160,11 +162,16 @@ export class Controller {
     };
 
     ensureInit = async () => {
-        if (this.status === 'initialized') {
+        if (this.isInitialized()) {
             return;
         }
 
         await this.initPromise;
+
+        if (this.isInitialized()) {
+            return;
+        }
+
         this.status = 'initialized';
         this.events.emit('init', {});
         this.logger.debug('Initialized');
@@ -578,6 +585,8 @@ export class Controller {
             throw new Error('Promo manager progress not loaded');
         }
     }
+
+    private isInitialized = () => this.status === 'initialized';
 
     private isAbleToRun = (slug: PromoSlug) => {
         const status = this.getPromoStatus(slug);
