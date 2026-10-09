@@ -89,6 +89,16 @@ describe('active promo', () => {
         expect(controller.state.base.activePromo).toBe('ganttPoll');
     });
 
+    it('skip active promo -> trigger next', async () => {
+        await controller.requestStart('boardPoll');
+        await controller.requestStart('ganttPoll');
+
+        controller.skipPromo('boardPoll');
+
+        expect(controller.state.base.activePromo).toBe('ganttPoll');
+        expect(controller.state.base.activeQueue).toEqual([]);
+    });
+
     it('2 request and finish promo -> not trigger next', async () => {
         await controller.requestStart('boardPoll');
         await controller.requestStart('boardPoll');
