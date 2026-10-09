@@ -25,6 +25,21 @@ test('finish promo -> remove it from queue', async () => {
     expect(controller.state.base.activeQueue).not.toContain('ganttPoll');
 });
 
+test('cancel pending promo -> remove it from queue and never activate it', async () => {
+    const controller = new Controller(testOptions);
+
+    await controller.requestStart('boardPoll');
+    await controller.requestStart('ganttPoll');
+    controller.cancelPromo('ganttPoll');
+
+    expect(controller.state.base.activeQueue).not.toContain('ganttPoll');
+    expect(controller.getPromoStatus('ganttPoll')).toBe('finished');
+
+    controller.finishPromo('boardPoll');
+
+    expect(controller.state.base.activePromo).toBe(null);
+});
+
 test('add finished promo -> queue is empty', async () => {
     const controller = new Controller(testOptions);
 
