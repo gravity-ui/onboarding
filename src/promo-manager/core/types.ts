@@ -16,6 +16,8 @@ export type Promo<T = PromoMeta> = {
     slug: PromoSlug;
     conditions?: Condition[];
     priority?: Priority;
+    /** Higher groups are selected first. Defaults to 0; priority applies within each group. */
+    priorityGroup?: number;
     meta?: T;
     trigger?: Trigger;
     repeatable?: boolean;
