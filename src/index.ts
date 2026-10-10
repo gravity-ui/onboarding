@@ -26,6 +26,14 @@ export function passStep(step: string) {
     }
 }
 
+export async function skipStep(step: string) {
+    await controllerRef?.skipStep(step);
+}
+
+export async function passOrSkipStep(step: string) {
+    await controllerRef?.passOrSkipStep(step);
+}
+
 export async function finishPreset(preset: string) {
     if (controllerRef !== null) {
         await controllerRef.finishPreset(preset);
@@ -73,24 +81,14 @@ export function createOnboarding<T extends InitOptions<any, any, any>>(options: 
     // @ts-ignore
     controllerRef = controller;
 
-    const {
-        useWizard,
-        useOnboardingPresets,
-        useOnboardingStep,
-        useOnboardingHint,
-        useOnboardingStepBySelector,
-    } = getHooks(controller);
+    const hooks = getHooks(controller);
 
     const presetsNames = Object.keys(
         controller.options.config.presets,
     ) as unknown as keyof typeof controller.options.config.presets;
 
     return {
-        useOnboardingStep,
-        useOnboardingStepBySelector,
-        useOnboardingPresets,
-        useOnboardingHint,
-        useWizard,
+        ...hooks,
         controller,
         presetsNames,
     };

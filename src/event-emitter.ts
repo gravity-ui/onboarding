@@ -13,37 +13,34 @@ export class EventEmitter<
         this.extraArg = extraArg;
     }
 
-    emit = async <T extends EventTypes>(type: T, data: EventsMap[T]) => {
-        const listeners = this.map[type];
-
-        if (!listeners || listeners.size === 0) {
-            return true;
+    emit = async <T extends EventTypes>(type: T, data: EventsMap[T], continueOnError = false) => {
+        let canContinue = true;
+        let firstError: {reason: unknown} | undefined;
+        for (const listener of this.map[type] ?? []) {
+            try {
+                if ((await listener(data, this.extraArg)) === false) {
+                    canContinue = false;
+                }
+            } catch (error) {
+                if (!continueOnError) {
+                    throw error;
+                }
+                firstError ??= {reason: error};
+            }
         }
 
-        let canContinue = true;
-        for (const listener of listeners) {
-            const result = await listener(data, this.extraArg);
-            if (result === false) {
-                canContinue = false;
-            }
+        if (firstError) {
+            throw firstError.reason;
         }
 
         return canContinue;
     };
 
     subscribe = <T extends EventTypes>(type: T, callback: EventListener) => {
-        if (!this.map[type]) {
-            this.map[type] = new Set();
-        }
-
-        this.map[type].add(callback);
+        (this.map[type] ??= new Set()).add(callback);
     };
 
     unsubscribe = <T extends EventTypes>(type: T, callback: EventListener) => {
-        if (!this.map[type]) {
-            return;
-        }
-
-        this.map[type].delete(callback);
+        this.map[type]?.delete(callback);
     };
 }

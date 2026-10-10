@@ -175,6 +175,45 @@ describe('open wizard', function () {
 });
 
 describe('close wizard', function () {
+    it('preserves a skip before the first run, on wizard hide and on restart', async () => {
+        const options = getOptions(
+            {
+                wizardState: 'hidden',
+                enabled: false,
+                availablePresets: [],
+                activePresets: [],
+            },
+            {presetPassedSteps: {}},
+        );
+        options.plugins = [new WizardPlugin()];
+        const controller = new Controller(options);
+        await controller.skipStep('openBoard');
+        await controller.runPreset('createProject');
+        expect(controller.state.progress?.presetSkippedSteps?.createProject).toEqual(['openBoard']);
+        await controller.setWizardState('visible');
+        await controller.passStep('createSprint');
+
+        await controller.setWizardState('hidden');
+
+        expect(controller.state.progress?.presetSkippedSteps?.createProject).toEqual(['openBoard']);
+        expect(controller.state.progress?.presetPassedSteps.createProject).toBeUndefined();
+        expect(controller.state.base.activePresets).not.toContain('createProject');
+
+        await controller.runPreset('createProject');
+        await controller.setWizardState('visible');
+        await controller.stepElementReached({
+            stepSlug: 'openBoard',
+            element: getAnchorElement(),
+        });
+        expect(controller.hintStore.state.open).toBe(false);
+
+        await controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: getAnchorElement(),
+        });
+        expect(controller.hintStore.state.hint?.step.slug).toBe('createSprint');
+    });
+
     it('wizard visible -> remove progress for common preset', async function () {
         const options = getOptions({enabled: true, wizardState: 'visible'});
         options.plugins = [new WizardPlugin()];
@@ -370,6 +409,69 @@ describe('run preset', function () {
 });
 
 describe('finish preset', function () {
+    it('does not open a hidden wizard when an unavailable preset is skipped in the background', async () => {
+        const options = getOptions(
+            {
+                wizardState: 'hidden',
+                enabled: false,
+                availablePresets: [],
+                activePresets: [],
+            },
+            {presetPassedSteps: {}},
+        );
+        options.config.presets.createProject.steps =
+            options.config.presets.createProject.steps.slice(0, 1);
+        options.plugins = [new WizardPlugin()];
+        const controller = new Controller(options);
+
+        await controller.skipStep('openBoard');
+
+        expect(controller.state.progress?.finishedPresets).toEqual(['createProject']);
+        expect(controller.state.base.wizardState).toBe('hidden');
+        expect(controller.state.base.enabled).toBe(false);
+        expect(controller.state.base.availablePresets).toEqual([]);
+    });
+
+    it.each([
+        {
+            source: 'initially active',
+            wizardState: 'collapsed' as const,
+            activePresets: ['createProject'],
+        },
+        {source: 'started in this session', wizardState: 'invisible' as const, activePresets: []},
+    ])(
+        'returns to the wizard when an entirely skipped preset was $source',
+        async ({wizardState, activePresets}) => {
+            const options = getOptions({wizardState, activePresets}, {presetPassedSteps: {}});
+            options.plugins = [new WizardPlugin()];
+            const controller = new Controller(options);
+            if (!activePresets.length) {
+                await controller.runPreset('createProject');
+            }
+
+            await controller.skipStep('openBoard');
+            await controller.skipStep('createSprint');
+            await controller.skipStep('createIssue');
+
+            expect(controller.state.base.wizardState).toBe('visible');
+            expect(controller.state.progress?.finishedPresets).toEqual(['createProject']);
+        },
+    );
+
+    it('does not reopen a hidden wizard after its active preset was reset', async () => {
+        const options = getOptions({}, {presetPassedSteps: {}});
+        options.plugins = [new WizardPlugin()];
+        const controller = new Controller(options);
+        await controller.setWizardState('hidden');
+
+        await controller.skipStep('openBoard');
+        await controller.skipStep('createSprint');
+        await controller.skipStep('createIssue');
+
+        expect(controller.state.base.wizardState).toBe('hidden');
+        expect(controller.state.base.enabled).toBe(false);
+    });
+
     it('finish common preset -> show wizard', async function () {
         const options = getOptionsWithPromo({wizardState: 'collapsed'});
         options.plugins = [new WizardPlugin()];

@@ -12,7 +12,23 @@ type StepBySelectorOptions<Steps> = {
 export function getHooks<HintParams, Presets extends string, Steps extends string>(
     controller: Controller<HintParams, Presets, Steps>,
 ) {
+    const useStepActions = (step: Steps) =>
+        useMemo(
+            () => ({
+                pass: async () => {
+                    await controller.passStep(step);
+                },
+                skip: () => controller.skipStep(step),
+                passOrSkip: () => controller.passOrSkipStep(step),
+                closeHint: () => {
+                    controller.closeHintByUser(step);
+                },
+            }),
+            [step],
+        );
+
     const useOnboardingStep = (step: Steps, readyForHint = true) => {
+        const actions = useStepActions(step);
         const onRefChange = useCallback(
             (node: Element | null) => {
                 if (!readyForHint) {
@@ -28,15 +44,7 @@ export function getHooks<HintParams, Presets extends string, Steps extends strin
             [readyForHint, step],
         );
 
-        const pass = useCallback(async () => {
-            await controller.passStep(step);
-        }, [step]);
-
-        const closeHint = useCallback(() => {
-            controller.closeHintByUser(step);
-        }, [step]);
-
-        return {pass, ref: onRefChange, closeHint};
+        return {...actions, ref: onRefChange};
     };
 
     const useOnboardingStepBySelector = ({
@@ -50,17 +58,13 @@ export function getHooks<HintParams, Presets extends string, Steps extends strin
             const parentElement = ref?.current ?? element;
 
             if (readyForHint) {
-                if (parentElement) {
-                    const targetElement = parentElement.querySelector(selector);
+                const targetElement = parentElement?.querySelector(selector);
 
-                    if (targetElement) {
-                        controller.stepElementReached({
-                            stepSlug: step,
-                            element: targetElement,
-                        });
-                    } else {
-                        controller.stepElementDisappeared(step);
-                    }
+                if (targetElement) {
+                    controller.stepElementReached({
+                        stepSlug: step,
+                        element: targetElement,
+                    });
                 } else {
                     controller.stepElementDisappeared(step);
                 }
@@ -71,18 +75,7 @@ export function getHooks<HintParams, Presets extends string, Steps extends strin
             };
         }, [ref?.current, element, selector]);
 
-        const pass = useCallback(async () => {
-            await controller.passStep(step);
-        }, [step]);
-
-        const closeHint = useCallback(() => {
-            controller.closeHintByUser(step);
-        }, [step]);
-
-        return {
-            pass,
-            closeHint,
-        };
+        return useStepActions(step);
     };
 
     const useOnboardingPresets = () => {

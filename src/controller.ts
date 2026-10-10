@@ -8,6 +8,7 @@ import type {
     Preset,
     PresetField,
     PresetStatus,
+    PresetStep,
     ProgressState,
     ReachElementParams,
     ResolvedOptions,
@@ -203,7 +204,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             }
         }
 
-        await this.savePassedStepData(preset, stepSlug, () => {
+        await this.saveStepData(preset, stepSlug, () => {
             step?.hooks?.onStepPass?.();
             this.events.emit('stepPass', {preset, step: stepSlug});
 
@@ -213,6 +214,98 @@ export class Controller<HintParams, Presets extends string, Steps extends string
                 this.checkReachedHints();
             }
         });
+    };
+
+    skipStep = async (stepSlug: Steps, presetSlug?: Presets) => {
+        if (this.status === 'disabled') {
+            return;
+        }
+
+        await this.ensurePresetsLoaded();
+
+        const presets = this.findPresetsWithStep(stepSlug).filter(
+            (candidate) => presetSlug === undefined || candidate === presetSlug,
+        );
+        if (!presets.length) {
+            return;
+        }
+
+        await this.ensureRunning();
+        this.progressLoadedGuard();
+        const unfinished = presets.filter(
+            (preset) => !this.state.progress.finishedPresets.includes(preset),
+        );
+        const preset =
+            unfinished.find((candidate) => this.hintStore.state.hint?.preset === candidate) ??
+            unfinished.find((candidate) => this.state.base.activePresets.includes(candidate)) ??
+            unfinished.find((candidate) => this.state.base.availablePresets.includes(candidate)) ??
+            unfinished[0];
+        if (!preset) {
+            return;
+        }
+
+        const step = this.getStepBySlugAndPreset(stepSlug, preset);
+        await this.saveStepData(
+            preset,
+            stepSlug,
+            () => this.notifyStepSkip(preset, stepSlug, step),
+            true,
+        );
+    };
+
+    passOrSkipStep = (stepSlug: Steps) => {
+        // Attribute the action using the hint visible when the action occurred,
+        // before asynchronous preset or progress loading can display another hint.
+        const {open, hint} = this.hintStore.state;
+        return open && hint?.step.slug === stepSlug
+            ? this.passStep(stepSlug)
+            : this.skipStep(stepSlug);
+    };
+
+    syncPresetProgress = async (
+        preset: Presets,
+        {passedSteps = [], skippedSteps = []}: {passedSteps?: Steps[]; skippedSteps?: Steps[]},
+    ) => {
+        if (this.status === 'disabled') {
+            return;
+        }
+        await this.ensurePresetsLoaded();
+        const config = this.options.config.presets[preset];
+        if (!config || config.type === 'combined') {
+            return;
+        }
+        await this.ensureRunning();
+        const {knownSteps, storedPassed, storedSkipped, newSkipped} = this.mergePresetProgress(
+            preset,
+            config.steps,
+            passedSteps,
+            skippedSteps,
+        );
+
+        let results: PromiseSettledResult<void>[];
+        try {
+            const hint = this.hintStore.state.hint;
+            if (hint?.preset === preset) {
+                const step = hint.step.slug;
+                if (storedPassed.has(step) || storedSkipped.has(step)) {
+                    this.closeHint(step, 'progressSynced');
+                }
+            }
+        } finally {
+            results = await Promise.allSettled(
+                newSkipped.map((step) => this.notifyStepSkip(preset, step, knownSteps.get(step))),
+            );
+            try {
+                await this.checkAndProcessPresetFinish(preset);
+            } finally {
+                this.checkReachedHints();
+                await this.updateProgress();
+            }
+        }
+        const failed = results.find((result) => result.status === 'rejected');
+        if (failed?.status === 'rejected') {
+            throw failed.reason;
+        }
     };
 
     setWizardState = async (state: BaseState['wizardState']) => {
@@ -332,6 +425,14 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
 
         if (this.hintStore.state.open) {
+            return;
+        }
+
+        if (
+            !this.state.base.activePresets.includes(preset) ||
+            this.state.progress.finishedPresets.includes(preset) ||
+            this.findNextStepForPreset(preset) !== stepSlug
+        ) {
             return;
         }
 
@@ -508,6 +609,11 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             presetToRun.type === 'combined' ? await presetToRun.pickPreset() : presetToRunSlug
         ) as Presets;
 
+        await this.ensureRunning();
+        if (this.getPresetOutcome(presetSlug) === 'skipped') {
+            return false;
+        }
+
         this.logger.debug('Running preset', presetSlug);
 
         await presetToRun.hooks?.onBeforeStart?.();
@@ -555,54 +661,44 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         return true;
     };
 
-    finishPreset = async (presetToFinish: Presets, shouldSave = true) => {
-        if (this.status === 'disabled') {
-            return false;
+    finishPreset = (presetToFinish: Presets, shouldSave = true) =>
+        this.endPreset(presetToFinish, shouldSave, 'finishPreset');
+
+    getPresetOutcome = (presetSlug: Presets): 'finished' | 'skipped' | undefined => {
+        const preset = this.options.config.presets[presetSlug];
+        const progress = this.state.progress;
+        if (!progress || !preset || preset.type === 'combined') {
+            return undefined;
         }
 
-        await this.ensurePresetsLoaded();
-
-        // take normal or find internal
-        const presetSlug = this.resolvePresetSlug(presetToFinish);
-        if (!presetSlug) {
-            return false;
+        const steps = preset.steps.map(({slug}) => slug);
+        const passedSteps = progress.presetPassedSteps[presetSlug] ?? [];
+        const skippedSteps = progress.presetSkippedSteps?.[presetSlug] ?? [];
+        if (
+            steps.length &&
+            steps.every((step) => skippedSteps.includes(step)) &&
+            !steps.some((step) => passedSteps.includes(step))
+        ) {
+            return 'skipped';
         }
-
-        await this.ensureRunning();
-        this.progressLoadedGuard();
-
-        if (this.state.progress.finishedPresets.includes(presetSlug)) {
-            this.logger.debug('Preset already finished', presetToFinish);
-            return true;
+        if (
+            progress.finishedPresets.includes(presetSlug) ||
+            (steps.length &&
+                (steps.some((step) => skippedSteps.includes(step))
+                    ? !this.findNextStepForPreset(presetSlug)
+                    : passedSteps.includes(steps[steps.length - 1])))
+        ) {
+            return 'finished';
         }
-
-        this.logger.debug('Preset finished', presetToFinish);
-
-        this.events.emit('finishPreset', {preset: presetSlug});
-
-        this.options.config.presets[presetToFinish]?.hooks?.onEnd?.();
-
-        if (presetSlug !== presetToFinish) {
-            this.options.config.presets[presetSlug].hooks?.onEnd?.();
-        }
-
-        this.state.base.activePresets = this.state.base.activePresets.filter(
-            (activePresetSlug) => activePresetSlug !== presetSlug,
-        );
-
-        this.state.progress.finishedPresets?.push(presetSlug);
-
-        if (shouldSave) {
-            await this.updateBaseState();
-            await this.updateProgress();
-        }
-
-        return true;
+        return undefined;
     };
 
     resetPresetProgress = async (
         presetArg: string | string[],
-        {removeFromSuggested} = {removeFromSuggested: false},
+        {
+            removeFromSuggested = false,
+            preserveSkippedSteps = false,
+        }: {removeFromSuggested?: boolean; preserveSkippedSteps?: boolean} = {},
     ) => {
         if (this.status === 'disabled') {
             return;
@@ -620,12 +716,18 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             .map((preset) => this.resolvePresetSlug(preset))
             .filter((preset) => Boolean(preset)) as Presets[];
 
+        const presetsToReopen = preserveSkippedSteps
+            ? presets.filter((preset) => this.getPresetOutcome(preset) !== 'skipped')
+            : presets;
         this.state.progress.finishedPresets = this.state.progress.finishedPresets.filter(
-            (preset) => !presets.includes(preset as Presets),
+            (preset) => !presetsToReopen.includes(preset as Presets),
         );
 
         for (const preset of presets) {
             delete this.state.progress.presetPassedSteps[preset];
+            if (!preserveSkippedSteps) {
+                delete this.state.progress.presetSkippedSteps?.[preset];
+            }
         }
 
         this.state.base.activePresets = this.state.base.activePresets.filter(
@@ -662,7 +764,11 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         this.logger.debug('Loading onboarding progress data');
         try {
-            this.initProgressState(await this.progressLoadingPromise);
+            const progress = await this.progressLoadingPromise;
+            if (!this.state.progress) {
+                this.initProgressState(progress);
+            }
+            this.status = 'active';
         } catch {
             this.logger.error('progress data loading error');
         }
@@ -690,19 +796,22 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     }
 
     closeHint = (stepSlug?: Steps, eventSource: HintCloseSource = 'externalEvent') => {
-        const currentHintStep = this.hintStore.state.hint?.step.slug;
+        const hint = this.hintStore.state.hint;
+        const currentHintStep = hint?.step.slug;
         this.logger.debug('Close hint(internal)', currentHintStep);
         if (stepSlug && stepSlug !== currentHintStep) {
             this.logger.debug('Hint for step', stepSlug, 'is not current hint');
             return;
         }
 
-        if (currentHintStep) {
-            const step = this.getStepBySlug(currentHintStep);
-            step?.hooks?.onCloseHint?.({eventSource});
+        try {
+            if (hint) {
+                const step = this.getStepBySlugAndPreset(hint.step.slug, hint.preset);
+                step?.hooks?.onCloseHint?.({eventSource});
+            }
+        } finally {
+            this.hintStore.closeHint(eventSource);
         }
-
-        this.hintStore.closeHint(eventSource);
     };
 
     emitStateChange = () => {
@@ -724,6 +833,63 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             this.stepElementReached({stepSlug, element});
         }
     }
+
+    private endPreset = async (
+        presetToFinish: Presets,
+        shouldSave: boolean,
+        event: 'finishPreset' | 'skipPreset',
+    ) => {
+        if (this.status === 'disabled') {
+            return false;
+        }
+
+        await this.ensurePresetsLoaded();
+
+        // take normal or find internal
+        const presetSlug = this.resolvePresetSlug(presetToFinish);
+        if (!presetSlug) {
+            return false;
+        }
+
+        await this.ensureRunning();
+        this.progressLoadedGuard();
+
+        if (this.state.progress.finishedPresets.includes(presetSlug)) {
+            this.logger.debug('Preset already finished', presetToFinish);
+            return true;
+        }
+
+        this.logger.debug(event, presetToFinish);
+
+        this.state.base.activePresets = this.state.base.activePresets.filter(
+            (activePresetSlug) => activePresetSlug !== presetSlug,
+        );
+
+        this.state.progress.finishedPresets?.push(presetSlug);
+
+        const skipAware =
+            event === 'skipPreset' ||
+            Boolean(this.state.progress.presetSkippedSteps?.[presetSlug]?.length);
+        try {
+            const notification = this.events.emit(event, {preset: presetSlug}, skipAware);
+            if (skipAware) {
+                await notification;
+            }
+        } finally {
+            this.options.config.presets[presetToFinish]?.hooks?.onEnd?.();
+
+            if (presetSlug !== presetToFinish) {
+                this.options.config.presets[presetSlug].hooks?.onEnd?.();
+            }
+
+            if (shouldSave) {
+                await this.updateBaseState();
+                await this.updateProgress();
+            }
+        }
+
+        return true;
+    };
 
     private resolveOnePreset = (
         presetKey: string,
@@ -873,10 +1039,12 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         const presetSteps = preset.steps.map((step) => step.slug);
         const passedSteps = this.state.progress.presetPassedSteps[presetSlug] ?? [];
+        const skippedSteps = this.state.progress.presetSkippedSteps?.[presetSlug] ?? [];
 
-        if (!presetSteps || !passedSteps) {
-            this.logger.debug('Unknown preset', preset);
-            return undefined;
+        if (presetSteps.some((step) => skippedSteps.includes(step))) {
+            return presetSteps.find(
+                (step) => !passedSteps.includes(step) && !skippedSteps.includes(step),
+            );
         }
 
         return Controller.findNextUnpassedStep(presetSteps, passedSteps) as Steps;
@@ -926,44 +1094,124 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }) as Array<Presets>;
     }
 
-    private async savePassedStepData(preset: Presets, step: Steps, callback?: () => void) {
-        this.logger.debug('Save passed step data', preset, step);
+    private mergePresetProgress(
+        preset: Presets,
+        steps: PresetStep<Steps, HintParams | undefined>[],
+        passedSteps: Steps[],
+        skippedSteps: Steps[],
+    ) {
+        this.progressLoadedGuard();
+        const knownSteps = new Map<Steps, PresetStep<Steps, HintParams | undefined>>();
+        for (const step of steps) {
+            if (!knownSteps.has(step.slug)) {
+                knownSteps.set(step.slug, step);
+            }
+        }
+        const storedPassed = new Set(this.state.progress.presetPassedSteps[preset] ?? []);
+        const storedSkipped = new Set(this.state.progress.presetSkippedSteps?.[preset] ?? []);
+        const incomingSkipped = new Set(skippedSteps.filter((step) => knownSteps.has(step)));
+        if (passedSteps.length) {
+            for (const step of passedSteps) {
+                if (
+                    knownSteps.has(step) &&
+                    !storedSkipped.has(step) &&
+                    !incomingSkipped.has(step)
+                ) {
+                    storedPassed.add(step);
+                }
+            }
+            this.state.progress.presetPassedSteps[preset] = [...storedPassed];
+        }
+        const newSkipped = this.state.progress.finishedPresets.includes(preset)
+            ? []
+            : [...incomingSkipped].filter(
+                  (step) => !storedPassed.has(step) && !storedSkipped.has(step),
+              );
+        if (newSkipped.length) {
+            // Commit the whole batch before callbacks can start another action or sync.
+            this.state.progress.presetSkippedSteps ??= {};
+            this.state.progress.presetSkippedSteps[preset] = [...storedSkipped, ...newSkipped];
+        }
+        return {knownSteps, storedPassed, storedSkipped, newSkipped};
+    }
 
+    private async notifyStepSkip(
+        preset: Presets,
+        step: Steps,
+        config?: PresetStep<Steps, HintParams | undefined>,
+    ) {
+        try {
+            await config?.hooks?.onStepSkip?.();
+        } finally {
+            try {
+                await this.events.emit('stepSkip', {preset, step}, true);
+            } finally {
+                if (this.hintStore.state.hint?.preset === preset) {
+                    this.closeHint(step, 'stepSkipped');
+                }
+            }
+        }
+    }
+
+    private async saveStepData(
+        preset: Presets,
+        step: Steps,
+        callback?: () => void | Promise<void>,
+        skipped = false,
+    ) {
         this.progressLoadedGuard();
 
         const passedSteps = this.state.progress.presetPassedSteps[preset] ?? [];
+        const skippedSteps = this.state.progress.presetSkippedSteps?.[preset] ?? [];
 
-        if (passedSteps.includes(step)) {
-            this.logger.debug('Step already passed', preset, step);
+        if (
+            passedSteps.includes(step) ||
+            skippedSteps.includes(step) ||
+            (skipped && this.state.progress.finishedPresets.includes(preset))
+        ) {
             return;
         }
 
-        this.state.progress.presetPassedSteps[preset] = [...passedSteps, step];
+        if (skipped) {
+            this.state.progress.presetSkippedSteps ??= {};
+            this.state.progress.presetSkippedSteps[preset] = [...skippedSteps, step];
+        } else {
+            this.state.progress.presetPassedSteps[preset] = [...passedSteps, step];
+        }
 
-        // eslint-disable-next-line callback-return
-        callback?.();
+        if (!skipped) {
+            // eslint-disable-next-line callback-return
+            callback?.();
+            await this.checkAndProcessPresetFinish(preset);
+            await this.updateProgress();
+            return;
+        }
 
-        await this.checkAndProcessPresetFinish(preset);
-
-        await this.updateProgress();
+        try {
+            // eslint-disable-next-line callback-return
+            await callback?.();
+        } finally {
+            try {
+                await this.checkAndProcessPresetFinish(preset);
+            } finally {
+                this.checkReachedHints();
+                await this.updateProgress();
+            }
+        }
     }
 
     private async checkAndProcessPresetFinish(presetSlug: Presets) {
-        this.progressLoadedGuard();
-        const preset = this.options.config.presets[presetSlug];
-
-        if (!preset || preset.type === 'combined') {
-            // no combined presets here
-            return;
-        }
-
-        const lastStepSlug = preset.steps[preset.steps.length - 1].slug;
-        const isFinishPreset =
-            this.state.progress?.presetPassedSteps[presetSlug]?.includes(lastStepSlug);
-
-        if (isFinishPreset) {
-            await this.finishPreset(presetSlug, false);
-            await this.updateBaseState();
+        const outcome = this.getPresetOutcome(presetSlug);
+        if (outcome) {
+            try {
+                await this.endPreset(
+                    presetSlug,
+                    false,
+                    outcome === 'finished' ? 'finishPreset' : 'skipPreset',
+                );
+            } finally {
+                await this.updateBaseState();
+            }
         }
     }
 
@@ -1054,17 +1302,27 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         const presetSteps = preset.steps.map((step) => step.slug);
         const passedSteps = this.state.progress.presetPassedSteps[presetSlug] ?? [];
+        const skippedSteps = this.state.progress.presetSkippedSteps?.[presetSlug] ?? [];
+        const hasSkippedSteps = presetSteps.some((step) => skippedSteps.includes(step));
+        let lastPassedStep: string | undefined = passedSteps[passedSteps.length - 1];
 
-        const lastPassedStep = passedSteps[passedSteps.length - 1];
+        if (hasSkippedSteps) {
+            const nextStep = this.findNextStepForPreset(presetSlug);
+            const nextIndex = nextStep ? presetSteps.indexOf(nextStep) : presetSteps.length;
+            lastPassedStep = presetSteps
+                .slice(0, nextIndex)
+                .reverse()
+                .find((step) => passedSteps.includes(step));
+        }
+
         const lastPassedStepIndex = presetSteps.findIndex((step) => step === lastPassedStep);
 
         if (lastPassedStepIndex === -1) {
             return;
         }
-        this.state.progress.presetPassedSteps[presetSlug] = presetSteps.slice(
-            0,
-            lastPassedStepIndex,
-        );
+        this.state.progress.presetPassedSteps[presetSlug] = hasSkippedSteps
+            ? passedSteps.filter((step) => step !== lastPassedStep)
+            : presetSteps.slice(0, lastPassedStepIndex);
 
         this.closeHint();
         this.closedHints.delete(lastPassedStep as Steps);
