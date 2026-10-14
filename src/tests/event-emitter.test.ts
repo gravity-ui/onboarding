@@ -153,6 +153,26 @@ describe('EventEmitter', () => {
             emitter.subscribe('testEvent', normalListener);
 
             await expect(emitter.emit('testEvent', {data: 'test'})).rejects.toThrow('Test error');
+            expect(normalListener).not.toHaveBeenCalled();
+        });
+
+        it('delivers notifications to every listener before rejecting the first error', async () => {
+            const calls: string[] = [];
+            const firstError = new Error('sync listener failed');
+            emitter.subscribe('testEvent', () => {
+                calls.push('first');
+                throw firstError;
+            });
+            emitter.subscribe('testEvent', async () => {
+                calls.push('second');
+                throw new Error('async listener failed');
+            });
+            emitter.subscribe('testEvent', () => {
+                calls.push('third');
+            });
+
+            await expect(emitter.emit('testEvent', {data: 'test'}, true)).rejects.toBe(firstError);
+            expect(calls).toEqual(['first', 'second', 'third']);
         });
 
         it('should pass correct extra argument to listeners', async () => {

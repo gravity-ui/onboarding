@@ -6,8 +6,10 @@ import {
     createPreset,
     createStep,
     finishPreset,
+    passOrSkipStep,
     passStep,
     setWizardState,
+    skipStep,
 } from '../index';
 import {getOptions} from './utils';
 
@@ -118,6 +120,28 @@ describe('Main API', () => {
 
                 expect(spy).toHaveBeenCalledWith('openBoard');
             });
+        });
+
+        it.each([
+            ['skipStep', skipStep],
+            ['passOrSkipStep', passOrSkipStep],
+        ] as const)('should await controller %s', async (method, action) => {
+            let resolve!: () => void;
+            const operation = new Promise<void>((complete) => {
+                resolve = complete;
+            });
+            const spy = vi.spyOn(onboarding.controller, method).mockReturnValue(operation);
+            const complete = vi.fn();
+
+            const result = action('openBoard').then(complete);
+            await Promise.resolve();
+
+            expect(spy).toHaveBeenCalledWith('openBoard');
+            expect(complete).not.toHaveBeenCalled();
+
+            resolve();
+            await result;
+            expect(complete).toHaveBeenCalledOnce();
         });
 
         describe('finishPreset', () => {
