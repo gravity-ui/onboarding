@@ -189,7 +189,10 @@ export type EventsMap<
     beforeSuggestPreset: {preset: string};
     resetPresetProgress: {presets: Array<string>};
     stepElementReached: {stepData: ReachElementParams<Presets, Steps>};
-    beforeShowHint: {stepData: ReachElementParams<Presets, Steps>};
+    beforeShowHint: {
+        stepData: ReachElementParams<Presets, Steps>;
+        addShowGuard: (guard: () => boolean) => void;
+    };
     stateChange: {state: Controller<any, any, any>['state']};
     hintDataChanged: {state: HintState<HintParams, Presets, Steps>};
     closeHint: {

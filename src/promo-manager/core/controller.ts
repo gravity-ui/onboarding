@@ -559,14 +559,38 @@ export class Controller {
         this.conditions = getConditions(this.options.config.promoGroups);
         this.helpers = getHelpers(this.options.config.promoGroups);
 
+        const releasePromoWithoutHint = (
+            preset: string,
+            version = this.startRequestVersions.get(preset),
+        ) => {
+            instance.waitForNextHint(preset).then((result) => {
+                if (
+                    result === 'unavailable' &&
+                    version === this.startRequestVersions.get(preset) &&
+                    this.state.base.activePromo === preset &&
+                    (!instance.hintStore.state.open ||
+                        instance.hintStore.state.hint?.preset !== preset)
+                ) {
+                    this.skipPromo(preset);
+                }
+            });
+        };
+
         instance.events.subscribe(
             'beforeShowHint',
-            async ({stepData}: OnboardingEventsMap['beforeShowHint']) => {
+            async ({stepData, addShowGuard}: OnboardingEventsMap['beforeShowHint']) => {
                 if (!this.promoPresets.has(stepData.preset)) {
                     return true;
                 }
 
+                const wasActive = this.state.base.activePromo === stepData.preset;
                 const requestVersion = this.startRequestVersions.get(stepData.preset);
+                // Later async handlers may outlive this promo run's permission to show a hint.
+                addShowGuard(
+                    () =>
+                        requestVersion === this.startRequestVersions.get(stepData.preset) &&
+                        this.state.base.activePromo === stepData.preset,
+                );
                 const result = await this.requestStart(stepData.preset);
                 // An obsolete hint attempt must not skip a newer run of the same promo.
                 if (requestVersion !== this.startRequestVersions.get(stepData.preset)) {
@@ -577,6 +601,11 @@ export class Controller {
                 if (!result || !currentElement?.isConnected) {
                     this.skipPromo(stepData.preset);
                     return false;
+                }
+                if (!wasActive) {
+                    // Do not await the check containing this handler after acquiring the slot.
+                    // Existing transitions use closeHint to preserve listener ordering.
+                    releasePromoWithoutHint(stepData.preset, requestVersion);
                 }
                 return result;
             },
@@ -591,11 +620,19 @@ export class Controller {
             },
         );
 
-        instance.events.subscribe('closeHint', async ({hint}: OnboardingEventsMap['closeHint']) => {
-            if (this.promoPresets.has(hint.preset)) {
+        instance.events.subscribe(
+            'closeHint',
+            ({hint, eventSource}: OnboardingEventsMap['closeHint']) => {
+                if (!this.promoPresets.has(hint.preset)) {
+                    return;
+                }
+                if (eventSource === 'stepPassed') {
+                    releasePromoWithoutHint(hint.preset);
+                    return;
+                }
                 this.skipPromo(hint.preset);
-            }
-        });
+            },
+        );
 
         instance.events.subscribe(
             'resetPresetProgress',

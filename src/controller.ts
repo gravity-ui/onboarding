@@ -79,6 +79,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     saveProgressState: () => void;
 
     private presetsLoadingPromise: Promise<void> | undefined;
+    private pendingStepChecks = new Map<Steps, Set<Promise<void>>>();
+    private hintWaiters = new Set<(shownPreset?: Presets) => void>();
 
     constructor(
         options: InitOptions<HintParams, Presets, Steps>,
@@ -239,38 +241,67 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         await this.updateBaseState();
     };
 
-    stepElementReached = async ({
-        stepSlug,
-        element,
-    }: Omit<ReachElementParams<Presets, Steps>, 'preset'>) => {
+    stepElementReached = (data: Omit<ReachElementParams<Presets, Steps>, 'preset'>) => {
+        const checks = this.pendingStepChecks.get(data.stepSlug) ?? new Set<Promise<void>>();
+        this.pendingStepChecks.set(data.stepSlug, checks);
+        const pending = this.processReachedElement(data);
+        checks.add(pending);
+        return pending.finally(() => {
+            checks.delete(pending);
+            if (checks.size === 0) {
+                this.pendingStepChecks.delete(data.stepSlug);
+            }
+        });
+    };
+
+    waitForNextHint = async (preset: Presets) => {
         if (this.status === 'disabled') {
-            return;
+            return 'unavailable' as const;
         }
 
-        await this.ensurePresetsLoaded();
-
-        this.logger.debug('Step element reached', stepSlug, element);
-        this.reachedElements.set(stepSlug, element);
-
-        const preset = this.findActivePresetWithStep(stepSlug);
-
-        if (!preset) {
-            this.logger.debug('Not found active preset for step', stepSlug);
-            return;
-        }
-
-        const stepData = {
-            preset,
-            stepSlug,
-            element,
+        const shownPresets = new Set<string>();
+        let wake: (() => void) | undefined;
+        const waitForChange = () =>
+            new Promise<void>((resolve) => {
+                wake = resolve;
+            });
+        const onChange = (shownPreset?: Presets) => {
+            if (shownPreset !== undefined) {
+                shownPresets.add(shownPreset);
+            }
+            wake?.();
         };
+        this.hintWaiters.add(onChange);
+        try {
+            // The first await also lets the caller schedule checks after emitting closeHint.
+            await this.ensurePresetsLoaded();
+            await this.ensureRunning();
+            const resolvedPreset = this.resolvePresetSlug(preset);
+            if (!resolvedPreset) {
+                return 'unavailable' as const;
+            }
 
-        const shouldProcessAppearance = await this.events.emit('stepElementReached', {stepData});
-
-        if (shouldProcessAppearance) {
-            await this.processElementAppearance(stepData);
-        } else {
-            this.logger.debug('Reject process appearance', stepSlug);
+            let nextStep = this.findNextStepForPreset(resolvedPreset);
+            while (nextStep) {
+                const changed = waitForChange();
+                // Remember a successful show even if a hook has already closed the hint.
+                if (
+                    shownPresets.has(resolvedPreset) ||
+                    (this.hintStore.state.open &&
+                        this.hintStore.state.hint?.preset === resolvedPreset)
+                ) {
+                    return 'shown' as const;
+                }
+                const checks = this.pendingStepChecks.get(nextStep);
+                if (!checks?.size) {
+                    return 'unavailable' as const;
+                }
+                await Promise.race([Promise.allSettled(checks), changed]);
+                nextStep = this.findNextStepForPreset(resolvedPreset);
+            }
+            return 'finished' as const;
+        } finally {
+            this.hintWaiters.delete(onChange);
         }
     };
 
@@ -318,9 +349,19 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
-        const allowRun = await this.events.emit('beforeShowHint', {stepData});
+        const showGuards: Array<() => boolean> = [];
+        const allowRun = await this.events.emit('beforeShowHint', {
+            stepData,
+            addShowGuard: (guard) => {
+                showGuards.push(guard);
+            },
+        });
         if (!allowRun) {
             this.logger.debug('Show hint has been canceled by beforeShowHint event', stepData);
+            return;
+        }
+
+        if (stepSlug !== this.findNextStepForPreset(preset)) {
             return;
         }
 
@@ -331,7 +372,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
-        if (this.hintStore.state.open) {
+        if (this.hintStore.state.open || showGuards.some((guard) => !guard())) {
             return;
         }
 
@@ -340,6 +381,9 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         this.options.showHint?.({preset, element: currentElement, step});
         this.hintStore.showHint({preset, element: currentElement, step});
+        for (const listener of this.hintWaiters) {
+            listener(preset);
+        }
 
         if (step.passMode === 'onShowHint') {
             await this.passStep(stepSlug);
@@ -708,6 +752,9 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     emitStateChange = () => {
         this.state = JSON.parse(JSON.stringify(this.state));
 
+        for (const listener of this.hintWaiters) {
+            listener();
+        }
         this.events.emit('stateChange', {state: this.state});
     };
 
@@ -724,6 +771,41 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             this.stepElementReached({stepSlug, element});
         }
     }
+
+    private processReachedElement = async ({
+        stepSlug,
+        element,
+    }: Omit<ReachElementParams<Presets, Steps>, 'preset'>) => {
+        if (this.status === 'disabled') {
+            return;
+        }
+
+        await this.ensurePresetsLoaded();
+
+        this.logger.debug('Step element reached', stepSlug, element);
+        this.reachedElements.set(stepSlug, element);
+
+        const preset = this.findActivePresetWithStep(stepSlug);
+
+        if (!preset) {
+            this.logger.debug('Not found active preset for step', stepSlug);
+            return;
+        }
+
+        const stepData = {
+            preset,
+            stepSlug,
+            element,
+        };
+
+        const shouldProcessAppearance = await this.events.emit('stepElementReached', {stepData});
+
+        if (shouldProcessAppearance) {
+            await this.processElementAppearance(stepData);
+        } else {
+            this.logger.debug('Reject process appearance', stepSlug);
+        }
+    };
 
     private resolveOnePreset = (
         presetKey: string,

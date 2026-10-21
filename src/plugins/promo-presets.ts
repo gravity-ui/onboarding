@@ -31,7 +31,7 @@ export class PromoPresetsPlugin implements OnboardingPlugin {
         onboarding.events.subscribe('wizardStateChanged', this.onWizardStateChanged);
     };
 
-    onElementReach = ({stepData}: EventsMap['beforeShowHint']) => {
+    onElementReach = ({stepData}: EventsMap['stepElementReached']) => {
         if (!this.onboardingInstance) {
             return true;
         }

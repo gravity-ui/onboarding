@@ -380,6 +380,8 @@ controller.events.subscribe('beforeShowHint', callback);
 
 Callbacks can be async. Some events can cancel target action: `stepElementReached`, `beforeShowHint`, `beforeSuggestPreset`
 
+`beforeShowHint` also provides `addShowGuard(guard)`. Use it to register a synchronous, side-effect-free check that runs after all asynchronous event handlers, immediately before showing the hint. If any guard returns `false`, the hint is not shown. Guards belong to one show attempt. The promo-manager integration uses a guard to reject attempts whose promo permission was canceled or replaced while handlers were pending.
+
 ```typescript jsx
 controller.events.subscribe('stepElementReached', async () => {
     /* ... */
@@ -723,3 +725,9 @@ const {controller} = createPromoManager({
     },
 });
 ```
+
+### Waiting for the next onboarding hint
+
+The onboarding controller exposes `waitForNextHint(preset)`. It waits for initialization and pending checks of the preset's next step. Progress changes wake the waiter immediately, without waiting for checks of an obsolete step. It returns `finished` when there is no next step, `shown` when a hint of that preset is open or has been shown during the wait, or `unavailable` when the current step has no pending checks and no hint was shown. A successful show completes the wait even if another check is still pending or a hook has already closed the hint; it does not wait for an `onShowHint` step to finish passing. For combined presets, it follows the selected internal preset and returns `unavailable` if none has been selected. It does not start checks or wait for future DOM elements to appear.
+
+The promo manager uses this result after a hint attempt acquires the promo slot and when a hint closes because a step was passed. It keeps the promo active during the checks and releases it if the next hint cannot be shown. Waiting does not block subsequent `closeHint` handlers; previously registered asynchronous handlers retain their existing order.
