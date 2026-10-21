@@ -1,4 +1,4 @@
-import {getAnchorElement, getOptions} from '../tests/utils';
+import {getAnchorElement, getOptions, getSameStepsOptions} from '../tests/utils';
 import {Controller} from '../controller';
 import {MultiTabSyncPlugin} from './multi-tab-sync';
 
@@ -11,6 +11,7 @@ describe('init', function () {
         const customOptions = {
             changeStateLSKey: 'custom.changeState',
             closeHintLSKey: 'custom.closeHint',
+            skipStepLSKey: 'custom.skipStep',
             enableCloseHintSync: false,
             __unstable_enableStateSync: true,
         };
@@ -19,6 +20,7 @@ describe('init', function () {
 
         expect(plugin.options.changeStateLSKey).toBe('custom.changeState');
         expect(plugin.options.closeHintLSKey).toBe('custom.closeHint');
+        expect(plugin.options.skipStepLSKey).toBe('custom.skipStep');
         expect(plugin.options.enableCloseHintSync).toBe(false);
         expect(plugin.options.__unstable_enableStateSync).toBe(true);
     });
@@ -28,6 +30,7 @@ describe('init', function () {
 
         expect(plugin.options.changeStateLSKey).toBe('onboarding.plugin-sync.changeState');
         expect(plugin.options.closeHintLSKey).toBe('onboarding.plugin-sync.closeHint');
+        expect(plugin.options.skipStepLSKey).toBe('onboarding.plugin-sync.skipStep');
         expect(plugin.options.enableCloseHintSync).toBe(true);
         expect(plugin.options.__unstable_enableStateSync).toBe(false);
         expect(plugin.isQuotaExceeded).toBe(false);
@@ -35,6 +38,70 @@ describe('init', function () {
 });
 
 describe('close hint sync', function () {
+    it('sends scoped skipped progress and preserves the legacy close format', async function () {
+        const options = getOptions();
+        options.plugins = [new MultiTabSyncPlugin()];
+        const controller = new Controller(options);
+        await controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: getAnchorElement(),
+        });
+
+        await controller.skipStep('createSprint');
+
+        expect(JSON.parse(localStorage.getItem('onboarding.plugin-sync.skipStep') ?? '')).toEqual(
+            expect.objectContaining({
+                preset: 'createProject',
+                step: 'createSprint',
+                passedSteps: ['openBoard'],
+                skippedSteps: ['createSprint'],
+                closeHint: true,
+            }),
+        );
+        expect(localStorage.getItem('onboarding.plugin-sync.closeHint')).toBe('createSprint');
+    });
+
+    it('suppresses the legacy close paired with a scoped skip', async function () {
+        const options = getOptions();
+        const plugin = new MultiTabSyncPlugin();
+        options.plugins = [plugin];
+        const onUserClose = vi.fn();
+        const onClose = vi.fn();
+        options.config.presets.createProject.steps[1].hooks = {
+            onCloseHintByUser: onUserClose,
+            onCloseHint: onClose,
+        };
+        const controller = new Controller(options);
+        await controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: getAnchorElement(),
+        });
+
+        const syncing = plugin.handleLSEvent(
+            new StorageEvent('storage', {
+                key: plugin.options.skipStepLSKey,
+                newValue: JSON.stringify({
+                    preset: 'createProject',
+                    step: 'createSprint',
+                    skippedSteps: ['createSprint'],
+                    passedSteps: ['openBoard'],
+                    closeHint: true,
+                }),
+            }),
+        );
+        plugin.handleLSEvent(
+            new StorageEvent('storage', {
+                key: plugin.options.closeHintLSKey,
+                newValue: 'createSprint',
+            }),
+        );
+        await syncing;
+
+        expect(controller.hintStore.state.open).toBe(false);
+        expect(onClose).toHaveBeenCalledWith({eventSource: 'stepSkipped'});
+        expect(onUserClose).not.toHaveBeenCalled();
+    });
+
     describe('send event', function () {
         it('hint closed by user -> change ls', async function () {
             const options = getOptions();
@@ -174,6 +241,146 @@ describe('close hint sync', function () {
             expect(plugin.handleLSEvent(event)).toBeUndefined();
         });
     });
+});
+
+describe('skipped progress sync', () => {
+    const skipEvent = (plugin: MultiTabSyncPlugin, payload: object) =>
+        new StorageEvent('storage', {
+            key: plugin.options.skipStepLSKey,
+            newValue: JSON.stringify(payload),
+        });
+
+    it('broadcasts skips before a hint and varies payloads after a reset', async () => {
+        const plugin = new MultiTabSyncPlugin({closeHintLSKey: 'custom.close'});
+        const options = getOptions({}, {presetPassedSteps: {}});
+        options.plugins = [plugin];
+        const controller = new Controller(options);
+        await controller.skipStep('openBoard');
+        const first = localStorage.getItem('custom.close.skipStep');
+        expect(JSON.parse(first ?? '')).toEqual(
+            expect.objectContaining({
+                preset: 'createProject',
+                step: 'openBoard',
+                skippedSteps: ['openBoard'],
+                closeHint: false,
+            }),
+        );
+        expect(localStorage.getItem(plugin.options.closeHintLSKey)).toBeNull();
+
+        await controller.resetPresetProgress('createProject');
+        await controller.skipStep('openBoard');
+        expect(localStorage.getItem('custom.close.skipStep')).not.toBe(first);
+    });
+
+    it('merges overlapping mixed snapshots without echoing a delayed skip', async () => {
+        const plugin = new MultiTabSyncPlugin();
+        const options = getOptions({}, {presetPassedSteps: {}});
+        options.plugins = [plugin];
+        let releaseHook!: () => void;
+        let notifyHookStarted!: () => void;
+        const hookPermission = new Promise<void>((resolve) => {
+            releaseHook = resolve;
+        });
+        const hookStarted = new Promise<void>((resolve) => {
+            notifyHookStarted = resolve;
+        });
+        const slowHook = vi.fn(async () => {
+            notifyHookStarted();
+            await hookPermission;
+        });
+        options.config.presets.createProject.steps[0].hooks = {onStepSkip: slowHook};
+        const controller = new Controller(options);
+        const finish = vi.fn();
+        controller.events.subscribe('finishPreset', finish);
+        const first = plugin.handleLSEvent(
+            skipEvent(plugin, {
+                preset: 'createProject',
+                step: 'openBoard',
+                passedSteps: ['createSprint'],
+                skippedSteps: ['openBoard'],
+            }),
+        );
+        await hookStarted;
+
+        const overlapping = skipEvent(plugin, {
+            preset: 'createProject',
+            step: 'createIssue',
+            passedSteps: ['createSprint'],
+            skippedSteps: ['openBoard', 'createIssue'],
+        });
+        await plugin.handleLSEvent(overlapping);
+
+        expect(localStorage.getItem(plugin.options.skipStepLSKey)).toBeNull();
+        expect(localStorage.getItem(plugin.options.closeHintLSKey)).toBeNull();
+
+        releaseHook();
+        await first;
+        await plugin.handleLSEvent(overlapping);
+
+        expect(slowHook).toHaveBeenCalledOnce();
+        expect(controller.state.progress?.presetPassedSteps.createProject).toEqual([
+            'createSprint',
+        ]);
+        expect(controller.state.progress?.presetSkippedSteps?.createProject).toEqual([
+            'openBoard',
+            'createIssue',
+        ]);
+        expect(finish).toHaveBeenCalledOnce();
+        expect(localStorage.getItem(plugin.options.skipStepLSKey)).toBeNull();
+        expect(localStorage.getItem(plugin.options.closeHintLSKey)).toBeNull();
+    });
+
+    it('scopes remote skips and legacy closes when two presets share a slug', async () => {
+        const plugin = new MultiTabSyncPlugin();
+        const options = getSameStepsOptions({
+            availablePresets: ['preset1', 'preset2'],
+            activePresets: ['preset2'],
+        });
+        options.plugins = [plugin];
+        const controller = new Controller(options);
+        await controller.stepElementReached({stepSlug: 'step1', element: getAnchorElement()});
+        const syncing = plugin.handleLSEvent(
+            skipEvent(plugin, {preset: 'preset1', step: 'step1', closeHint: true}),
+        );
+        plugin.handleLSEvent(
+            new StorageEvent('storage', {
+                key: plugin.options.closeHintLSKey,
+                newValue: 'step1',
+            }),
+        );
+        await syncing;
+
+        expect(controller.state.progress?.presetSkippedSteps).toEqual({preset1: ['step1']});
+        expect(controller.hintStore.state.hint?.preset).toBe('preset2');
+        expect(controller.hintStore.state.open).toBe(true);
+    });
+
+    it('does not synchronize skips when hint sync is disabled', async () => {
+        const plugin = new MultiTabSyncPlugin({enableCloseHintSync: false});
+        const options = getOptions({}, {presetPassedSteps: {}});
+        options.plugins = [plugin];
+        const controller = new Controller(options);
+        await controller.skipStep('openBoard');
+        expect(localStorage.getItem(plugin.options.skipStepLSKey)).toBeNull();
+        await plugin.handleLSEvent(
+            skipEvent(plugin, {preset: 'createProject', step: 'createSprint'}),
+        );
+        expect(controller.state.progress?.presetSkippedSteps?.createProject).toEqual(['openBoard']);
+    });
+
+    it.each(['broken-json', 'null', '{"preset":1,"step":"openBoard"}'])(
+        'ignores invalid skip messages: %s',
+        async (newValue) => {
+            const plugin = new MultiTabSyncPlugin();
+            const options = getOptions();
+            options.plugins = [plugin];
+            const controller = new Controller(options);
+            await plugin.handleLSEvent(
+                new StorageEvent('storage', {key: plugin.options.skipStepLSKey, newValue}),
+            );
+            expect(controller.state.progress).toBeUndefined();
+        },
+    );
 });
 
 describe('state sync', function () {

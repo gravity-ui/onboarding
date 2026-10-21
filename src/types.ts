@@ -22,7 +22,13 @@ type HintPlacement =
     | 'left-start'
     | 'left-end';
 
-export type HintCloseSource = 'stepPassed' | 'closedByUser' | 'elementHidden' | 'externalEvent';
+export type HintCloseSource =
+    | 'stepPassed'
+    | 'stepSkipped'
+    | 'progressSynced'
+    | 'closedByUser'
+    | 'elementHidden'
+    | 'externalEvent';
 
 export type PresetStatus = 'unPassed' | 'inProgress' | 'finished';
 
@@ -37,6 +43,7 @@ export type PresetStep<Steps extends string, HintParams> = {
     passRestriction?: 'afterPrevious';
     hooks?: {
         onStepPass?: () => void;
+        onStepSkip?: () => void | Promise<void>;
         onCloseHint?: (params: {eventSource: HintCloseSource}) => void;
         onCloseHintByUser?: (params: {eventSource: HintCloseSource}) => void;
     };
@@ -122,6 +129,7 @@ export type BaseState = {
 
 export type ProgressState = {
     presetPassedSteps: Record<string, string[]>;
+    presetSkippedSteps?: Record<string, string[]>;
     finishedPresets: string[];
 };
 
@@ -182,10 +190,12 @@ export type EventsMap<
 > = {
     showHint: {preset: Presets; step: Steps};
     stepPass: {preset: Presets; step: Steps};
+    stepSkip: {preset: Presets; step: Steps};
     addPreset: {preset: Presets};
     beforeRunPreset: {preset: Presets};
     runPreset: {preset: Presets};
     finishPreset: {preset: Presets};
+    skipPreset: {preset: Presets};
     beforeSuggestPreset: {preset: string};
     resetPresetProgress: {presets: Array<string>};
     stepElementReached: {stepData: ReachElementParams<Presets, Steps>};
