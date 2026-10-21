@@ -414,7 +414,7 @@ export class Controller {
             return this.isAbleToRun(slug);
         });
 
-        this.state.base = defaultBaseState;
+        this.state.base = {activePromo: null, activeQueue: []};
 
         promoToValidate.forEach((slug) => this.addPromoToActiveQueue(slug));
         this.emitChange();
