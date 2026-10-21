@@ -75,6 +75,8 @@ export class Controller {
     private status: PromoManagerStatus;
     private initializationPromise?: Promise<void>;
     private startRequestVersions = new Map<PromoSlug, number>();
+    private activationPaused = false;
+    private activationWaiters = new Set<() => void>();
 
     constructor(options: PromoOptions) {
         this.options = options;
@@ -182,13 +184,32 @@ export class Controller {
         await this.initializationPromise;
     };
 
+    // Pausing only gates future activation; the active promo and its progress are preserved.
+    pauseActivation = () => {
+        this.activationPaused = true;
+    };
+
+    // Pause/resume is an idempotent switch, so callers should coordinate through one owner.
+    resumeActivation = () => {
+        if (!this.activationPaused) {
+            return;
+        }
+
+        this.activationPaused = false;
+        try {
+            this.triggerNextPromo();
+        } finally {
+            this.wakeActivationWaiters();
+        }
+    };
+
     requestStart = async (slug: Nullable<PromoSlug>) => {
         this.logger.debug('Request start preset', slug);
         if (!slug) {
             return false;
         }
 
-        // Skip, finish and cancel invalidate requests suspended on progress loading or init.
+        // Skip, finish and cancel invalidate requests waiting for progress, init or activation.
         const requestVersion = this.startRequestVersions.get(slug);
 
         if (!this.state.progress) {
@@ -211,6 +232,10 @@ export class Controller {
         this.addPromoToActiveQueue(slug);
 
         await this.ensureInit();
+
+        while (this.activationPaused && requestVersion === this.startRequestVersions.get(slug)) {
+            await new Promise<void>((resolve) => this.activationWaiters.add(resolve));
+        }
 
         if (requestVersion !== this.startRequestVersions.get(slug)) {
             return false;
@@ -388,6 +413,7 @@ export class Controller {
             return;
         }
 
+        const requests: Promise<boolean>[] = [];
         for (const promoSlug of this.triggersMap[eventName]) {
             const promo = this.helpers.promoBySlug[promoSlug];
 
@@ -398,16 +424,16 @@ export class Controller {
                     await this.requestStart(promoSlug);
                 })();
             } else {
-                await this.requestStart(promoSlug);
+                requests.push(this.requestStart(promoSlug));
             }
         }
+
+        await Promise.all(requests);
     };
 
     protected invalidateBaseState = () => {
-        const promoToValidate = [
-            this.state.base.activePromo,
-            ...this.state.base.activeQueue,
-        ].filter((slug): slug is string => {
+        const previousPromos = [this.state.base.activePromo, ...this.state.base.activeQueue];
+        const promoToValidate = previousPromos.filter((slug): slug is string => {
             if (!slug) {
                 return false;
             }
@@ -417,6 +443,11 @@ export class Controller {
         this.state.base = {activePromo: null, activeQueue: []};
 
         promoToValidate.forEach((slug) => this.addPromoToActiveQueue(slug));
+        previousPromos.forEach((slug) => {
+            if (slug && !this.isPending(slug)) {
+                this.invalidateStartRequests(slug);
+            }
+        });
         this.emitChange();
     };
 
@@ -485,8 +516,15 @@ export class Controller {
         }
     }
 
+    private wakeActivationWaiters = () => {
+        const waiters = [...this.activationWaiters];
+        this.activationWaiters.clear();
+        waiters.forEach((resolve) => resolve());
+    };
+
     private invalidateStartRequests = (slug: PromoSlug) => {
         this.startRequestVersions.set(slug, (this.startRequestVersions.get(slug) ?? 0) + 1);
+        this.wakeActivationWaiters();
     };
 
     private runWithProgress = (action: () => void) => {
@@ -691,6 +729,10 @@ export class Controller {
     };
 
     private triggerNextPromo = () => {
+        if (this.activationPaused || this.status !== 'initialized') {
+            return;
+        }
+
         if (this.state.base.activeQueue.length === 0 || this.state.base.activePromo !== null) {
             return;
         }
