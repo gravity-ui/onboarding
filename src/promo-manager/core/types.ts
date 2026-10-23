@@ -37,6 +37,8 @@ export type OnboardingIntegrationOptions = {
     getInstance: () => OnboardingController<any, any, any>;
 
     groupSlug: string;
+
+    asyncPromoPresets?: string[];
 };
 
 export type PromoManagerPlugin = {

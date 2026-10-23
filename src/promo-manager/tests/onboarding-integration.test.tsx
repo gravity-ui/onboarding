@@ -516,3 +516,214 @@ describe('reset progress', function () {
         expect(controller.state.progress?.progressInfoByPromo.coolNewFeature).toBe(undefined);
     });
 });
+
+describe('async preset resolution', function () {
+    const asyncPresetBody = {
+        name: 'Async hidden feature',
+        visibility: 'alwaysHidden' as const,
+        steps: [{slug: 'showAsyncFeature', name: '', description: ''}],
+    };
+
+    const getAsyncData = (opts?: {asyncPromoPresets?: string[]}) => {
+        const loader = vi.fn(() => Promise.resolve(asyncPresetBody));
+
+        const onboardingBase = getOptionsWithPromo({
+            wizardState: 'hidden',
+            availablePresets: ['createProject', 'coolNewFeature', 'asyncHiddenFeature'],
+            activePresets: ['createProject', 'coolNewFeature', 'asyncHiddenFeature'],
+        });
+
+        const onboardingController = new OnboardingController({
+            ...onboardingBase,
+            config: {
+                ...onboardingBase.config,
+                asyncPromoPresets: {
+                    asyncHiddenFeature: loader,
+                },
+            },
+        } as any);
+
+        const options = {
+            ...testOptions,
+            config: {
+                promoGroups: [
+                    {
+                        slug: 'hintPromos',
+                        conditions: [],
+                        // Async-backed promo declared explicitly — participates in queue resolution
+                        promos: [{slug: 'asyncHiddenFeature', conditions: []}],
+                    },
+                ],
+            },
+            onboarding: {
+                getInstance: () => onboardingController,
+                groupSlug: 'hintPromos',
+                ...(opts?.asyncPromoPresets ? {asyncPromoPresets: opts.asyncPromoPresets} : {}),
+            },
+        };
+
+        return {onboardingController, options, loader};
+    };
+
+    it('asyncPromoPresets -> requestStart queues and activates the promo, loading the body on demand', async function () {
+        const {options, loader} = getAsyncData({asyncPromoPresets: ['asyncHiddenFeature']});
+        const controller = new Controller(options);
+
+        await controller.ensureInit();
+
+        // Nothing loaded yet — the preset body is not fetched at init
+        expect(loader).not.toHaveBeenCalled();
+
+        const started = await controller.requestStart('asyncHiddenFeature');
+
+        expect(started).toBe(true);
+        expect(controller.state.base.activePromo).toBe('asyncHiddenFeature');
+
+        // Activation triggered the on-demand load of exactly this preset's body
+        await waitForNextTick();
+        expect(loader).toHaveBeenCalledTimes(1);
+        expect(
+            (controller.options.onboarding?.getInstance() as any).options.config.presets
+                .asyncHiddenFeature,
+        ).toEqual(asyncPresetBody);
+    });
+
+    it('asyncPromoPresets -> reaching the async preset step shows its hint', async function () {
+        const {options, onboardingController} = getAsyncData({
+            asyncPromoPresets: ['asyncHiddenFeature'],
+        });
+        const controller = new Controller(options);
+
+        await controller.ensureInit();
+
+        // Element reached before the preset body is loaded — recorded, but no hint yet
+        await onboardingController.stepElementReached({
+            stepSlug: 'showAsyncFeature',
+            element: getAnchorElement(),
+        });
+        expect(onboardingController.hintStore.state.open).toBe(false);
+
+        // Promo start activates the promo, loads the preset body on demand,
+        // and re-checks reached hints — now the hint can show
+        await controller.requestStart('asyncHiddenFeature');
+        await waitForNextTick();
+
+        expect(controller.state.base.activePromo).toBe('asyncHiddenFeature');
+        expect(onboardingController.hintStore.state.open).toBe(true);
+        expect(onboardingController.hintStore.state.hint?.step.slug).toBe('showAsyncFeature');
+    });
+
+    it('asyncPromoPresets -> loader is called exactly once across repeated activations', async function () {
+        const {options, loader} = getAsyncData({asyncPromoPresets: ['asyncHiddenFeature']});
+        const controller = new Controller(options);
+
+        await controller.ensureInit();
+        await controller.requestStart('asyncHiddenFeature');
+        await waitForNextTick();
+        await controller.requestStart('asyncHiddenFeature');
+        await waitForNextTick();
+
+        expect(loader).toHaveBeenCalledTimes(1);
+    });
+
+    it('no asyncPromoPresets -> nothing is loaded at init, sync presets still auto-injected', async function () {
+        const {options, loader} = getAsyncData();
+        const controller = new Controller(options);
+
+        await controller.ensureInit();
+        await waitForNextTick();
+
+        // No preset body is fetched at init
+        expect(loader).not.toHaveBeenCalled();
+
+        // Sync alwaysHidden presets are still auto-injected
+        const {promos} = controller.options.config.promoGroups[0];
+        expect(promos).toEqual([
+            {slug: 'asyncHiddenFeature', conditions: []},
+            {slug: 'coolNewFeature', conditions: []},
+            {slug: 'coolNewFeature2', conditions: []},
+        ]);
+    });
+
+    it('asyncPromoPresets slug missing from promoGroups -> error logged', async function () {
+        const loader = vi.fn(() => Promise.resolve(asyncPresetBody));
+        const onboardingBase = getOptionsWithPromo({wizardState: 'hidden'});
+        const onboardingController = new OnboardingController({
+            ...onboardingBase,
+            config: {
+                ...onboardingBase.config,
+                asyncPromoPresets: {asyncHiddenFeature: loader},
+            },
+        } as any);
+        const errorLog = vi.fn();
+
+        const controller = new Controller({
+            ...testOptions,
+            config: {
+                promoGroups: [
+                    {
+                        slug: 'hintPromos',
+                        conditions: [],
+                        promos: [], // slug NOT declared
+                    },
+                ],
+            },
+            onboarding: {
+                getInstance: () => onboardingController,
+                groupSlug: 'hintPromos',
+                asyncPromoPresets: ['asyncHiddenFeature'],
+            },
+            logger: {
+                level: 'error' as const,
+                logger: {
+                    debug: () => {},
+                    error: errorLog,
+                },
+            },
+        });
+
+        await controller.ensureInit();
+
+        expect(errorLog).toHaveBeenCalledWith(
+            expect.stringContaining('asyncPromoPresets: slug "asyncHiddenFeature" is not declared'),
+        );
+    });
+
+    it('asyncPromoPresets -> loader failure skips promo gracefully', async function () {
+        const loader = vi.fn().mockRejectedValue(new Error('offline'));
+        const onboardingBase = getOptionsWithPromo({wizardState: 'hidden'});
+        const onboardingController = new OnboardingController({
+            ...onboardingBase,
+            config: {
+                ...onboardingBase.config,
+                asyncPromoPresets: {asyncHiddenFeature: loader},
+            },
+        } as any);
+
+        const controller = new Controller({
+            ...testOptions,
+            config: {
+                promoGroups: [
+                    {
+                        slug: 'hintPromos',
+                        conditions: [],
+                        promos: [{slug: 'asyncHiddenFeature', conditions: []}],
+                    },
+                ],
+            },
+            onboarding: {
+                getInstance: () => onboardingController,
+                groupSlug: 'hintPromos',
+                asyncPromoPresets: ['asyncHiddenFeature'],
+            },
+        });
+
+        await controller.ensureInit();
+        await controller.requestStart('asyncHiddenFeature');
+        await waitForNextTick();
+
+        // Loader failed — no hint shown, no crash
+        expect(loader).toHaveBeenCalledTimes(1);
+        expect(onboardingController.hintStore.state.open).toBe(false);
+    });
+});
