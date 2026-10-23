@@ -522,7 +522,7 @@ export class Controller {
             return;
         }
 
-        const {getInstance, groupSlug} = this.options.onboarding;
+        const {getInstance, groupSlug, asyncPromoPresets} = this.options.onboarding;
 
         const promoGroupToIntegrate = this.options.config.promoGroups.find(
             (group) => group.slug === groupSlug,
@@ -556,6 +556,21 @@ export class Controller {
             }
         }
 
+        // Register explicitly declared async-backed promo presets.
+        // Their bodies are NOT loaded here — each loads on demand via
+        // loadPreset(slug) when its promo is about to be shown.
+        for (const asyncSlug of asyncPromoPresets ?? []) {
+            this.promoPresets.add(asyncSlug);
+
+            const hasPromo = promoGroupToIntegrate.promos.some((promo) => promo.slug === asyncSlug);
+
+            if (!hasPromo) {
+                this.logger.error(
+                    `asyncPromoPresets: slug "${asyncSlug}" is not declared in promoGroup "${groupSlug}". Add it to promoGroups.promos so it participates in queue resolution.`,
+                );
+            }
+        }
+
         this.conditions = getConditions(this.options.config.promoGroups);
         this.helpers = getHelpers(this.options.config.promoGroups);
 
@@ -564,6 +579,13 @@ export class Controller {
             async ({stepData}: OnboardingEventsMap['beforeShowHint']) => {
                 if (!this.promoPresets.has(stepData.preset)) {
                     return true;
+                }
+
+                try {
+                    await instance.loadPreset(stepData.preset);
+                } catch {
+                    this.skipPromo(stepData.preset);
+                    return false;
                 }
 
                 const requestVersion = this.startRequestVersions.get(stepData.preset);
@@ -684,7 +706,17 @@ export class Controller {
         const groupSlug = this.getGroupBySlug(slug);
 
         if (groupSlug === this.options.onboarding?.groupSlug) {
-            this.options.onboarding.getInstance().checkReachedHints();
+            const instance = this.options.onboarding.getInstance();
+
+            // Async-backed promo preset: load its body on demand, then
+            // re-check reached hints so the freshly merged preset can show
+            // its hint. For sync presets loadPreset resolves immediately.
+            instance
+                .loadPreset(slug)
+                .catch(() => {})
+                .then(() => {
+                    instance.checkReachedHints();
+                });
         }
 
         this.emitChange();

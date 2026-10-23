@@ -79,6 +79,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     saveProgressState: () => void;
 
     private presetsLoadingPromise: Promise<void> | undefined;
+    private presetLoadingPromises = new Map<string, Promise<void>>();
 
     constructor(
         options: InitOptions<HintParams, Presets, Steps>,
@@ -723,6 +724,48 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         for (const [stepSlug, element] of this.reachedElements) {
             this.stepElementReached({stepSlug, element});
         }
+    }
+
+    loadPresets(): Promise<void> {
+        return this.ensurePresetsLoaded();
+    }
+
+    loadPreset(slug: string): Promise<void> {
+        if (this.status === 'disabled') {
+            return Promise.resolve();
+        }
+
+        const loaders = this.options.config.asyncPromoPresets;
+        if (!loaders) {
+            return Promise.resolve();
+        }
+
+        const loader = loaders[slug];
+        if (!loader) {
+            // Not an async promo preset (sync preset or unknown slug) — nothing to load.
+            return Promise.resolve();
+        }
+
+        const cached = this.presetLoadingPromises.get(slug);
+        if (cached) {
+            return cached;
+        }
+
+        const loading = loader()
+            .catch((err) => {
+                this.logger.error('Failed to load async promo preset', slug, err);
+                throw err;
+            })
+            .then((loadedPreset) => {
+                this.mergeLoadedPresets({[slug]: loadedPreset});
+                this.emitStateChange();
+            });
+
+        // Attach a no-op handler so fire-and-forget callers don't leak an unhandled rejection.
+        loading.catch(() => {});
+        this.presetLoadingPromises.set(slug, loading);
+
+        return loading;
     }
 
     private resolveOnePreset = (
