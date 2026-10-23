@@ -102,11 +102,13 @@ export type AsyncPresetsLoader<HintParams, Steps extends string> = () => Promise
 export type InitConfig<HintParams, Presets extends string, Steps extends string> = {
     presets: Record<Presets, PresetField<HintParams, Steps>>;
     asyncPresets?: AsyncPresetsLoader<HintParams, Steps>;
+    asyncPromoPresets?: Record<string, () => Promise<PresetField<HintParams, Steps>>>;
 };
 
 export type ResolvedConfig<HintParams, Presets extends string, Steps extends string> = {
     presets: Record<Presets, Preset<HintParams, Steps>>;
     asyncPresets?: AsyncPresetsLoader<HintParams, Steps>;
+    asyncPromoPresets?: Record<string, () => Promise<PresetField<HintParams, Steps>>>;
 };
 
 type DateUTC = string;
