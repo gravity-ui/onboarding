@@ -1,5 +1,6 @@
 import {
     CombinedPreset,
+    EventsMap,
     InferHintParamsFromPreset,
     InferStepsFromPreset,
     PresetField,
@@ -87,6 +88,26 @@ describe('type infering', () => {
         type OnboardingHint2 = Expect<Extends<OnboardingHintType, {a: number}>>;
         type OnboardingHint3 = Expect<Not<Extends<OnboardingHintType, {b?: number}>>>;
 
+        type PublicHintTransitions = Expect<
+            Equal<
+                Extract<
+                    keyof typeof controller,
+                    'waitForNextHint' | 'invalidatePendingHints' | 'processCurrentElementAppearance'
+                >,
+                never
+            >
+        >;
+
+        type BeforeShowHintFields = Expect<Equal<keyof EventsMap['beforeShowHint'], 'stepData'>>;
+        type CloseHintFields = Expect<Equal<keyof EventsMap['closeHint'], 'hint' | 'eventSource'>>;
+        type AppearanceArguments = Expect<
+            Equal<Parameters<typeof controller.processElementAppearance>['length'], 1>
+        >;
+        type CloseHintArguments = Expect<
+            Equal<Parameters<typeof controller.hintStore.closeHint>['length'], 0 | 1>
+        >;
+        type EmitArguments = Expect<Equal<Parameters<typeof controller.events.emit>['length'], 2>>;
+
         // Dummy usage to satisfy TypeScript compiler
         const _typeChecks: [
             PresetHelper1,
@@ -97,7 +118,13 @@ describe('type infering', () => {
             OnboardingHint1,
             OnboardingHint2,
             OnboardingHint3,
-        ] = [true, true, true, true, true, true, true, true];
+            PublicHintTransitions,
+            BeforeShowHintFields,
+            CloseHintFields,
+            AppearanceArguments,
+            CloseHintArguments,
+            EmitArguments,
+        ] = [true, true, true, true, true, true, true, true, true, true, true, true, true, true];
 
         // Prevent unused variable warning
         expect(_typeChecks).toBeDefined();

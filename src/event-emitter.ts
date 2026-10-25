@@ -1,4 +1,5 @@
 import {EventListener} from './types';
+import {isEventCurrent} from './internal/event-guards';
 
 export class EventEmitter<
     EventTypes extends string,
@@ -22,6 +23,9 @@ export class EventEmitter<
 
         let canContinue = true;
         for (const listener of listeners) {
+            if (!isEventCurrent(data)) {
+                return false;
+            }
             const result = await listener(data, this.extraArg);
             if (result === false) {
                 canContinue = false;

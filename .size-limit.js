@@ -1,7 +1,7 @@
 module.exports = [
     {
         "path": "src/index.ts",
-        "limit": "5 kB"
+        "limit": "5.5 kB"
     },
     {
         "path": "src/promo-manager.ts",
