@@ -490,3 +490,23 @@ describe('finishPromo', () => {
         expect(mock).toHaveBeenCalledTimes(2);
     });
 });
+
+it('keeps invalidated queues out of later resets and new controllers', async () => {
+    const controller = new Controller(testOptions);
+    await controller.requestStart('boardPoll');
+    await controller.requestStart('ganttPoll');
+
+    controller['invalidateBaseState']();
+    expect(controller.state.base.activeQueue).toEqual(['ganttPoll']);
+
+    const independent = new Controller(testOptions);
+    await independent.ensureInit();
+    expect.soft(independent.state.base).toEqual({activePromo: null, activeQueue: []});
+
+    controller.finishPromo('ganttPoll');
+    expect(controller.state.base.activeQueue).toEqual([]);
+    controller['invalidateBaseState']();
+
+    expect(controller.state.base.activeQueue).toEqual([]);
+    expect(controller.getPromoStatus('ganttPoll')).toBe('finished');
+});
