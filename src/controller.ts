@@ -79,6 +79,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     saveProgressState: () => void;
 
     private presetsLoadingPromise: Promise<void> | undefined;
+    private presetLoadingPromises = new Map<string, Promise<void>>();
 
     constructor(
         options: InitOptions<HintParams, Presets, Steps>,
@@ -934,11 +935,14 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         const preset = this.options.config.presets[presetSlug as Presets];
 
-        if (!preset || preset.type === 'combined' || preset.type === 'lazy') {
+        if (!preset || preset.type === 'combined') {
             return false;
         }
 
-        const presetSteps = preset.steps.map((step) => step.slug);
+        // Lazy presets only have pre-declared step slugs (no bodies yet) —
+        // use them directly for routing before the preset is loaded.
+        const presetSteps =
+            preset.type === 'lazy' ? preset.steps : preset.steps.map((step) => step.slug);
         const passedSteps = this.state.progress.presetPassedSteps[presetSlug] ?? [];
 
         if (!presetSteps || !passedSteps) {

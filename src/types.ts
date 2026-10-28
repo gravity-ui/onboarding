@@ -88,7 +88,7 @@ export type LazyPreset<HintParams, Steps extends string> = {
     type: 'lazy';
     name: string;
     visibility?: PresetVisibility;
-    steps?: Steps[];
+    steps: Steps[];
     load: () => Promise<PresetField<HintParams, Steps>>;
 };
 
