@@ -576,8 +576,12 @@ export class Controller {
         const instance = getInstance();
 
         for (const [presetKey, preset] of Object.entries(instance.options.config.presets)) {
+            // Lazy presets are self-describing: their bodies load on demand
+            // via loadPreset(slug), but the slug is known statically and can
+            // join the queue right away.
             const shouldInjectPreset =
-                preset?.type !== 'internal' && preset?.visibility === 'alwaysHidden';
+                preset?.type !== 'internal' &&
+                (preset?.visibility === 'alwaysHidden' || preset?.type === 'lazy');
 
             if (shouldInjectPreset) {
                 this.promoPresets.add(presetKey);
@@ -722,7 +726,19 @@ export class Controller {
         const groupSlug = this.getGroupBySlug(slug);
 
         if (groupSlug === this.options.onboarding?.groupSlug) {
-            this.options.onboarding.getInstance().checkReachedHints();
+            const instance = this.options.onboarding.getInstance();
+            const preset = instance.options.config.presets[slug];
+
+            if (preset?.type === 'lazy') {
+                instance
+                    .loadPreset(slug)
+                    .catch(() => {})
+                    .then(() => {
+                        instance.checkReachedHints();
+                    });
+            } else {
+                instance.checkReachedHints();
+            }
         }
 
         this.emitChange();

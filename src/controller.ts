@@ -79,6 +79,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     saveProgressState: () => void;
 
     private presetsLoadingPromise: Promise<void> | undefined;
+    private presetLoadingPromises = new Map<string, Promise<void>>();
 
     constructor(
         options: InitOptions<HintParams, Presets, Steps>,
@@ -189,6 +190,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
+        if (this.options.config.presets[preset]?.type === 'lazy') {
+            await this.loadPreset(preset).catch(() => {});
+        }
+
         await this.ensureRunning();
 
         const step = this.getStepBySlugAndPreset(stepSlug, preset);
@@ -223,6 +228,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         if (state === 'visible' || state === 'collapsed') {
             // eslint-disable-next-line no-void
             void this.ensurePresetsLoaded();
+            // eslint-disable-next-line no-void
+            void this.loadActiveLazyPresets();
         }
 
         this.state.base.wizardState = state;
@@ -310,6 +317,14 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         if (!step) {
             this.logger.debug('Unknown step', preset, stepSlug);
+            if (this.options.config.presets[preset as Presets]?.type === 'lazy') {
+                // eslint-disable-next-line no-void
+                void this.loadPreset(preset)
+                    .then(() => {
+                        this.checkReachedHints();
+                    })
+                    .catch(() => {});
+            }
             return;
         }
 
@@ -399,6 +414,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         if (this.status !== 'disabled') {
             // eslint-disable-next-line no-void
             void this.ensurePresetsLoaded();
+            // eslint-disable-next-line no-void
+            void this.loadActiveLazyPresets();
         }
         const allUserPresetSlugs = [
             ...new Set([
@@ -498,12 +515,26 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
 
         await this.ensurePresetsLoaded();
+        // loadPreset rejects when the loader throws; catch it here so runPreset
+        // returns false instead of propagating the exception to the caller.
+        const loadedOk = await this.loadPreset(presetToRunSlug)
+            .then(() => true)
+            .catch(() => false);
+        if (!loadedOk) {
+            return false;
+        }
 
         if (!this.presetExistsGuard(presetToRunSlug)) {
             return false;
         }
 
         const presetToRun = this.options.config.presets[presetToRunSlug];
+
+        if (presetToRun.type === 'lazy') {
+            this.logger.error('Lazy preset is not loaded', presetToRunSlug);
+            return false;
+        }
+
         const presetSlug = (
             presetToRun.type === 'combined' ? await presetToRun.pickPreset() : presetToRunSlug
         ) as Presets;
@@ -512,7 +543,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         await presetToRun.hooks?.onBeforeStart?.();
         if (presetSlug !== presetToRunSlug) {
-            await this.options.config.presets[presetSlug].hooks?.onBeforeStart?.();
+            await this.getPresetHooks(presetSlug)?.onBeforeStart?.();
         }
 
         await this.events.emit('beforeRunPreset', {preset: presetSlug});
@@ -544,7 +575,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.events.emit('runPreset', {preset: presetSlug});
         presetToRun.hooks?.onStart?.();
         if (presetSlug !== presetToRunSlug) {
-            this.options.config.presets[presetSlug].hooks?.onStart?.();
+            this.getPresetHooks(presetSlug)?.onStart?.();
         }
 
         this.checkReachedHints();
@@ -580,10 +611,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         this.events.emit('finishPreset', {preset: presetSlug});
 
-        this.options.config.presets[presetToFinish]?.hooks?.onEnd?.();
+        this.getPresetHooks(presetToFinish)?.onEnd?.();
 
         if (presetSlug !== presetToFinish) {
-            this.options.config.presets[presetSlug].hooks?.onEnd?.();
+            this.getPresetHooks(presetSlug)?.onEnd?.();
         }
 
         this.state.base.activePresets = this.state.base.activePresets.filter(
@@ -725,6 +756,52 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
     }
 
+    loadPresets(): Promise<void> {
+        return this.ensurePresetsLoaded();
+    }
+
+    loadPreset(slug: string): Promise<void> {
+        if (this.status === 'disabled') {
+            return Promise.resolve();
+        }
+
+        const preset = this.options.config.presets[slug as Presets];
+
+        if (!preset || preset.type !== 'lazy') {
+            // Not a lazy preset (sync preset, already-loaded preset or unknown slug).
+            return Promise.resolve();
+        }
+
+        const cached = this.presetLoadingPromises.get(slug);
+        if (cached) {
+            return cached;
+        }
+
+        const loading = preset
+            .load()
+            .catch((err) => {
+                this.logger.error('Failed to load lazy preset', slug, err);
+                // Evict the rejected promise so the next call can retry the loader.
+                this.presetLoadingPromises.delete(slug);
+                throw err;
+            })
+            .then((loadedPreset) => {
+                // Replace the lazy stub with the fully resolved preset.
+                const presets = this.options.config.presets as Record<
+                    string,
+                    Preset<HintParams, Steps>
+                >;
+                presets[slug] = this.resolveOnePreset(slug, loadedPreset);
+                this.emitStateChange();
+            });
+
+        // Attach a no-op handler so fire-and-forget callers don't leak an unhandled rejection.
+        loading.catch(() => {});
+        this.presetLoadingPromises.set(slug, loading);
+
+        return loading;
+    }
+
     private resolveOnePreset = (
         presetKey: string,
         preset: PresetField<HintParams, Steps>,
@@ -817,6 +894,16 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         return preset.type === 'combined' ? this.findInternalPreset(presetSlug) : presetSlug;
     };
 
+    private getPresetHooks = (presetSlug: Presets) => {
+        const preset = this.options.config.presets[presetSlug];
+
+        if (!preset || preset.type === 'lazy') {
+            return undefined;
+        }
+
+        return preset.hooks;
+    };
+
     private findInternalPreset = (presetSlug: Presets) => {
         const preset = this.options.config.presets[presetSlug];
 
@@ -852,6 +939,12 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return false;
         }
 
+        // Lazy presets are never shown in the wizard —
+        // only their loaded bodies are, after replacement.
+        if (preset.type === 'lazy') {
+            return false;
+        }
+
         const userHasPreset =
             this.state.base.availablePresets.includes(presetSlug) ||
             this.state.progress?.finishedPresets.includes(presetSlug);
@@ -871,7 +964,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return false;
         }
 
-        const presetSteps = preset.steps.map((step) => step.slug);
+        // Lazy presets only have pre-declared step slugs (no bodies yet) —
+        // use them directly for routing before the preset is loaded.
+        const presetSteps =
+            preset.type === 'lazy' ? preset.steps : preset.steps.map((step) => step.slug);
         const passedSteps = this.state.progress.presetPassedSteps[presetSlug] ?? [];
 
         if (!presetSteps || !passedSteps) {
@@ -922,6 +1018,12 @@ export class Controller<HintParams, Presets extends string, Steps extends string
                 return false;
             }
 
+            if (preset.type === 'lazy') {
+                // Lazy presets match by pre-declared step slugs only —
+                // full step bodies are unavailable until the preset is loaded.
+                return preset.steps?.includes(stepSlug) ?? false;
+            }
+
             return preset?.steps.some((step) => step.slug === stepSlug) ?? false;
         }) as Array<Presets>;
     }
@@ -953,11 +1055,15 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         const preset = this.options.config.presets[presetSlug];
 
         if (!preset || preset.type === 'combined') {
-            // no combined presets here
             return;
         }
 
-        const lastStepSlug = preset.steps[preset.steps.length - 1].slug;
+        // Lazy presets expose only plain step slugs (Steps[]) before loading.
+        // Contentful presets expose PresetStep[] — use .slug to extract the key.
+        const lastStepSlug =
+            preset.type === 'lazy'
+                ? preset.steps[preset.steps.length - 1]
+                : preset.steps[preset.steps.length - 1].slug;
         const isFinishPreset =
             this.state.progress?.presetPassedSteps[presetSlug]?.includes(lastStepSlug);
 
@@ -982,6 +1088,14 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.emitStateChange();
 
         await this.saveBaseState();
+    }
+
+    private loadActiveLazyPresets(): Promise<void> {
+        const promises = this.state.base.activePresets
+            .filter((slug) => this.options.config.presets[slug as Presets]?.type === 'lazy')
+            .map((slug) => this.loadPreset(slug).catch(() => {}));
+
+        return Promise.all(promises).then(() => {});
     }
 
     private presetExistsGuard(preset: string): preset is Presets {
@@ -1026,7 +1140,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     private getStepBySlugAndPreset(stepSlug: Steps, presetSlug: Presets) {
         const targetPreset = this.options.config.presets[presetSlug];
 
-        if (!targetPreset || targetPreset.type === 'combined') {
+        if (!targetPreset || targetPreset.type === 'combined' || targetPreset.type === 'lazy') {
             return undefined;
         }
 
@@ -1048,7 +1162,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         const preset = this.options.config.presets[presetSlug as Presets];
 
-        if (!preset || preset.type === 'combined') {
+        if (!preset || preset.type === 'combined' || preset.type === 'lazy') {
             return;
         }
 
