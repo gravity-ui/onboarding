@@ -256,7 +256,12 @@ type AllPresetsMap<T> = SyncPresetsMap<T> & AsyncPresetsMap<T>;
 type PresetValuesOf<T> = AllPresetsMap<T>[keyof AllPresetsMap<T>];
 
 // Use a helper with a naked type parameter so that the `extends` check distributes over the union
-type ExtractStepsFromPresetValue<U> = U extends ContentfulPresets<any, infer Steps> ? Steps : never;
+type ExtractStepsFromPresetValue<U> =
+    U extends ContentfulPresets<any, infer Steps>
+        ? Steps
+        : U extends LazyPreset<any, infer Steps>
+          ? Steps
+          : never;
 type ExtractHintParamsFromPresetValue<U> =
     U extends ContentfulPresets<infer HintParams, any> ? HintParams : never;
 

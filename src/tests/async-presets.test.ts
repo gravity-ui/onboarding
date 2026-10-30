@@ -459,3 +459,224 @@ describe('async presets — unhandled rejection safety', () => {
         }
     });
 });
+
+// ─── Lazy preset (per-preset `load`) bug fixes ────────────────────────────────
+
+const getLazyOptions = (
+    loaderFn: () => Promise<any> = () =>
+        Promise.resolve({
+            name: 'Lazy A',
+            steps: [{slug: 'lazyAStep1', name: '', description: ''}],
+        }),
+) => {
+    const base = getOptions();
+    const loader = vi.fn(loaderFn);
+    const options = {
+        ...base,
+        baseState: {
+            ...base.baseState,
+            availablePresets: ['createProject', 'lazyA'],
+            activePresets: ['lazyA'],
+        },
+        config: {
+            ...base.config,
+            presets: {
+                ...base.config.presets,
+                lazyA: {
+                    type: 'lazy' as const,
+                    name: 'Lazy A',
+                    steps: ['lazyAStep1'],
+                    load: loader,
+                },
+            },
+        },
+    } as unknown as InitOptions<any, any, any>;
+    return {options, loader};
+};
+
+describe('lazy presets — passStep finishes preset (Bug 6.2)', () => {
+    it('passing the last step of a lazy preset finishes the preset and fires onEnd', async () => {
+        const {options} = getLazyOptions();
+        const onEnd = vi.fn();
+        const optionsWithHook = {
+            ...options,
+            config: {
+                ...options.config,
+                presets: {
+                    ...(options.config as any).presets,
+                    lazyA: {
+                        ...(options.config as any).presets.lazyA,
+                        // `load` returns a body with an `onEnd` hook so we can assert it fires
+                        load: vi.fn(() =>
+                            Promise.resolve({
+                                name: 'Lazy A',
+                                steps: [{slug: 'lazyAStep1', name: '', description: ''}],
+                                hooks: {onEnd},
+                            }),
+                        ),
+                    },
+                },
+            },
+        };
+        const controller = new Controller(optionsWithHook as any);
+
+        await controller.passStep('lazyAStep1' as any);
+
+        expect(controller.state.progress?.finishedPresets).toContain('lazyA');
+        expect(onEnd).toHaveBeenCalledTimes(1);
+    });
+
+    it('onStepPass hook fires when a lazy preset step is passed', async () => {
+        const onStepPass = vi.fn();
+        const {options} = getLazyOptions(() =>
+            Promise.resolve({
+                name: 'Lazy A',
+                steps: [{slug: 'lazyAStep1', name: '', description: '', hooks: {onStepPass}}],
+            }),
+        );
+        const controller = new Controller(options as any);
+
+        await controller.passStep('lazyAStep1' as any);
+
+        expect(onStepPass).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('lazy presets — runPreset returns false on loader failure (Bug 6.3)', () => {
+    it('returns false instead of throwing when lazy loader rejects', async () => {
+        const base = getOptions();
+        const controller = new Controller({
+            ...base,
+            config: {
+                ...base.config,
+                presets: {
+                    ...base.config.presets,
+                    lazyFail: {
+                        type: 'lazy' as const,
+                        name: 'Lazy fail',
+                        steps: ['lazyFailStep'],
+                        load: vi.fn(() => Promise.reject(new Error('network error'))),
+                    },
+                },
+            },
+        } as any);
+
+        const result = await controller.runPreset('lazyFail');
+
+        expect(result).toBe(false);
+    });
+});
+
+describe('lazy presets — rejected promise cache eviction (Bug 6.4)', () => {
+    it('a failed load is evicted so the next loadPreset call retries the loader', async () => {
+        let callCount = 0;
+        const {options} = getLazyOptions(() => {
+            callCount++;
+            if (callCount === 1) {
+                return Promise.reject(new Error('transient'));
+            }
+            return Promise.resolve({
+                name: 'Lazy A',
+                steps: [{slug: 'lazyAStep1', name: '', description: ''}],
+            });
+        });
+
+        // lazyA must NOT be pre-activated, otherwise runPreset bails out at
+        // the "already active" check and never reaches the loader retry.
+        const controller = new Controller({
+            ...options,
+            baseState: {
+                ...(options as any).baseState,
+                availablePresets: ['createProject'],
+                activePresets: [],
+            },
+        } as any);
+
+        // First attempt — loader fails, promise must be evicted
+        const firstResult = await controller.runPreset('lazyA');
+
+        expect(firstResult).toBe(false);
+
+        // Second attempt — loader must be called again (cache evicted)
+        const result = await controller.runPreset('lazyA');
+
+        expect(callCount).toBe(2);
+        expect(result).toBe(true);
+        expect(controller.state.base.activePresets).toContain('lazyA');
+    });
+});
+
+describe('lazy presets — stepElementReached triggers load (W1 fix)', () => {
+    it('reaching the step of an active lazy preset loads the body and shows hint', async () => {
+        const {options} = getLazyOptions();
+        const controller = new Controller(options as any);
+
+        const el = document.createElement('div');
+        document.body.appendChild(el);
+
+        // Call stepElementReached — it records the element and kicks off a
+        // fire-and-forget load with a microtask re-check of reached hints.
+        await controller.stepElementReached({stepSlug: 'lazyAStep1' as any, element: el});
+
+        // Immediately after the awaited call the hint must NOT be open yet —
+        // the load chain's continuation microtasks have not all drained.
+        expect(controller.hintStore.state.open).toBe(false);
+
+        // Let the load chain settle — now the re-check should have run.
+        await flushPromises();
+
+        expect(controller.hintStore.state.open).toBe(true);
+        expect(controller.hintStore.state.hint?.step.slug).toBe('lazyAStep1');
+
+        document.body.removeChild(el);
+    });
+
+    it('loader failure during stepElementReached does not throw and shows no hint', async () => {
+        const {options} = getLazyOptions(() => Promise.reject(new Error('offline')));
+        const controller = new Controller(options as any);
+
+        const el = document.createElement('div');
+        document.body.appendChild(el);
+
+        // Must not throw
+        await expect(
+            controller.stepElementReached({stepSlug: 'lazyAStep1' as any, element: el}),
+        ).resolves.toBeUndefined();
+
+        await flushPromises();
+
+        expect(controller.hintStore.state.open).toBe(false);
+
+        document.body.removeChild(el);
+    });
+});
+
+describe('lazy presets — wizard loading (W1 / wizard fix)', () => {
+    it('setWizardState(visible) kicks off load for active lazy presets', async () => {
+        const {options, loader} = getLazyOptions();
+        const controller = new Controller({
+            ...options,
+            baseState: {...(options as any).baseState, wizardState: 'hidden'},
+        } as any);
+
+        expect(loader).not.toHaveBeenCalled();
+
+        await controller.setWizardState('visible');
+        await flushPromises();
+
+        expect(loader).toHaveBeenCalledTimes(1);
+    });
+
+    it('userPresets getter kicks off load for active lazy presets', async () => {
+        const {options, loader} = getLazyOptions();
+        const controller = new Controller(options as any);
+
+        expect(loader).not.toHaveBeenCalled();
+
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+        controller.userPresets;
+        await flushPromises();
+
+        expect(loader).toHaveBeenCalledTimes(1);
+    });
+});
