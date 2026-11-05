@@ -122,6 +122,79 @@ describe('React Hooks', () => {
 
             expect(spy).toHaveBeenCalledWith('openBoard');
         });
+
+        it('should not call stepElementReached when readyForHint is false', () => {
+            const spy = vi.spyOn(controller, 'stepElementReached');
+            const container = document.createElement('div');
+            const targetElement = document.createElement('button');
+            targetElement.className = 'test-button';
+            container.appendChild(targetElement);
+
+            renderHook(() =>
+                hooks.useOnboardingStepBySelector({
+                    element: container,
+                    selector: '.test-button',
+                    step: 'openBoard',
+                    readyForHint: false,
+                }),
+            );
+
+            expect(spy).not.toHaveBeenCalled();
+        });
+
+        it('should call stepElementReached when readyForHint changes from false to true', () => {
+            const spy = vi.spyOn(controller, 'stepElementReached');
+            const container = document.createElement('div');
+            const targetElement = document.createElement('button');
+            targetElement.className = 'test-button';
+            container.appendChild(targetElement);
+
+            const {rerender} = renderHook(
+                ({readyForHint}) =>
+                    hooks.useOnboardingStepBySelector({
+                        element: container,
+                        selector: '.test-button',
+                        step: 'openBoard',
+                        readyForHint,
+                    }),
+                {initialProps: {readyForHint: false}},
+            );
+
+            expect(spy).not.toHaveBeenCalled();
+
+            rerender({readyForHint: true});
+
+            expect(spy).toHaveBeenCalledWith({stepSlug: 'openBoard', element: targetElement});
+        });
+
+        it('should call stepElementDisappeared when readyForHint changes from true to false', () => {
+            const reachedSpy = vi.spyOn(controller, 'stepElementReached');
+            const disappearedSpy = vi.spyOn(controller, 'stepElementDisappeared');
+            const container = document.createElement('div');
+            const targetElement = document.createElement('button');
+            targetElement.className = 'test-button';
+            container.appendChild(targetElement);
+
+            const {rerender} = renderHook(
+                ({readyForHint}) =>
+                    hooks.useOnboardingStepBySelector({
+                        element: container,
+                        selector: '.test-button',
+                        step: 'openBoard',
+                        readyForHint,
+                    }),
+                {initialProps: {readyForHint: true}},
+            );
+
+            expect(reachedSpy).toHaveBeenCalledWith({
+                stepSlug: 'openBoard',
+                element: targetElement,
+            });
+
+            rerender({readyForHint: false});
+
+            expect(disappearedSpy).toHaveBeenCalledWith('openBoard');
+        });
     });
 
     describe('useOnboardingPresets', () => {

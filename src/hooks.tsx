@@ -69,7 +69,7 @@ export function getHooks<HintParams, Presets extends string, Steps extends strin
             return () => {
                 controller.stepElementDisappeared(step);
             };
-        }, [ref?.current, element, selector]);
+        }, [ref?.current, element, selector, readyForHint]);
 
         const pass = useCallback(async () => {
             await controller.passStep(step);
