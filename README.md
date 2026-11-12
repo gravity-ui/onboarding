@@ -698,7 +698,7 @@ const {controller: onboardingController} = createOnboarding({
         }
     },
     plugins: [new PromoPresetsPlugin(),]
-   /**/ 
+   /**/
 })
 
 const {controller} = createPromoManager({
@@ -710,7 +710,7 @@ const {controller} = createPromoManager({
                 conditions: [ShowOnceForSession()], // only 1 promo hint for session
                 promos: [
                     {
-                        slug: 'coolNewFeature', // slug = onboarding preset name 
+                        slug: 'coolNewFeature', // slug = onboarding preset name
                         conditions: [/**/], //  you can add additional conditions
                     },
                 ],
@@ -722,4 +722,104 @@ const {controller} = createPromoManager({
         groupSlug: 'hintPromos',
     },
 });
+```
+
+### Integration modes
+
+#### `mode: 'hint'` (default)
+
+The existing behaviour. The promo slot is requested on every `beforeShowHint`
+and released when the hint is closed (`closeHint`). Omitting `mode` selects
+this path, so there is **no migration needed** for existing consumers.
+
+#### `mode: 'preset'`
+
+The preset lifecycle owns the slot:
+
+| Onboarding event | Promo action |
+|---|---|
+| `beforeSuggestPreset` | `requestStart` — vetoes the suggest if the slot is unavailable |
+| `runPreset` | `requestStart` — non-vetoing (manual run always proceeds) |
+| `beforeShowHint` | read-only gate — `true` only while this preset holds the slot |
+| `finishPreset` | `finishPromo` |
+| `resetPresetProgress` | `resetPromoProgress` |
+| `closeHint` | **not subscribed** — slot is held across all steps |
+
+```typescript
+const {controller} = createPromoManager({
+    config: {
+        promoGroups: [{slug: 'hintPromos', conditions: [ShowOnceForSession()], promos: []}],
+    },
+    onboarding: {
+        getInstance: () => onboardingController,
+        groupSlug: 'hintPromos',
+        mode: 'preset',  // ← new
+    },
+});
+```
+
+Releasing the slot mid-preset is done from a step hook:
+
+```typescript
+steps: [{
+    slug: 'showCoolFeature',
+    name: '', description: '',
+    hooks: {
+        onCloseHintByUser: ({eventSource}) => {
+            if (eventSource === 'closedByUser') controller.cancelPromo('coolNewFeature');
+        },
+    },
+}]
+```
+
+### Multiple onboarding groups
+
+Pass an array of group slugs plus an optional `resolveGroup` mapper to
+distribute presets across independent budget groups:
+
+```typescript
+onboarding: {
+    getInstance: () => onboardingController,
+    groupSlug: ['helpGroup', 'infoGroup'],
+    resolveGroup: (presetSlug) =>
+        presetSlug.startsWith('info_') ? 'infoGroup' : 'helpGroup',
+}
+```
+
+### Deferred initialization (`initType: 'event'`)
+
+Use `initType: 'event'` when you need to gate all promo activation until some
+app-level condition is met (data loaded, user authenticated, etc.). First
+activation is **passive** — there is no `init()` method; the gate opens when
+the configured event arrives through `sendEvent`:
+
+```typescript
+const {controller} = createPromoManager({
+    config: {
+        // timeout is a mandatory fallback; event names the opener
+        init: {initType: 'event', timeout: 5000, event: 'app:ready'},
+        promoGroups: [/**/],
+    },
+    // …
+});
+
+// Once the app is ready (e.g. bridged from a real signal):
+controller.sendEvent('app:ready');
+```
+
+The `timeout` is mandatory and acts as a safety net: if the event never
+arrives the manager activates automatically after the given milliseconds,
+logging a debug warning. If the configured event name also matches a promo
+`trigger.on`, one `sendEvent` call both opens the gate and fires those promos
+— the two roles are independent.
+
+### Reinitialization
+
+```typescript
+// Gate all future activation and re-evaluate the queue.
+// Re-arms a fresh listener for the configured init event + timeout fallback.
+controller.reinitialize();
+
+// Open the gate — send the configured event (or let the timeout win).
+controller.sendEvent('app:ready');
 ```
