@@ -3,6 +3,7 @@ import {Controller} from '../core/controller';
 import {testOptions} from './options';
 import {getAnchorElement, getOptionsWithPromo} from '../../tests/utils';
 import {waitForNextTick} from './utils';
+import {PromoPresetsPlugin} from '../../plugins/promo-presets';
 
 const getData = () => {
     const onboardingController = new OnboardingController(
@@ -29,6 +30,53 @@ const getData = () => {
         onboardingController,
         options,
     };
+};
+
+const getPresetModeData = () => {
+    const onboardingController = new OnboardingController({
+        config: {
+            presets: {
+                coolNewFeature: {
+                    name: 'Cool feature',
+                    visibility: 'alwaysHidden' as const,
+                    steps: [{slug: 'showCoolFeature', name: '', description: ''}],
+                },
+                coolNewFeature2: {
+                    name: 'Cool feature 2',
+                    visibility: 'alwaysHidden' as const,
+                    steps: [{slug: 'showCoolFeature2', name: '', description: ''}],
+                },
+            },
+        },
+        baseState: {
+            wizardState: 'hidden' as const,
+            availablePresets: ['coolNewFeature', 'coolNewFeature2'],
+            activePresets: ['coolNewFeature', 'coolNewFeature2'],
+            suggestedPresets: [],
+            enabled: true,
+        },
+        getProgressState: async () => ({}),
+        onSave: {state: vi.fn(), progress: vi.fn()},
+        logger: {
+            level: 'error' as const,
+            logger: {debug: () => {}, error: () => {}},
+        },
+        plugins: [new PromoPresetsPlugin()],
+    });
+
+    const options = {
+        ...testOptions,
+        config: {
+            promoGroups: [{slug: 'hintPromos', conditions: [], promos: []}],
+        },
+        onboarding: {
+            getInstance: () => onboardingController,
+            groupSlug: 'hintPromos',
+            mode: 'preset' as const,
+        },
+    };
+
+    return {onboardingController, options};
 };
 
 describe('init', function () {
@@ -514,5 +562,237 @@ describe('reset progress', function () {
 
         expect(controller.state.progress?.finishedPromos).toEqual([]);
         expect(controller.state.progress?.progressInfoByPromo.coolNewFeature).toBe(undefined);
+    });
+});
+
+describe('preset mode', function () {
+    it('slot held across all steps — closing the hint does not release it', async function () {
+        const {onboardingController, options} = getPresetModeData();
+        const controller = new Controller(options);
+        await controller.ensureInit();
+
+        // In preset mode, the promo slot must be acquired BEFORE the hint step fires.
+        // beforeShowHint only checks ownership; it does not requestStart.
+        await controller.requestStart('coolNewFeature');
+        expect(controller.state.base.activePromo).toBe('coolNewFeature');
+
+        await onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature',
+            element: getAnchorElement(),
+        });
+        expect(onboardingController.hintStore.state.open).toBe(true);
+
+        // Close the hint (simulates user dismissal without finishing the preset).
+        onboardingController.closeHintByUser();
+        await waitForNextTick();
+
+        // Promo slot must still be held — closeHint is not subscribed in preset mode.
+        expect(controller.state.base.activePromo).toBe('coolNewFeature');
+    });
+
+    it('finishPreset releases the promo slot', async function () {
+        const {onboardingController, options} = getPresetModeData();
+        const controller = new Controller(options);
+        await controller.ensureInit();
+
+        // Acquire promo slot first (preset-mode requirement).
+        await controller.requestStart('coolNewFeature');
+        expect(controller.state.base.activePromo).toBe('coolNewFeature');
+
+        await onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature',
+            element: getAnchorElement(),
+        });
+        expect(onboardingController.hintStore.state.open).toBe(true);
+
+        // Finishing the preset should release and finish the promo.
+        await onboardingController.passStep('showCoolFeature');
+        await waitForNextTick();
+
+        expect(controller.state.base.activePromo).toBe(null);
+        expect(controller.state.progress?.finishedPromos).toContain('coolNewFeature');
+    });
+
+    it('hints suppressed when promo slot is held by another promo', async function () {
+        const {onboardingController, options} = getPresetModeData();
+        // Add a competing promo group so we can hold the slot externally.
+        const controller = new Controller({
+            ...options,
+            config: {
+                promoGroups: [
+                    {slug: 'otherPromos', conditions: [], promos: [{slug: 'otherPromo'}]},
+                    {slug: 'hintPromos', conditions: [], promos: []},
+                ],
+            },
+        });
+        await controller.ensureInit();
+
+        // Take the slot with an unrelated promo.
+        await controller.requestStart('otherPromo');
+        expect(controller.state.base.activePromo).toBe('otherPromo');
+
+        // Trying to show a hint for coolNewFeature should be blocked —
+        // beforeShowHint returns false because otherPromo, not coolNewFeature,
+        // holds the active slot.
+        await onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature',
+            element: getAnchorElement(),
+        });
+
+        expect(onboardingController.hintStore.state.open).toBe(false);
+    });
+
+    it('consumer-driven cancelPromo stops subsequent hints', async function () {
+        const {onboardingController, options} = getPresetModeData();
+        const controller = new Controller(options);
+        await controller.ensureInit();
+
+        // Acquire promo slot first.
+        await controller.requestStart('coolNewFeature');
+        expect(controller.state.base.activePromo).toBe('coolNewFeature');
+
+        await onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature',
+            element: getAnchorElement(),
+        });
+        expect(onboardingController.hintStore.state.open).toBe(true);
+
+        // Simulate consumer closing the hint and cancelling via step hook.
+        onboardingController.closeHintByUser();
+        await waitForNextTick();
+        controller.cancelPromo('coolNewFeature');
+        await waitForNextTick();
+
+        expect(controller.state.base.activePromo).toBe(null);
+
+        // Reaching the step again should not show the hint (quota recorded by cancelPromo).
+        await onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature',
+            element: getAnchorElement(),
+        });
+        expect(onboardingController.hintStore.state.open).toBe(false);
+    });
+
+    it('beforeSuggestPreset vetoed when another promo holds the slot', async function () {
+        const {onboardingController, options} = getPresetModeData();
+        const controller = new Controller({
+            ...options,
+            config: {
+                promoGroups: [
+                    {slug: 'otherPromos', conditions: [], promos: [{slug: 'otherPromo'}]},
+                    {slug: 'hintPromos', conditions: [], promos: []},
+                ],
+            },
+        });
+        await controller.ensureInit();
+
+        // Hold the slot with an unrelated promo.
+        await controller.requestStart('otherPromo');
+
+        // Suggest coolNewFeature2 — its beforeSuggestPreset should be vetoed.
+        await onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature2',
+            element: getAnchorElement(),
+        });
+
+        // The preset must not have been added to suggestedPresets.
+        expect(onboardingController.state.base.suggestedPresets).not.toContain('coolNewFeature2');
+        expect(onboardingController.hintStore.state.open).toBe(false);
+    });
+
+    it('presets split across two groups with independent conditions', async function () {
+        const onboardingController = new OnboardingController({
+            config: {
+                presets: {
+                    featureA: {
+                        name: 'Feature A',
+                        visibility: 'alwaysHidden' as const,
+                        steps: [{slug: 'stepA', name: '', description: ''}],
+                    },
+                    featureB: {
+                        name: 'Feature B',
+                        visibility: 'alwaysHidden' as const,
+                        steps: [{slug: 'stepB', name: '', description: ''}],
+                    },
+                },
+            },
+            baseState: {
+                wizardState: 'hidden' as const,
+                availablePresets: ['featureA', 'featureB'],
+                activePresets: ['featureA', 'featureB'],
+                suggestedPresets: [],
+                enabled: true,
+            },
+            getProgressState: async () => ({}),
+            onSave: {state: vi.fn(), progress: vi.fn()},
+            logger: {
+                level: 'error' as const,
+                logger: {debug: () => {}, error: () => {}},
+            },
+            plugins: [new PromoPresetsPlugin()],
+        });
+
+        const conditionAAllowed = vi.fn().mockReturnValue(true);
+        const conditionBAllowed = vi.fn().mockReturnValue(true);
+
+        // Pre-declare each preset in its target group — config-derived routing:
+        // the controller reads the existing promos array to determine which group
+        // each alwaysHidden preset should be injected into. No resolveGroup needed.
+        const controller = new Controller({
+            ...testOptions,
+            config: {
+                promoGroups: [
+                    {
+                        slug: 'groupA',
+                        conditions: [conditionAAllowed],
+                        promos: [{slug: 'featureA', conditions: []}],
+                    },
+                    {
+                        slug: 'groupB',
+                        conditions: [conditionBAllowed],
+                        promos: [{slug: 'featureB', conditions: []}],
+                    },
+                ],
+            },
+            onboarding: {
+                getInstance: () => onboardingController,
+                groupSlug: ['groupA', 'groupB'],
+                mode: 'preset',
+            },
+        });
+
+        await controller.ensureInit();
+
+        // featureA is in groupA, featureB is in groupB — declared in the config.
+        const groups = controller.options.config.promoGroups.filter(
+            (g) => g.slug === 'groupA' || g.slug === 'groupB',
+        );
+        expect(groups).toHaveLength(2);
+        const [groupA, groupB] = groups;
+        expect(groupA?.promos.map((p) => p.slug)).toContain('featureA');
+        expect(groupB?.promos.map((p) => p.slug)).toContain('featureB');
+    });
+});
+
+describe('hint mode (default) regression', function () {
+    it('hint mode is unchanged when mode option is omitted', async function () {
+        const {options, onboardingController} = getData();
+        // Explicitly no `mode` field → defaults to 'hint'.
+        const controller = new Controller(options);
+        await controller.ensureInit();
+
+        await onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature',
+            element: getAnchorElement(),
+        });
+
+        expect(controller.state.base.activePromo).toBe('coolNewFeature');
+        expect(onboardingController.hintStore.state.open).toBe(true);
+
+        // In hint mode, closing the hint releases the promo slot.
+        onboardingController.closeHintByUser();
+        await waitForNextTick();
+
+        expect(controller.state.base.activePromo).toBe(null);
     });
 });

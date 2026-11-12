@@ -28,15 +28,17 @@ export type PromoGroup<Config = PromoMeta> = {
     promos: Promo<Config>[];
 };
 
-export type InitPromoManagerOptions = {
-    initType: 'timeout';
-    timeout: number;
-};
+export type InitPromoManagerOptions =
+    {initType: 'timeout'; timeout: number} | {initType: 'event'; timeout: number; event: string};
+
+export type OnboardingIntegrationMode = 'hint' | 'preset';
 
 export type OnboardingIntegrationOptions = {
     getInstance: () => OnboardingController<any, any, any>;
 
-    groupSlug: string;
+    groupSlug: string | string[];
+
+    mode?: OnboardingIntegrationMode;
 };
 
 export type PromoManagerPlugin = {
