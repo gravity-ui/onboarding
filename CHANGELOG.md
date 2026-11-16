@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.13.0](https://github.com/gravity-ui/onboarding/compare/v1.12.4...v1.13.0) (2026-11-16)
+
+
+### Features
+
+* **promo-manager:** add activation pause and resume ([7427dde](https://github.com/gravity-ui/onboarding/commit/7427dded629d61df5390800a160e95f9e8549a54))
+
+
+### Bug Fixes
+
+* **onboarding:** add readyForHint to depndencies in useOnboardingStepBySelector ([055a879](https://github.com/gravity-ui/onboarding/commit/055a879747e47bbe7b974c5d58e48ef0dcc2d655))
+* **promo-manager:** isolate base state during invalidation ([f3c1f0c](https://github.com/gravity-ui/onboarding/commit/f3c1f0c1f241a26aa403c6db80353d1b1b7146b8))
+
 ## [1.12.4](https://github.com/gravity-ui/onboarding/compare/v1.12.3...v1.12.4) (2026-10-09)
 
 
