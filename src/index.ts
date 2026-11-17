@@ -10,7 +10,7 @@ import type {
     PresetFunctions,
     PresetStep,
 } from './types';
-import {BaseState, CombinedPreset, InternalPreset, PresetField} from './types';
+import {BaseState, CombinedPreset, InternalPreset, LazyPreset, PresetField} from './types';
 
 let controllerRef: Controller<object, string, string>;
 
@@ -58,6 +58,12 @@ export function createInternalPreset<T>(preset: T) {
         InferHintParamsFromPreset<T>,
         InferStepsFromPreset<T>
     >;
+}
+
+export function createLazyPreset<HintParams = any, Steps extends string = string>(
+    preset: Omit<LazyPreset<HintParams, Steps>, 'type'>,
+): LazyPreset<HintParams, Steps> {
+    return {type: 'lazy', ...preset};
 }
 
 export function createAsyncPresets<T extends Record<string, PresetField<any, any>>>(presets: T): T {

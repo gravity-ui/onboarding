@@ -45,7 +45,10 @@ export type PresetStep<Steps extends string, HintParams> = {
 export type PresetVisibility = 'visible' | 'initialHidden' | 'alwaysHidden';
 
 export type Preset<HintParams, Steps extends string> =
-    CommonPreset<HintParams, Steps> | CombinedPreset<string> | InternalPreset<HintParams, Steps>;
+    | CommonPreset<HintParams, Steps>
+    | CombinedPreset<string>
+    | InternalPreset<HintParams, Steps>
+    | LazyPreset<HintParams, Steps>;
 
 export type PresetHooks = {
     onBeforeStart?: () => Promise<void> | void;
@@ -79,6 +82,14 @@ export type CombinedPreset<InternalPresets extends string> = {
     hooks?: PresetHooks;
     internalPresets: InternalPresets[];
     pickPreset: () => InternalPresets | Promise<InternalPresets>;
+};
+
+export type LazyPreset<HintParams, Steps extends string> = {
+    type: 'lazy';
+    name: string;
+    visibility?: PresetVisibility;
+    steps: Steps[];
+    load: () => Promise<PresetField<HintParams, Steps>>;
 };
 
 export type UserPreset<Presets extends string> = {
@@ -245,7 +256,12 @@ type AllPresetsMap<T> = SyncPresetsMap<T> & AsyncPresetsMap<T>;
 type PresetValuesOf<T> = AllPresetsMap<T>[keyof AllPresetsMap<T>];
 
 // Use a helper with a naked type parameter so that the `extends` check distributes over the union
-type ExtractStepsFromPresetValue<U> = U extends ContentfulPresets<any, infer Steps> ? Steps : never;
+type ExtractStepsFromPresetValue<U> =
+    U extends ContentfulPresets<any, infer Steps>
+        ? Steps
+        : U extends LazyPreset<any, infer Steps>
+          ? Steps
+          : never;
 type ExtractHintParamsFromPresetValue<U> =
     U extends ContentfulPresets<infer HintParams, any> ? HintParams : never;
 

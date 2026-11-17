@@ -7,6 +7,16 @@ const {useOnboardingStep} = createOnboarding({
                 name: 'Sync',
                 steps: [createStep({slug: 'syncStep', name: '', description: ''})],
             }),
+            lazyPreset: {
+                type: 'lazy' as const,
+                name: 'Lazy',
+                steps: ['lazyStep' as const],
+                load: async () =>
+                    createPreset({
+                        name: 'Lazy loaded',
+                        steps: [createStep({slug: 'lazyStep', name: '', description: ''})],
+                    }),
+            },
         },
         asyncPresets: async () =>
             createAsyncPresets({
@@ -28,6 +38,7 @@ const {useOnboardingStep} = createOnboarding({
 function _typeChecks() {
     useOnboardingStep('syncStep');
     useOnboardingStep('asyncStep');
+    useOnboardingStep('lazyStep');
 
     // @ts-expect-error — unknown slug must fail to compile
     useOnboardingStep('unknownStep');

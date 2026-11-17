@@ -516,3 +516,147 @@ describe('reset progress', function () {
         expect(controller.state.progress?.progressInfoByPromo.coolNewFeature).toBe(undefined);
     });
 });
+
+describe('async preset resolution', function () {
+    const asyncPresetBody = {
+        name: 'Async hidden feature',
+        visibility: 'alwaysHidden' as const,
+        steps: [{slug: 'showAsyncFeature', name: '', description: ''}],
+    };
+
+    const getAsyncData = (opts?: {loader?: () => Promise<any>}) => {
+        const loader = vi.fn(opts?.loader ?? (() => Promise.resolve(asyncPresetBody)));
+
+        const onboardingBase = getOptionsWithPromo({
+            wizardState: 'hidden',
+            availablePresets: ['createProject', 'coolNewFeature', 'asyncHiddenFeature'],
+            activePresets: ['createProject', 'coolNewFeature', 'asyncHiddenFeature'],
+        });
+
+        const onboardingController = new OnboardingController({
+            ...onboardingBase,
+            config: {
+                ...onboardingBase.config,
+                presets: {
+                    ...onboardingBase.config.presets,
+                    asyncHiddenFeature: {
+                        type: 'lazy' as const,
+                        name: 'Async hidden feature',
+                        visibility: 'alwaysHidden' as const,
+                        steps: ['showAsyncFeature'],
+                        load: loader,
+                    },
+                },
+            },
+        } as any);
+
+        const options = {
+            ...testOptions,
+            config: {
+                promoGroups: [
+                    {
+                        slug: 'hintPromos',
+                        conditions: [],
+                        promos: [],
+                    },
+                ],
+            },
+            onboarding: {
+                getInstance: () => onboardingController,
+                groupSlug: 'hintPromos',
+            },
+        };
+
+        return {onboardingController, options, loader};
+    };
+
+    it('lazy preset is auto-injected as a promo on init without loading its body', async function () {
+        const {options, loader} = getAsyncData();
+        const controller = new Controller(options);
+
+        await controller.ensureInit();
+
+        // The lazy-backed promo is auto-discovered and injected — no explicit declaration needed
+        const {promos} = controller.options.config.promoGroups[0];
+        expect(promos).toEqual([
+            {slug: 'coolNewFeature', conditions: []},
+            {slug: 'coolNewFeature2', conditions: []},
+            {slug: 'asyncHiddenFeature', conditions: []},
+        ]);
+
+        // Nothing is loaded at init
+        expect(loader).not.toHaveBeenCalled();
+    });
+
+    it('requestStart activates the lazy-backed promo and loads the body on demand', async function () {
+        const {options, loader} = getAsyncData();
+        const controller = new Controller(options);
+
+        await controller.ensureInit();
+        expect(loader).not.toHaveBeenCalled();
+
+        const started = await controller.requestStart('asyncHiddenFeature');
+
+        expect(started).toBe(true);
+        expect(controller.state.base.activePromo).toBe('asyncHiddenFeature');
+
+        // Activation triggered the on-demand load of exactly this preset's body
+        await waitForNextTick();
+        expect(loader).toHaveBeenCalledTimes(1);
+        expect(
+            (controller.options.onboarding?.getInstance() as any).options.config.presets
+                .asyncHiddenFeature,
+        ).toEqual(asyncPresetBody);
+    });
+
+    it('reaching the lazy preset step shows its hint after the promo activates', async function () {
+        const {options, onboardingController} = getAsyncData();
+        const controller = new Controller(options);
+
+        await controller.ensureInit();
+
+        // Element reached before the preset body is loaded — recorded, but no hint yet
+        await onboardingController.stepElementReached({
+            stepSlug: 'showAsyncFeature',
+            element: getAnchorElement(),
+        });
+        expect(onboardingController.hintStore.state.open).toBe(false);
+
+        // Promo start activates the promo, loads the preset body on demand,
+        // and re-checks reached hints — now the hint can show
+        await controller.requestStart('asyncHiddenFeature');
+        await waitForNextTick();
+
+        expect(controller.state.base.activePromo).toBe('asyncHiddenFeature');
+        expect(onboardingController.hintStore.state.open).toBe(true);
+        expect(onboardingController.hintStore.state.hint?.step.slug).toBe('showAsyncFeature');
+    });
+
+    it('loader is called exactly once across repeated activations', async function () {
+        const {options, loader} = getAsyncData();
+        const controller = new Controller(options);
+
+        await controller.ensureInit();
+        await controller.requestStart('asyncHiddenFeature');
+        await waitForNextTick();
+        await controller.requestStart('asyncHiddenFeature');
+        await waitForNextTick();
+
+        expect(loader).toHaveBeenCalledTimes(1);
+    });
+
+    it('loader failure is logged and no hint is shown', async function () {
+        const {options, onboardingController} = getAsyncData({
+            loader: () => Promise.reject(new Error('offline')),
+        });
+        const controller = new Controller(options);
+
+        await controller.ensureInit();
+        await controller.requestStart('asyncHiddenFeature');
+        await waitForNextTick();
+
+        // Loader failed — the promo stays active but no hint is shown, no crash
+        expect(controller.state.base.activePromo).toBe('asyncHiddenFeature');
+        expect(onboardingController.hintStore.state.open).toBe(false);
+    });
+});
