@@ -1,8 +1,26 @@
 import {Controller} from '../core/controller';
+import type {PromoOptions} from '../core/types';
 import {PromoTabSyncPlugin} from '../plugins/promo-tab-sync-plugin';
 import {testOptions} from './options';
 
-describe('activation gate', () => {
+const INIT_EVENT = 'app:ready';
+
+function makeEventGatedController(overrides: Partial<PromoOptions> = {}) {
+    const opts: PromoOptions = {
+        ...testOptions,
+        config: {
+            ...testOptions.config,
+            init: {initType: 'event', timeout: 3000, event: INIT_EVENT},
+        },
+        ...overrides,
+    } as PromoOptions;
+    return new Controller(opts);
+}
+
+/** Open the gate the way a real consumer would. */
+const openGate = (controller: Controller) => controller.sendEvent(INIT_EVENT);
+
+describe('activation gate (initType: event)', () => {
     beforeEach(() => {
         vi.useFakeTimers();
         localStorage.clear();
@@ -15,27 +33,23 @@ describe('activation gate', () => {
     });
 
     it('keeps requests pending after initialization and resumes in configured priority order', async () => {
-        const controller = new Controller({
-            ...testOptions,
-            config: {...testOptions.config, init: {initType: 'timeout', timeout: 3000}},
-        });
-        controller.pauseActivation();
+        const controller = makeEventGatedController();
         const settled = vi.fn();
         const ordinary = controller.requestStart('boardPoll').then(settled);
         const highPriority = controller.requestStart('hightPoll2').then(settled);
 
-        await vi.advanceTimersByTimeAsync(3000);
-        await controller.ensureInit();
+        await vi.advanceTimersByTimeAsync(0);
 
         expect(controller.getActivePromo()).toBe(null);
         expect(controller.state.base.activeQueue).toEqual(['hightPoll2', 'boardPoll']);
         expect(settled).not.toHaveBeenCalled();
 
-        controller.resumeActivation();
+        await openGate(controller);
         await Promise.all([ordinary, highPriority]);
 
         expect(controller.getActivePromo()).toBe('hightPoll2');
         expect(controller.state.base.activeQueue).toEqual(['boardPoll']);
+        // boardPoll resolved first (registered first), gets false; hightPoll2 gets true.
         expect(settled.mock.calls).toEqual([[false], [true]]);
         expect(controller.state.progress).toEqual(testOptions.progressState);
 
@@ -43,7 +57,7 @@ describe('activation gate', () => {
         expect(controller.getActivePromo()).toBe('boardPoll');
     });
 
-    it('queues all promos from an event while paused and resumes by priority', async () => {
+    it('queues all promos from an event while gated and resumes by priority after the gate opens', async () => {
         const controller = new Controller({
             ...testOptions,
             config: {
@@ -57,11 +71,16 @@ describe('activation gate', () => {
                         ],
                     },
                 ],
+                init: {initType: 'event', timeout: 3000, event: INIT_EVENT},
             },
         });
+
+        await openGate(controller);
         await vi.advanceTimersByTimeAsync(0);
         await controller.requestStart('active');
-        controller.pauseActivation();
+
+        // Re-arm the gate so subsequent requests queue.
+        controller.reinitialize();
 
         const event = controller.sendEvent('pageOpened');
         await vi.advanceTimersByTimeAsync(0);
@@ -70,14 +89,14 @@ describe('activation gate', () => {
         controller.finishPromo('active');
         expect(controller.getActivePromo()).toBe(null);
 
-        controller.resumeActivation();
+        await openGate(controller);
         await event;
 
         expect(controller.getActivePromo()).toBe('high');
         expect(controller.state.base.activeQueue).toEqual(['ordinary']);
     });
 
-    it('starts event timers while paused without waiting for delayed promos', async () => {
+    it('starts event timers while gated without waiting for delayed promos', async () => {
         const controller = new Controller({
             ...testOptions,
             config: {
@@ -90,40 +109,48 @@ describe('activation gate', () => {
                         ],
                     },
                 ],
+                init: {initType: 'event', timeout: 5000, event: INIT_EVENT},
             },
         });
-        controller.pauseActivation();
+
         const event = controller.sendEvent('pageOpened');
         await vi.advanceTimersByTimeAsync(500);
 
-        controller.resumeActivation();
+        await openGate(controller);
         await event;
         expect(controller.getActivePromo()).toBe('immediate');
         expect(controller.state.base.activeQueue).toEqual([]);
 
-        controller.pauseActivation();
+        // Re-arm.
+        controller.reinitialize();
         controller.finishPromo('immediate');
+
         await vi.advanceTimersByTimeAsync(500);
 
         expect(controller.getActivePromo()).toBe(null);
         expect(controller.state.base.activeQueue).toEqual(['delayed']);
-        controller.resumeActivation();
+
+        await openGate(controller);
+        await vi.advanceTimersByTimeAsync(0);
         expect(controller.getActivePromo()).toBe('delayed');
     });
 
-    it('wakes all requests when an activation subscriber throws', async () => {
-        const controller = new Controller(testOptions);
-        controller.pauseActivation();
+    it('wakes all requests when an init event subscriber throws', async () => {
+        const controller = makeEventGatedController();
         const requests = [
             controller.requestStart('boardPoll'),
             controller.requestStart('ganttPoll'),
         ];
         await vi.advanceTimersByTimeAsync(0);
+
         const unsubscribe = controller.subscribe(() => {
             throw new Error('Subscriber failed');
         });
 
-        expect(() => controller.resumeActivation()).toThrow('Subscriber failed');
+        // inside the background init IIFE, but the outer promise still resolves.
+        await openGate(controller);
+        // Let the background work run.
+        await vi.advanceTimersByTimeAsync(0);
         unsubscribe();
 
         await expect(Promise.all(requests)).resolves.toEqual([true, false]);
@@ -131,14 +158,21 @@ describe('activation gate', () => {
         expect(controller.state.base.activeQueue).toEqual(['ganttPoll']);
     });
 
-    it('does not bypass initialization when resumed before its timeout', async () => {
-        const controller = new Controller({
-            ...testOptions,
-            config: {...testOptions.config, init: {initType: 'timeout', timeout: 3000}},
-        });
-        controller.pauseActivation();
+    it('does not bypass the event gate when the init event is sent before the timeout', async () => {
+        const controller = makeEventGatedController();
         const request = controller.requestStart('boardPoll');
-        controller.resumeActivation();
+
+        await vi.advanceTimersByTimeAsync(0);
+        expect(controller.getActivePromo()).toBe(null);
+
+        await openGate(controller);
+        expect(await request).toBe(true);
+        expect(controller.getActivePromo()).toBe('boardPoll');
+    });
+
+    it('activates via timeout fallback when the init event never arrives', async () => {
+        const controller = makeEventGatedController();
+        const request = controller.requestStart('boardPoll');
 
         await vi.advanceTimersByTimeAsync(2999);
         expect(controller.getActivePromo()).toBe(null);
@@ -149,10 +183,9 @@ describe('activation gate', () => {
     });
 
     it.each(['skipPromo', 'finishPromo', 'cancelPromo'] as const)(
-        '%s resolves all invalidated requests without waiting for resume',
+        '%s resolves all invalidated requests when the init event arrives',
         async (action) => {
-            const controller = new Controller(testOptions);
-            controller.pauseActivation();
+            const controller = makeEventGatedController();
             const settled = vi.fn();
             const requests = [
                 controller.requestStart('boardPoll').then(settled),
@@ -161,16 +194,20 @@ describe('activation gate', () => {
             await vi.advanceTimersByTimeAsync(0);
             expect(settled).not.toHaveBeenCalled();
 
+            // Invalidate; callers remain parked until the gate opens
+            // (there is no parking loop anymore).
             controller[action]('boardPoll');
             await vi.advanceTimersByTimeAsync(0);
+            expect(settled).not.toHaveBeenCalled();
+
+            // The init event opens the gate; version-bumped requests return false.
+            await openGate(controller);
+            await Promise.all(requests);
 
             expect(settled.mock.calls).toEqual([[false], [false]]);
             expect(controller.state.base.activeQueue).toEqual([]);
             expect(controller.getActivePromo()).toBe(null);
-            await Promise.all(requests);
 
-            controller.resumeActivation();
-            expect(controller.getActivePromo()).toBe(null);
             if (action === 'skipPromo') {
                 expect(controller.state.progress).toEqual(testOptions.progressState);
             } else {
@@ -180,8 +217,7 @@ describe('activation gate', () => {
     );
 
     it('does not let a skipped waiter revive or cancel a retry of the same slug', async () => {
-        const controller = new Controller(testOptions);
-        controller.pauseActivation();
+        const controller = makeEventGatedController();
         const originalSettled = vi.fn();
         const original = controller.requestStart('boardPoll').then(originalSettled);
         await vi.advanceTimersByTimeAsync(0);
@@ -191,40 +227,20 @@ describe('activation gate', () => {
         const retry = controller.requestStart('boardPoll').then(retrySettled);
         await vi.advanceTimersByTimeAsync(0);
 
-        expect(originalSettled).toHaveBeenCalledExactlyOnceWith(false);
+        // Both callers still parked — the init event is what wakes them.
+        expect(originalSettled).not.toHaveBeenCalled();
         expect(retrySettled).not.toHaveBeenCalled();
         expect(controller.state.base.activeQueue).toEqual(['boardPoll']);
 
-        controller.resumeActivation();
+        await openGate(controller);
         await Promise.all([original, retry]);
 
+        // The original request had its version bumped by skipPromo → returns false.
+        expect(originalSettled).toHaveBeenCalledExactlyOnceWith(false);
+        // The retry request holds the new version → activates normally → returns true.
         expect(retrySettled).toHaveBeenCalledExactlyOnceWith(true);
         expect(controller.getActivePromo()).toBe('boardPoll');
         expect(controller.state.progress).toEqual(testOptions.progressState);
-    });
-
-    it('keeps surviving requests waiting when activation is paused again before waiters resume', async () => {
-        const controller = new Controller(testOptions);
-        controller.pauseActivation();
-        const first = controller.requestStart('boardPoll');
-        const remainingSettled = vi.fn();
-        const remaining = controller.requestStart('ganttPoll').then(remainingSettled);
-        await vi.advanceTimersByTimeAsync(0);
-
-        controller.resumeActivation();
-        controller.pauseActivation();
-        controller.skipPromo('boardPoll');
-        await vi.advanceTimersByTimeAsync(0);
-
-        expect(await first).toBe(false);
-        expect(remainingSettled).not.toHaveBeenCalled();
-        expect(controller.getActivePromo()).toBe(null);
-        expect(controller.state.base.activeQueue).toEqual(['ganttPoll']);
-
-        controller.resumeActivation();
-        await remaining;
-        expect(remainingSettled).toHaveBeenCalledExactlyOnceWith(true);
-        expect(controller.getActivePromo()).toBe('ganttPoll');
     });
 
     it('wakes requests invalidated by tab sync', async () => {
@@ -232,8 +248,14 @@ describe('activation gate', () => {
             stateLSKey: 'activation-gate-progress',
             __UNSTABLE__syncState: true,
         });
-        const controller = new Controller({...testOptions, plugins: [plugin]});
-        controller.pauseActivation();
+        const controller = new Controller({
+            ...testOptions,
+            config: {
+                ...testOptions.config,
+                init: {initType: 'event', timeout: 3000, event: INIT_EVENT},
+            },
+            plugins: [plugin],
+        });
         const finishedElsewhere = vi.fn();
         const removed = controller.requestStart('boardPoll').then(finishedElsewhere);
         await vi.advanceTimersByTimeAsync(0);
@@ -248,29 +270,98 @@ describe('activation gate', () => {
         document.dispatchEvent(new Event('visibilitychange'));
         await vi.advanceTimersByTimeAsync(0);
 
+        // Version bumped by tab-sync, but caller still parked — the gate opens it.
+        expect(finishedElsewhere).not.toHaveBeenCalled();
+
+        await openGate(controller);
+        await removed;
+
         expect(finishedElsewhere).toHaveBeenCalledExactlyOnceWith(false);
         expect(controller.getActivePromo()).toBe(null);
         expect(controller.state.base.activeQueue).toEqual([]);
-
-        controller.resumeActivation();
-        await removed;
-        expect(controller.getActivePromo()).toBe(null);
     });
 
-    it('preserves an active promo and waits for resume after it finishes', async () => {
-        const controller = new Controller(testOptions);
+    it('reinitialize() re-queues surviving promos; active promo is dropped', async () => {
+        const controller = makeEventGatedController();
+        await openGate(controller);
         await vi.advanceTimersByTimeAsync(0);
         await controller.requestStart('boardPoll');
         await controller.requestStart('ganttPoll');
 
-        controller.pauseActivation();
         expect(controller.getActivePromo()).toBe('boardPoll');
-
-        controller.finishPromo('boardPoll');
+        // boardPoll is active; isAbleToRun returns false for 'active' status,
+        // so only ganttPoll (still pending) survives the re-queue.
+        controller.reinitialize();
         expect(controller.getActivePromo()).toBe(null);
         expect(controller.state.base.activeQueue).toEqual(['ganttPoll']);
 
-        controller.resumeActivation();
+        await openGate(controller);
+        await vi.advanceTimersByTimeAsync(0);
         expect(controller.getActivePromo()).toBe('ganttPoll');
+    });
+
+    it('callers parked across reinitialize() resolve rather than hang or throw', async () => {
+        const controller = makeEventGatedController();
+        const settled = vi.fn();
+        const parked = controller.requestStart('boardPoll').then(settled);
+        await vi.advanceTimersByTimeAsync(0);
+
+        // Re-arm before the gate first opens.
+        controller.reinitialize();
+        await vi.advanceTimersByTimeAsync(0);
+
+        // parked caller woke and saw status='idle' → resolved false.
+        expect(settled).toHaveBeenCalledExactlyOnceWith(false);
+        // The promo is still queued; opening the gate activates it.
+        expect(controller.state.base.activeQueue).toEqual(['boardPoll']);
+
+        await openGate(controller);
+        await vi.advanceTimersByTimeAsync(0);
+        expect(controller.getActivePromo()).toBe('boardPoll');
+
+        await parked;
+    });
+
+    it('repeated reinitialize() calls do not hang callers', async () => {
+        const controller = makeEventGatedController();
+        const req1 = controller.requestStart('boardPoll');
+        await vi.advanceTimersByTimeAsync(0);
+
+        controller.reinitialize();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(await req1).toBe(false);
+
+        const req2 = controller.requestStart('boardPoll');
+        await vi.advanceTimersByTimeAsync(0);
+        controller.reinitialize();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(await req2).toBe(false);
+
+        const req3 = controller.requestStart('boardPoll');
+        await openGate(controller);
+        expect(await req3).toBe(true);
+        expect(controller.getActivePromo()).toBe('boardPoll');
+    });
+
+    it('init event name independent from promo triggers: gate opens and promos fire together', async () => {
+        const controller = new Controller({
+            ...testOptions,
+            config: {
+                promoGroups: [
+                    {
+                        slug: 'eventPromos',
+                        promos: [{slug: 'onReadyPromo', trigger: {on: INIT_EVENT}}],
+                    },
+                ],
+                init: {initType: 'event', timeout: 3000, event: INIT_EVENT},
+            },
+        });
+
+        const request = controller.requestStart('onReadyPromo');
+        await vi.advanceTimersByTimeAsync(0);
+
+        await openGate(controller);
+        expect(await request).toBe(true);
+        expect(controller.getActivePromo()).toBe('onReadyPromo');
     });
 });

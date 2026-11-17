@@ -26,6 +26,7 @@ import * as defaultConditionHelpers from './condition/condition-helpers';
 
 import {EventEmitter} from '../../event-emitter';
 import {EventsMap as OnboardingEventsMap} from '../../types';
+import {Controller as OnboardingController} from '../../controller';
 
 type Listener = () => void;
 
@@ -74,9 +75,10 @@ export class Controller {
 
     private status: PromoManagerStatus;
     private initializationPromise?: Promise<void>;
+    private initializationResolve: (() => void) | undefined;
     private startRequestVersions = new Map<PromoSlug, number>();
-    private activationPaused = false;
-    private activationWaiters = new Set<() => void>();
+    private initEventResolve: (() => void) | undefined;
+    private initGeneration = 0;
 
     constructor(options: PromoOptions) {
         this.options = options;
@@ -122,8 +124,10 @@ export class Controller {
         this.conditions = getConditions(options.config.promoGroups);
         this.helpers = getHelpers(options.config.promoGroups);
 
+        this.createInitPromise();
+
+        // For timeout-based init the background cycle starts immediately.
         if (this.options.config.init.initType === 'timeout') {
-            this.initPromise = delay(this.options.config.init.timeout);
             this.ensureInit().catch((error) => {
                 this.logger.error(error);
             });
@@ -171,36 +175,54 @@ export class Controller {
         }
 
         if (!this.initializationPromise) {
-            this.initializationPromise = (async () => {
-                await this.initPromise;
-                this.status = 'initialized';
-                this.events.emit('init', {});
-                this.logger.debug('Initialized');
+            const generation = this.initGeneration;
+            let outerResolve!: () => void;
+            this.initializationPromise = new Promise<void>((resolve) => {
+                outerResolve = resolve;
+            });
+            this.initializationResolve = outerResolve;
 
-                await this.triggerNextPromo();
+            (async () => {
+                try {
+                    await this.initPromise;
+                    if (generation === this.initGeneration) {
+                        this.status = 'initialized';
+                        this.events.emit('init', {});
+                        this.logger.debug('Initialized');
+                        try {
+                            this.triggerNextPromo();
+                        } catch (triggerError) {
+                            this.logger.error(triggerError);
+                        }
+                    }
+                } finally {
+                    if (generation === this.initGeneration) {
+                        outerResolve();
+                    }
+                }
             })();
         }
 
         await this.initializationPromise;
     };
 
-    // Pausing only gates future activation; the active promo and its progress are preserved.
-    pauseActivation = () => {
-        this.activationPaused = true;
-    };
+    reinitialize = () => {
+        this.invalidateBaseState();
 
-    // Pause/resume is an idempotent switch, so callers should coordinate through one owner.
-    resumeActivation = () => {
-        if (!this.activationPaused) {
-            return;
-        }
+        this.initGeneration++;
 
-        this.activationPaused = false;
-        try {
-            this.triggerNextPromo();
-        } finally {
-            this.wakeActivationWaiters();
-        }
+        this.createInitPromise();
+        this.status = 'idle';
+
+        const prevResolve = this.initializationResolve;
+        this.initializationPromise = undefined;
+        this.initializationResolve = undefined;
+
+        this.ensureInit().catch((error) => {
+            this.logger.error(error);
+        });
+
+        prevResolve?.();
     };
 
     requestStart = async (slug: Nullable<PromoSlug>) => {
@@ -232,10 +254,6 @@ export class Controller {
         this.addPromoToActiveQueue(slug);
 
         await this.ensureInit();
-
-        while (this.activationPaused && requestVersion === this.startRequestVersions.get(slug)) {
-            await new Promise<void>((resolve) => this.activationWaiters.add(resolve));
-        }
 
         if (requestVersion !== this.startRequestVersions.get(slug)) {
             return false;
@@ -409,6 +427,11 @@ export class Controller {
     };
 
     sendEvent = async (eventName: string) => {
+        const initOptions = this.options.config.init;
+        if (initOptions?.initType === 'event' && eventName === initOptions.event) {
+            this.initEventResolve?.();
+        }
+
         if (!this.triggersMap[eventName]) {
             return;
         }
@@ -431,7 +454,7 @@ export class Controller {
         await Promise.all(requests);
     };
 
-    protected invalidateBaseState = () => {
+    invalidateBaseState = () => {
         const previousPromos = [this.state.base.activePromo, ...this.state.base.activeQueue];
         const promoToValidate = previousPromos.filter((slug): slug is string => {
             if (!slug) {
@@ -449,6 +472,31 @@ export class Controller {
             }
         });
         this.emitChange();
+    };
+
+    private createInitPromise = () => {
+        const initOptions = this.options.config.init ?? defaultInitOptions;
+
+        if (initOptions.initType === 'timeout') {
+            this.initPromise = delay(initOptions.timeout);
+        } else {
+            let eventFired = false;
+            const eventPromise = new Promise<void>((resolve) => {
+                this.initEventResolve = () => {
+                    eventFired = true;
+                    resolve();
+                };
+            });
+            const fallback = delay(initOptions.timeout).then(() => {
+                if (!eventFired) {
+                    this.logger.debug(
+                        `PromoManager: init() was not called within ${initOptions.timeout}ms — ` +
+                            'activating via timeout fallback.',
+                    );
+                }
+            });
+            this.initPromise = Promise.race([eventPromise, fallback]);
+        }
     };
 
     private checkPromoConditions = (slug: PromoSlug): boolean => {
@@ -516,15 +564,8 @@ export class Controller {
         }
     }
 
-    private wakeActivationWaiters = () => {
-        const waiters = [...this.activationWaiters];
-        this.activationWaiters.clear();
-        waiters.forEach((resolve) => resolve());
-    };
-
     private invalidateStartRequests = (slug: PromoSlug) => {
         this.startRequestVersions.set(slug, (this.startRequestVersions.get(slug) ?? 0) + 1);
-        this.wakeActivationWaiters();
     };
 
     private runWithProgress = (action: () => void) => {
@@ -555,25 +596,40 @@ export class Controller {
         }
     };
 
+    private getOnboardingGroupSlugs = (): string[] => {
+        const {groupSlug} = this.options.onboarding!;
+        return Array.isArray(groupSlug) ? groupSlug : [groupSlug];
+    };
+
     private initOnboardingIntegration = async () => {
         if (!this.options.onboarding) {
             return;
         }
 
         const {getInstance, groupSlug} = this.options.onboarding;
+        const groupSlugs = Array.isArray(groupSlug) ? groupSlug : [groupSlug];
 
-        const promoGroupToIntegrate = this.options.config.promoGroups.find(
-            (group) => group.slug === groupSlug,
+        const promoGroupsToIntegrate = groupSlugs.map((slug) =>
+            this.options.config.promoGroups.find((g) => g.slug === slug),
         );
 
-        if (!promoGroupToIntegrate) {
-            this.logger.error(
-                `Promo gpoup for onboarding integration with slug"${promoGroupToIntegrate}" not found in promo manager config`,
-            );
-            return;
+        for (let i = 0; i < groupSlugs.length; i++) {
+            if (!promoGroupsToIntegrate[i]) {
+                this.logger.error(
+                    `Promo group for onboarding integration with slug "${groupSlugs[i]}" not found in promo manager config`,
+                );
+                return;
+            }
         }
 
         const instance = getInstance();
+
+        const getTargetGroup = (presetKey: string) => {
+            const declared = promoGroupsToIntegrate.find((g) =>
+                g!.promos.some((p) => p.slug === presetKey),
+            );
+            return declared ?? promoGroupsToIntegrate[0]!;
+        };
 
         for (const [presetKey, preset] of Object.entries(instance.options.config.presets)) {
             const shouldInjectPreset =
@@ -581,12 +637,11 @@ export class Controller {
 
             if (shouldInjectPreset) {
                 this.promoPresets.add(presetKey);
-                const hasPromo = promoGroupToIntegrate.promos.some(
-                    (promo) => promo.slug === presetKey,
-                );
+                const targetGroup = getTargetGroup(presetKey);
+                const hasPromo = targetGroup.promos.some((promo) => promo.slug === presetKey);
 
                 if (!hasPromo) {
-                    promoGroupToIntegrate.promos.push({
+                    targetGroup.promos.push({
                         slug: presetKey,
                         conditions: [],
                     });
@@ -597,6 +652,33 @@ export class Controller {
         this.conditions = getConditions(this.options.config.promoGroups);
         this.helpers = getHelpers(this.options.config.promoGroups);
 
+        instance.events.subscribe(
+            'finishPreset',
+            async ({preset}: OnboardingEventsMap['finishPreset']) => {
+                if (this.promoPresets.has(preset)) {
+                    this.finishPromo(preset);
+                }
+            },
+        );
+
+        instance.events.subscribe(
+            'resetPresetProgress',
+            async ({presets}: OnboardingEventsMap['resetPresetProgress']) => {
+                this.resetPromoProgress(presets);
+            },
+        );
+
+        const mode = this.options.onboarding.mode ?? 'hint';
+        if (mode === 'preset') {
+            this.applyPresetModeIntegration(instance);
+        } else {
+            this.applyHintModeIntegration(instance);
+        }
+
+        this.logger.debug('Onboarding integration applied');
+    };
+
+    private applyHintModeIntegration = (instance: OnboardingController<any, any, any>) => {
         instance.events.subscribe(
             'beforeShowHint',
             async ({stepData}: OnboardingEventsMap['beforeShowHint']) => {
@@ -620,29 +702,46 @@ export class Controller {
             },
         );
 
-        instance.events.subscribe(
-            'finishPreset',
-            async ({preset}: OnboardingEventsMap['finishPreset']) => {
-                if (this.promoPresets.has(preset)) {
-                    this.finishPromo(preset);
-                }
-            },
-        );
-
         instance.events.subscribe('closeHint', async ({hint}: OnboardingEventsMap['closeHint']) => {
             if (this.promoPresets.has(hint.preset)) {
                 this.skipPromo(hint.preset);
             }
         });
+    };
 
+    private applyPresetModeIntegration = (instance: OnboardingController<any, any, any>) => {
         instance.events.subscribe(
-            'resetPresetProgress',
-            async ({presets}: OnboardingEventsMap['resetPresetProgress']) => {
-                this.resetPromoProgress(presets);
+            'beforeSuggestPreset',
+            async ({preset}: OnboardingEventsMap['beforeSuggestPreset']) => {
+                if (!this.promoPresets.has(preset)) {
+                    return true;
+                }
+                return this.requestStart(preset);
             },
         );
 
-        this.logger.debug('Onboarding integration applied');
+        instance.events.subscribe(
+            'runPreset',
+            async ({preset}: OnboardingEventsMap['runPreset']) => {
+                if (!this.promoPresets.has(preset)) {
+                    return;
+                }
+                // Fire-and-forget: result doesn't affect the run.
+                this.requestStart(preset).catch((error) => {
+                    this.logger.debug('requestStart error on runPreset', error);
+                });
+            },
+        );
+
+        instance.events.subscribe(
+            'beforeShowHint',
+            async ({stepData}: OnboardingEventsMap['beforeShowHint']) => {
+                if (!this.promoPresets.has(stepData.preset)) {
+                    return true;
+                }
+                return this.getActivePromo() === stepData.preset;
+            },
+        );
     };
 
     private checkConstraints(slug: PromoSlug, group: PromoGroupSlug) {
@@ -721,15 +820,18 @@ export class Controller {
 
         const groupSlug = this.getGroupBySlug(slug);
 
-        if (groupSlug === this.options.onboarding?.groupSlug) {
-            this.options.onboarding.getInstance().checkReachedHints();
+        if (groupSlug && this.options.onboarding) {
+            const onboardingGroupSlugs = this.getOnboardingGroupSlugs();
+            if (onboardingGroupSlugs.includes(groupSlug)) {
+                this.options.onboarding.getInstance().checkReachedHints();
+            }
         }
 
         this.emitChange();
     };
 
     private triggerNextPromo = () => {
-        if (this.activationPaused || this.status !== 'initialized') {
+        if (this.status !== 'initialized') {
             return;
         }
 
