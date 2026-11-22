@@ -17,8 +17,16 @@ import {HintStore} from './hints/hintStore';
 import {Logger, createLogger} from './logger';
 import {createDebounceHandler} from './debounce';
 import {EventEmitter} from './event-emitter';
+import {registerHintCloseCheck, registerHintTransitions} from './internal/hint-transitions';
+import {registerEventGuard} from './internal/event-guards';
 
 type Listener = () => void;
+type HintCheck<Presets> = {
+    id: number;
+    preset?: Presets;
+    element: Element;
+    promise: Promise<void>;
+};
 
 let instanceCounter = 0;
 
@@ -79,6 +87,11 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     saveProgressState: () => void;
 
     private presetsLoadingPromise: Promise<void> | undefined;
+    private pendingStepPasses = new Map<Steps, Set<Promise<void>>>();
+    private pendingStepChecks = new Map<Steps, Set<HintCheck<Presets>>>();
+    private hintCheckId = 0;
+    private invalidatedHintChecks = new Map<Presets, number>();
+    private hintWaiters = new Set<(shownPreset?: Presets) => void>();
 
     constructor(
         options: InitOptions<HintParams, Presets, Steps>,
@@ -128,6 +141,11 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
         instanceCounter++;
 
+        registerHintTransitions(this, {
+            waitForNextHint: this.waitForNextHint,
+            invalidatePendingHints: this.invalidatePendingHints,
+        });
+
         if (this.options.plugins) {
             for (const plugin of this.options.plugins) {
                 plugin.apply({onboarding: this});
@@ -174,43 +192,15 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         };
     };
 
-    passStep = async (stepSlug: Steps) => {
-        if (this.status === 'disabled') {
-            return;
-        }
-
-        await this.ensurePresetsLoaded();
-
-        this.logger.debug('Step passed', stepSlug);
-
-        const preset = this.findAvailablePresetWithStep(stepSlug);
-
-        if (!preset) {
-            return;
-        }
-
-        await this.ensureRunning();
-
-        const step = this.getStepBySlugAndPreset(stepSlug, preset);
-        if (step?.passRestriction === 'afterPrevious') {
-            const nextStepSlug = this.findNextStepForPreset(preset);
-            if (nextStepSlug !== stepSlug) {
-                this.logger.debug(
-                    'Pass restriction passAvailable=afterPrevious for step',
-                    stepSlug,
-                );
-                return;
-            }
-        }
-
-        await this.savePassedStepData(preset, stepSlug, () => {
-            step?.hooks?.onStepPass?.();
-            this.events.emit('stepPass', {preset, step: stepSlug});
-
-            if (step?.passMode !== 'onShowHint') {
-                this.logger.debug('Close hint on step', stepSlug);
-                this.closeHintByUser(undefined, 'stepPassed');
-                this.checkReachedHints();
+    passStep = (stepSlug: Steps) => {
+        const passes = this.pendingStepPasses.get(stepSlug) ?? new Set<Promise<void>>();
+        this.pendingStepPasses.set(stepSlug, passes);
+        const pending = this.processStepPass(stepSlug);
+        passes.add(pending);
+        return pending.finally(() => {
+            passes.delete(pending);
+            if (passes.size === 0) {
+                this.pendingStepPasses.delete(stepSlug);
             }
         });
     };
@@ -239,112 +229,13 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         await this.updateBaseState();
     };
 
-    stepElementReached = async ({
-        stepSlug,
-        element,
-    }: Omit<ReachElementParams<Presets, Steps>, 'preset'>) => {
-        if (this.status === 'disabled') {
-            return;
-        }
+    stepElementReached = (data: Omit<ReachElementParams<Presets, Steps>, 'preset'>) =>
+        this.trackHintCheck(data, (bindPreset) => this.processReachedElement(data, bindPreset));
 
-        await this.ensurePresetsLoaded();
-
-        this.logger.debug('Step element reached', stepSlug, element);
-        this.reachedElements.set(stepSlug, element);
-
-        const preset = this.findActivePresetWithStep(stepSlug);
-
-        if (!preset) {
-            this.logger.debug('Not found active preset for step', stepSlug);
-            return;
-        }
-
-        const stepData = {
-            preset,
-            stepSlug,
-            element,
-        };
-
-        const shouldProcessAppearance = await this.events.emit('stepElementReached', {stepData});
-
-        if (shouldProcessAppearance) {
-            await this.processElementAppearance(stepData);
-        } else {
-            this.logger.debug('Reject process appearance', stepSlug);
-        }
-    };
-
-    processElementAppearance = async (stepData: ReachElementParams<Presets, Steps>) => {
-        const {preset, element, stepSlug} = stepData;
-
-        if (!this.state.base.enabled) {
-            this.logger.debug('Onboarding is not enabled', preset, stepSlug);
-            return;
-        }
-
-        await this.ensureRunning();
-        this.progressLoadedGuard();
-
-        if (this.hintStore.state.hint?.step.slug === stepSlug && this.hintStore.state.open) {
-            this.logger.debug('Updating hint anchor', preset, stepSlug);
-            this.hintStore.updateHintAnchor({element, step: stepSlug});
-        }
-
-        if (this.closedHints.has(stepSlug)) {
-            this.logger.debug('Hint for step was shown and closed', preset, stepSlug);
-            return;
-        }
-
-        if (this.hintStore.state.open) {
-            this.logger.debug('Wait for close current hint', preset, stepSlug);
-            return;
-        }
-
-        const nextStep = this.findNextStepForPreset(preset);
-        if (stepSlug !== nextStep) {
-            this.logger.debug(`Step ${stepSlug} not is next step(${nextStep}). Preset ${preset}`);
-            return;
-        }
-
-        const step = this.getStepBySlugAndPreset(stepSlug, preset);
-
-        if (!step) {
-            this.logger.debug('Unknown step', preset, stepSlug);
-            return;
-        }
-
-        if (!stepData.element.isConnected) {
-            this.logger.debug('Element disappeared', stepData.element, stepSlug);
-            return;
-        }
-
-        const allowRun = await this.events.emit('beforeShowHint', {stepData});
-        if (!allowRun) {
-            this.logger.debug('Show hint has been canceled by beforeShowHint event', stepData);
-            return;
-        }
-
-        // The anchor may be replaced while asynchronous checks are pending.
-        const currentElement = this.reachedElements.get(stepSlug);
-        if (!currentElement?.isConnected) {
-            this.logger.debug('Element disappeared while preparing hint', currentElement, stepSlug);
-            return;
-        }
-
-        if (this.hintStore.state.open) {
-            return;
-        }
-
-        this.logger.debug(`Display hint for step ${stepSlug}`);
-        this.events.emit('showHint', {preset, step: stepSlug});
-
-        this.options.showHint?.({preset, element: currentElement, step});
-        this.hintStore.showHint({preset, element: currentElement, step});
-
-        if (step.passMode === 'onShowHint') {
-            await this.passStep(stepSlug);
-        }
-    };
+    processElementAppearance = (stepData: ReachElementParams<Presets, Steps>) =>
+        this.trackHintCheck(stepData, (bindPreset) =>
+            this.processCurrentElementAppearance(stepData, bindPreset(stepData.preset)),
+        );
 
     stepElementDisappeared = (stepSlug: Steps) => {
         this.logger.debug(`Step element ${stepSlug} disappeared`);
@@ -353,6 +244,9 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         if (step?.closeOnElementUnmount !== false) {
             this.closeHint(stepSlug, 'elementHidden');
+        }
+        for (const listener of this.hintWaiters) {
+            listener();
         }
     };
 
@@ -379,7 +273,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             });
         }
 
-        this.hintStore.closeHint(eventSource);
+        this.closeCurrentHint(eventSource);
         this.checkReachedHints();
     };
 
@@ -702,12 +596,15 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             step?.hooks?.onCloseHint?.({eventSource});
         }
 
-        this.hintStore.closeHint(eventSource);
+        this.closeCurrentHint(eventSource);
     };
 
     emitStateChange = () => {
         this.state = JSON.parse(JSON.stringify(this.state));
 
+        for (const listener of this.hintWaiters) {
+            listener();
+        }
         this.events.emit('stateChange', {state: this.state});
     };
 
@@ -724,6 +621,309 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             this.stepElementReached({stepSlug, element});
         }
     }
+
+    private trackHintCheck = (
+        {stepSlug, element}: Pick<ReachElementParams<Presets, Steps>, 'stepSlug' | 'element'>,
+        run: (bindPreset: (preset: Presets) => () => boolean) => Promise<void>,
+    ) => {
+        const checks = this.pendingStepChecks.get(stepSlug) ?? new Set<HintCheck<Presets>>();
+        this.pendingStepChecks.set(stepSlug, checks);
+        const check: HintCheck<Presets> = {
+            id: ++this.hintCheckId,
+            element,
+            promise: Promise.resolve(),
+        };
+        check.promise = run((preset) => {
+            check.preset = preset;
+            return () => check.id > (this.invalidatedHintChecks.get(preset) ?? 0);
+        });
+        checks.add(check);
+        return check.promise.finally(() => {
+            checks.delete(check);
+            if (checks.size === 0 && this.pendingStepChecks.get(stepSlug) === checks) {
+                this.pendingStepChecks.delete(stepSlug);
+            }
+        });
+    };
+
+    private processCurrentElementAppearance = async (
+        stepData: ReachElementParams<Presets, Steps>,
+        isCurrent: () => boolean,
+    ) => {
+        const {preset, element, stepSlug} = stepData;
+
+        if (!this.state.base.enabled) {
+            this.logger.debug('Onboarding is not enabled', preset, stepSlug);
+            return;
+        }
+
+        await this.ensureRunning();
+        if (!isCurrent()) {
+            return;
+        }
+        this.progressLoadedGuard();
+
+        if (this.hintStore.state.hint?.step.slug === stepSlug && this.hintStore.state.open) {
+            this.logger.debug('Updating hint anchor', preset, stepSlug);
+            this.hintStore.updateHintAnchor({element, step: stepSlug});
+        }
+
+        if (this.closedHints.has(stepSlug)) {
+            this.logger.debug('Hint for step was shown and closed', preset, stepSlug);
+            return;
+        }
+
+        if (this.hintStore.state.open) {
+            this.logger.debug('Wait for close current hint', preset, stepSlug);
+            return;
+        }
+
+        const nextStep = this.findNextStepForPreset(preset);
+        if (stepSlug !== nextStep) {
+            this.logger.debug(`Step ${stepSlug} not is next step(${nextStep}). Preset ${preset}`);
+            return;
+        }
+
+        const step = this.getStepBySlugAndPreset(stepSlug, preset);
+
+        if (!step) {
+            this.logger.debug('Unknown step', preset, stepSlug);
+            return;
+        }
+
+        if (!stepData.element.isConnected) {
+            this.logger.debug('Element disappeared', stepData.element, stepSlug);
+            return;
+        }
+
+        const canShow = () => this.canShowPreparedHint(stepData, isCurrent);
+        const event = {stepData};
+        registerEventGuard(event, canShow);
+        const allowRun = await this.events.emit('beforeShowHint', event);
+        if (!allowRun) {
+            this.logger.debug('Show hint has been canceled by beforeShowHint event', stepData);
+            return;
+        }
+
+        if (!canShow()) {
+            return;
+        }
+
+        // The anchor may be replaced while asynchronous checks are pending.
+        const currentElement = this.reachedElements.get(stepSlug);
+        if (!currentElement?.isConnected) {
+            this.logger.debug('Element disappeared while preparing hint', currentElement, stepSlug);
+            return;
+        }
+
+        this.logger.debug(`Display hint for step ${stepSlug}`);
+        this.events.emit('showHint', {preset, step: stepSlug});
+
+        this.options.showHint?.({preset, element: currentElement, step});
+        // Notify before synchronous show hooks can start waiting for a later hint.
+        for (const listener of this.hintWaiters) {
+            listener(preset);
+        }
+        this.hintStore.showHint({preset, element: currentElement, step});
+
+        if (step.passMode === 'onShowHint') {
+            await this.passStep(stepSlug);
+        }
+    };
+
+    private invalidatePendingHints = (preset: Presets) => {
+        const cutoff = ++this.hintCheckId;
+        this.invalidatedHintChecks.set(preset, cutoff);
+        for (const [step, checks] of this.pendingStepChecks) {
+            for (const check of checks) {
+                if (check.preset === preset) {
+                    checks.delete(check);
+                }
+            }
+            if (checks.size === 0) {
+                this.pendingStepChecks.delete(step);
+            }
+        }
+        for (const listener of this.hintWaiters) {
+            listener();
+        }
+    };
+
+    private waitForNextHint = async (preset: Presets, onUnavailable?: () => void) => {
+        if (this.status === 'disabled') {
+            onUnavailable?.();
+            return;
+        }
+
+        const startedAt = this.hintCheckId;
+        const shownPresets = new Set<string>();
+        let wake: (() => void) | undefined;
+        const waitForChange = () =>
+            new Promise<void>((resolve) => {
+                wake = resolve;
+            });
+        const onChange = (shownPreset?: Presets) => {
+            if (shownPreset !== undefined) {
+                shownPresets.add(shownPreset);
+            }
+            wake?.();
+        };
+        this.hintWaiters.add(onChange);
+        try {
+            // The first await also lets the caller schedule checks after emitting closeHint.
+            await this.ensurePresetsLoaded();
+            await this.ensureRunning();
+            let nextStep = this.findNextStepForPreset(preset);
+            while (nextStep) {
+                if ((this.invalidatedHintChecks.get(preset) ?? 0) > startedAt) {
+                    return;
+                }
+                const changed = waitForChange();
+                // Remember a successful show even if a hook has already closed the hint.
+                if (
+                    shownPresets.has(preset) ||
+                    (this.hintStore.state.open && this.hintStore.state.hint?.preset === preset)
+                ) {
+                    return;
+                }
+                if (!this.state.base.enabled) {
+                    break;
+                }
+                const passes = [...this.pendingStepPasses]
+                    .filter(([step]) => this.findPresetsWithStep(step).includes(preset))
+                    .flatMap(([, pending]) => [...pending]);
+                if (passes.length) {
+                    await Promise.race([Promise.allSettled(passes), changed]);
+                    nextStep = this.findNextStepForPreset(preset);
+                    continue;
+                }
+                const cutoff = this.invalidatedHintChecks.get(preset) ?? 0;
+                const checks = [...(this.pendingStepChecks.get(nextStep) ?? [])].filter(
+                    (check) =>
+                        check.id > cutoff &&
+                        (check.preset === undefined || check.preset === preset),
+                );
+                // A replacement may be registered before processReachedElement updates the map.
+                const hasAnchor =
+                    this.reachedElements.get(nextStep)?.isConnected ||
+                    checks.some((check) => check.preset === undefined && check.element.isConnected);
+                if (!checks.length || !hasAnchor) {
+                    // Release before a later attempt can register and be cancelled with this one.
+                    onUnavailable?.();
+                    return;
+                }
+                await Promise.race([
+                    Promise.allSettled(checks.map((check) => check.promise)),
+                    changed,
+                ]);
+                nextStep = this.findNextStepForPreset(preset);
+            }
+            onUnavailable?.();
+        } finally {
+            this.hintWaiters.delete(onChange);
+        }
+    };
+
+    private isStepPassing = (stepSlug: Steps) =>
+        Boolean(this.pendingStepPasses.get(stepSlug)?.size);
+
+    private closeCurrentHint = (eventSource: HintCloseSource) => {
+        const hint = this.hintStore.state.hint;
+        const hasTransition = () =>
+            Boolean(
+                hint &&
+                (this.isStepPassing(hint.step.slug) ||
+                    (this.state.progress &&
+                        this.findNextStepForPreset(hint.preset) !== hint.step.slug)),
+            );
+        const transitionAtClose = hasTransition();
+        if (hint) {
+            registerHintCloseCheck(hint, () => transitionAtClose || hasTransition());
+        }
+        this.hintStore.closeHint(eventSource);
+    };
+
+    private processStepPass = async (stepSlug: Steps) => {
+        if (this.status === 'disabled') {
+            return;
+        }
+
+        await this.ensurePresetsLoaded();
+
+        this.logger.debug('Step passed', stepSlug);
+
+        const preset = this.findAvailablePresetWithStep(stepSlug);
+
+        if (!preset) {
+            return;
+        }
+
+        await this.ensureRunning();
+
+        const step = this.getStepBySlugAndPreset(stepSlug, preset);
+        if (step?.passRestriction === 'afterPrevious') {
+            const nextStepSlug = this.findNextStepForPreset(preset);
+            if (nextStepSlug !== stepSlug) {
+                this.logger.debug(
+                    'Pass restriction passAvailable=afterPrevious for step',
+                    stepSlug,
+                );
+                return;
+            }
+        }
+
+        await this.savePassedStepData(preset, stepSlug, () => {
+            step?.hooks?.onStepPass?.();
+            this.events.emit('stepPass', {preset, step: stepSlug});
+
+            if (step?.passMode !== 'onShowHint') {
+                this.logger.debug('Close hint on step', stepSlug);
+                this.closeHintByUser(undefined, 'stepPassed');
+                this.checkReachedHints();
+            }
+        });
+    };
+
+    private processReachedElement = async (
+        {stepSlug, element}: Omit<ReachElementParams<Presets, Steps>, 'preset'>,
+        bindPreset: (preset: Presets) => () => boolean,
+    ) => {
+        if (this.status === 'disabled') {
+            return;
+        }
+
+        await this.ensurePresetsLoaded();
+
+        this.logger.debug('Step element reached', stepSlug, element);
+        this.reachedElements.set(stepSlug, element);
+
+        const preset = this.findActivePresetWithStep(stepSlug);
+
+        if (!preset) {
+            this.logger.debug('Not found active preset for step', stepSlug);
+            return;
+        }
+
+        const isCurrent = bindPreset(preset);
+        const stepData = {preset, stepSlug, element};
+        const event = {stepData};
+        registerEventGuard(event, isCurrent);
+        const shouldProcessAppearance = await this.events.emit('stepElementReached', event);
+
+        if (shouldProcessAppearance && isCurrent()) {
+            await this.processCurrentElementAppearance(stepData, isCurrent);
+        } else {
+            this.logger.debug('Reject process appearance', stepSlug);
+        }
+    };
+
+    private canShowPreparedHint = (
+        {preset, stepSlug}: ReachElementParams<Presets, Steps>,
+        isCurrent: () => boolean,
+    ) =>
+        isCurrent() &&
+        !this.hintStore.state.open &&
+        stepSlug === this.findNextStepForPreset(preset);
 
     private resolveOnePreset = (
         presetKey: string,

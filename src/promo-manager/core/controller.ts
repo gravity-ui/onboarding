@@ -1,4 +1,6 @@
 import {createDebounceHandler} from '../../debounce';
+import {getHintTransitions, isHintStepTransition} from '../../internal/hint-transitions';
+import {hasEventGuard, isEventCurrent} from '../../internal/event-guards';
 import {Logger, createLogger} from '../../logger';
 import type {
     PromoBaseState as BaseState,
@@ -525,6 +527,9 @@ export class Controller {
     private invalidateStartRequests = (slug: PromoSlug) => {
         this.startRequestVersions.set(slug, (this.startRequestVersions.get(slug) ?? 0) + 1);
         this.wakeActivationWaiters();
+        if (this.promoPresets.has(slug) && this.options.onboarding) {
+            getHintTransitions(this.options.onboarding.getInstance()).invalidatePendingHints(slug);
+        }
     };
 
     private runWithProgress = (action: () => void) => {
@@ -574,6 +579,7 @@ export class Controller {
         }
 
         const instance = getInstance();
+        const transitions = getHintTransitions(instance);
 
         for (const [presetKey, preset] of Object.entries(instance.options.config.presets)) {
             const shouldInjectPreset =
@@ -597,26 +603,66 @@ export class Controller {
         this.conditions = getConditions(this.options.config.promoGroups);
         this.helpers = getHelpers(this.options.config.promoGroups);
 
+        const releaseVersions = new Map<string, number>();
+        const releasePromoWithoutHint = (
+            preset: string,
+            version = this.startRequestVersions.get(preset),
+            releaseVersion = releaseVersions.get(preset) ?? 0,
+        ) => {
+            transitions.waitForNextHint(preset, () => {
+                if (
+                    version === this.startRequestVersions.get(preset) &&
+                    releaseVersion === (releaseVersions.get(preset) ?? 0) &&
+                    this.state.base.activePromo === preset &&
+                    (!instance.hintStore.state.open ||
+                        instance.hintStore.state.hint?.preset !== preset)
+                ) {
+                    this.skipPromo(preset);
+                }
+            });
+        };
+
         instance.events.subscribe(
             'beforeShowHint',
-            async ({stepData}: OnboardingEventsMap['beforeShowHint']) => {
+            async (event: OnboardingEventsMap['beforeShowHint']) => {
+                const {stepData} = event;
                 if (!this.promoPresets.has(stepData.preset)) {
                     return true;
                 }
 
+                const wasActive = this.state.base.activePromo === stepData.preset;
                 const requestVersion = this.startRequestVersions.get(stepData.preset);
-                const result = await this.requestStart(stepData.preset);
+                const releaseVersion = releaseVersions.get(stepData.preset) ?? 0;
+                await this.requestStart(stepData.preset);
                 // An obsolete hint attempt must not skip a newer run of the same promo.
                 if (requestVersion !== this.startRequestVersions.get(stepData.preset)) {
                     return false;
                 }
 
+                if (!hasEventGuard(event)) {
+                    // A manual renderer owns the slot; earlier automatic checks cannot release it.
+                    releaseVersions.set(
+                        stepData.preset,
+                        (releaseVersions.get(stepData.preset) ?? 0) + 1,
+                    );
+                } else if (!wasActive && this.state.base.activePromo === stepData.preset) {
+                    // Do not await the check containing this handler after acquiring the slot.
+                    releasePromoWithoutHint(stepData.preset, requestVersion, releaseVersion);
+                }
+                if (!isEventCurrent(event)) {
+                    return false;
+                }
+
                 const currentElement = instance.reachedElements.get(stepData.stepSlug);
-                if (!result || !currentElement?.isConnected) {
+                // Another request may have activated this promo after requestStart returned false.
+                if (
+                    this.state.base.activePromo !== stepData.preset ||
+                    !currentElement?.isConnected
+                ) {
                     this.skipPromo(stepData.preset);
                     return false;
                 }
-                return result;
+                return true;
             },
         );
 
@@ -629,11 +675,23 @@ export class Controller {
             },
         );
 
-        instance.events.subscribe('closeHint', async ({hint}: OnboardingEventsMap['closeHint']) => {
-            if (this.promoPresets.has(hint.preset)) {
+        instance.events.subscribe(
+            'closeHint',
+            ({hint, eventSource}: OnboardingEventsMap['closeHint']) => {
+                if (!this.promoPresets.has(hint.preset)) {
+                    return;
+                }
+                if (
+                    eventSource === 'stepPassed' ||
+                    hint.step.passMode === 'onShowHint' ||
+                    isHintStepTransition(hint)
+                ) {
+                    releasePromoWithoutHint(hint.preset);
+                    return;
+                }
                 this.skipPromo(hint.preset);
-            }
-        });
+            },
+        );
 
         instance.events.subscribe(
             'resetPresetProgress',
