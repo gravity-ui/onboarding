@@ -415,6 +415,10 @@ export class Controller {
 
         const requests: Promise<boolean>[] = [];
         for (const promoSlug of this.triggersMap[eventName]) {
+            if (this.promoPresets.has(promoSlug) && this.isTemporaryPreset(promoSlug)) {
+                continue;
+            }
+
             const promo = this.helpers.promoBySlug[promoSlug];
 
             const timeout = promo.trigger?.timeout;
@@ -555,6 +559,11 @@ export class Controller {
         }
     };
 
+    private isTemporaryPreset(slug: PromoSlug) {
+        const preset = this.options.onboarding?.getInstance().options.config.presets[slug];
+        return preset?.type !== 'combined' && preset?.persistence === 'temporary';
+    }
+
     private initOnboardingIntegration = async () => {
         if (!this.options.onboarding) {
             return;
@@ -599,15 +608,22 @@ export class Controller {
 
         instance.events.subscribe(
             'beforeShowHint',
-            async ({stepData}: OnboardingEventsMap['beforeShowHint']) => {
+            async ({stepData, isCurrentRun}: OnboardingEventsMap['beforeShowHint']) => {
                 if (!this.promoPresets.has(stepData.preset)) {
                     return true;
+                }
+
+                if (isCurrentRun?.() === false) {
+                    return false;
                 }
 
                 const requestVersion = this.startRequestVersions.get(stepData.preset);
                 const result = await this.requestStart(stepData.preset);
                 // An obsolete hint attempt must not skip a newer run of the same promo.
-                if (requestVersion !== this.startRequestVersions.get(stepData.preset)) {
+                if (
+                    requestVersion !== this.startRequestVersions.get(stepData.preset) ||
+                    isCurrentRun?.() === false
+                ) {
                     return false;
                 }
 
@@ -629,11 +645,34 @@ export class Controller {
             },
         );
 
-        instance.events.subscribe('closeHint', async ({hint}: OnboardingEventsMap['closeHint']) => {
-            if (this.promoPresets.has(hint.preset)) {
+        instance.events.subscribe(
+            'cancelTemporaryPreset',
+            ({preset}: OnboardingEventsMap['cancelTemporaryPreset']) => {
+                if (this.promoPresets.has(preset)) {
+                    this.skipPromo(preset);
+                }
+            },
+        );
+
+        instance.events.subscribe(
+            'closeHint',
+            ({hint, eventSource}: OnboardingEventsMap['closeHint']) => {
+                if (!this.promoPresets.has(hint.preset)) {
+                    return;
+                }
+
+                if (
+                    this.isTemporaryPreset(hint.preset) &&
+                    (eventSource === 'stepPassed' ||
+                        eventSource === 'interrupted' ||
+                        instance.state.progress?.finishedPresets.includes(hint.preset))
+                ) {
+                    return;
+                }
+
                 this.skipPromo(hint.preset);
-            }
-        });
+            },
+        );
 
         instance.events.subscribe(
             'resetPresetProgress',

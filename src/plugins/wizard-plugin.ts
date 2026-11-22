@@ -58,9 +58,14 @@ export class WizardPlugin implements OnboardingPlugin {
             return;
         }
 
-        this.onboardingInstance?.closeHintByUser();
-
         const currentPreset = this.onboardingInstance?.options.config.presets[preset];
+
+        if (currentPreset.type !== 'combined' && currentPreset.persistence === 'temporary') {
+            return;
+        }
+
+        this.onboardingInstance.closeHintByUser();
+
         const presetVisibility =
             'visibility' in currentPreset ? currentPreset.visibility : undefined;
 
@@ -76,6 +81,10 @@ export class WizardPlugin implements OnboardingPlugin {
 
         const presets = this.onboardingInstance?.options.config.presets;
         const currentPreset = presets[preset];
+
+        if (currentPreset.type !== 'combined' && currentPreset.persistence === 'temporary') {
+            return;
+        }
 
         const presetVisibility =
             'visibility' in currentPreset ? currentPreset.visibility : undefined;

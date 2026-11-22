@@ -11,6 +11,7 @@ import type {
     ProgressState,
     ReachElementParams,
     ResolvedOptions,
+    RunPresetOptions,
     UserPreset,
 } from './types';
 import {HintStore} from './hints/hintStore';
@@ -19,6 +20,11 @@ import {createDebounceHandler} from './debounce';
 import {EventEmitter} from './event-emitter';
 
 type Listener = () => void;
+
+type TemporaryPresetRun<Steps extends string> = {
+    passedSteps: Steps[];
+    detachAbort?: () => void;
+};
 
 let instanceCounter = 0;
 
@@ -79,6 +85,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     saveProgressState: () => void;
 
     private presetsLoadingPromise: Promise<void> | undefined;
+    private temporaryRuns = new Map<Presets, TemporaryPresetRun<Steps>>();
 
     constructor(
         options: InitOptions<HintParams, Presets, Steps>,
@@ -102,8 +109,9 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
 
         this.state = {
-            base: this.fulfillUserBaseState(options.baseState ?? {}),
+            base: {...this.fulfillUserBaseState(options.baseState ?? {})},
         };
+        this.discardStoredTemporaryState();
 
         this.closedHints = new Set();
         this.reachedElements = new Map();
@@ -189,7 +197,13 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
+        const temporaryRun = this.temporaryRuns.get(preset);
+
         await this.ensureRunning();
+
+        if (temporaryRun && this.temporaryRuns.get(preset) !== temporaryRun) {
+            return;
+        }
 
         const step = this.getStepBySlugAndPreset(stepSlug, preset);
         if (step?.passRestriction === 'afterPrevious') {
@@ -207,7 +221,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             step?.hooks?.onStepPass?.();
             this.events.emit('stepPass', {preset, step: stepSlug});
 
-            if (step?.passMode !== 'onShowHint') {
+            if (
+                step?.passMode !== 'onShowHint' &&
+                (!temporaryRun || this.hintStore.state.hint?.preset === preset)
+            ) {
                 this.logger.debug('Close hint on step', stepSlug);
                 this.closeHintByUser(undefined, 'stepPassed');
                 this.checkReachedHints();
@@ -264,10 +281,11 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             stepSlug,
             element,
         };
+        const temporaryRun = this.temporaryRuns.get(preset);
 
         const shouldProcessAppearance = await this.events.emit('stepElementReached', {stepData});
 
-        if (shouldProcessAppearance) {
+        if (shouldProcessAppearance && this.temporaryRuns.get(preset) === temporaryRun) {
             await this.processElementAppearance(stepData);
         } else {
             this.logger.debug('Reject process appearance', stepSlug);
@@ -276,6 +294,14 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
     processElementAppearance = async (stepData: ReachElementParams<Presets, Steps>) => {
         const {preset, element, stepSlug} = stepData;
+        const temporaryRun = this.temporaryRuns.get(preset);
+        const isCurrentRun = temporaryRun
+            ? () => this.temporaryRuns.get(preset) === temporaryRun
+            : undefined;
+
+        if (this.isTemporaryPreset(preset) && !temporaryRun) {
+            return;
+        }
 
         if (!this.state.base.enabled) {
             this.logger.debug('Onboarding is not enabled', preset, stepSlug);
@@ -284,6 +310,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         await this.ensureRunning();
         this.progressLoadedGuard();
+
+        if (isCurrentRun?.() === false) {
+            return;
+        }
 
         if (this.hintStore.state.hint?.step.slug === stepSlug && this.hintStore.state.open) {
             this.logger.debug('Updating hint anchor', preset, stepSlug);
@@ -318,7 +348,15 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
-        const allowRun = await this.events.emit('beforeShowHint', {stepData});
+        const allowRun = await this.events.emit(
+            'beforeShowHint',
+            isCurrentRun ? {stepData, isCurrentRun} : {stepData},
+        );
+
+        if (isCurrentRun?.() === false) {
+            return;
+        }
+
         if (!allowRun) {
             this.logger.debug('Show hint has been canceled by beforeShowHint event', stepData);
             return;
@@ -339,6 +377,11 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.events.emit('showHint', {preset, step: stepSlug});
 
         this.options.showHint?.({preset, element: currentElement, step});
+
+        if (isCurrentRun?.() === false) {
+            return;
+        }
+
         this.hintStore.showHint({preset, element: currentElement, step});
 
         if (step.passMode === 'onShowHint') {
@@ -453,7 +496,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         const presets = this.filterExistedPresets(
             Array.isArray(presetArg) ? presetArg : [presetArg],
-        );
+        ).filter((preset) => !this.isTemporaryPreset(preset));
         this.logger.debug('Add new presets', presets);
 
         for (const preset of presets) {
@@ -482,6 +525,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             await this.ensurePresetsLoaded();
         }
 
+        if (this.isTemporaryPreset(preset)) {
+            return false;
+        }
+
         const allowRun = await this.events.emit('beforeSuggestPreset', {preset});
 
         if (!allowRun) {
@@ -489,71 +536,11 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return false;
         }
 
-        return this.runPreset(preset);
+        return this.startPreset(preset, false);
     };
 
-    runPreset = async (presetToRunSlug: string) => {
-        if (this.status === 'disabled') {
-            return false;
-        }
-
-        await this.ensurePresetsLoaded();
-
-        if (!this.presetExistsGuard(presetToRunSlug)) {
-            return false;
-        }
-
-        const presetToRun = this.options.config.presets[presetToRunSlug];
-        const presetSlug = (
-            presetToRun.type === 'combined' ? await presetToRun.pickPreset() : presetToRunSlug
-        ) as Presets;
-
-        this.logger.debug('Running preset', presetSlug);
-
-        await presetToRun.hooks?.onBeforeStart?.();
-        if (presetSlug !== presetToRunSlug) {
-            await this.options.config.presets[presetSlug].hooks?.onBeforeStart?.();
-        }
-
-        await this.events.emit('beforeRunPreset', {preset: presetSlug});
-
-        if (!this.state.base.availablePresets.includes(presetSlug)) {
-            this.state.base.availablePresets.push(presetSlug);
-        }
-
-        if (this.state.base.activePresets.includes(presetSlug)) {
-            return false;
-        }
-
-        this.state.base.activePresets.push(presetSlug);
-
-        if (!this.state.base.suggestedPresets.includes(presetSlug)) {
-            this.state.base.suggestedPresets.push(presetSlug);
-        }
-
-        await this.closeHint();
-
-        const actualPreset = this.options.config.presets[presetSlug] as CommonPreset<
-            HintParams,
-            Steps
-        >;
-        actualPreset.steps?.forEach(({slug}) => {
-            this.closedHints.delete(slug);
-        });
-
-        this.events.emit('runPreset', {preset: presetSlug});
-        presetToRun.hooks?.onStart?.();
-        if (presetSlug !== presetToRunSlug) {
-            this.options.config.presets[presetSlug].hooks?.onStart?.();
-        }
-
-        this.checkReachedHints();
-
-        await this.updateBaseState();
-        this.logger.debug('Preset ran', presetSlug);
-
-        return true;
-    };
+    runPreset = (preset: string, {signal}: RunPresetOptions = {}) =>
+        this.startPreset(preset, true, signal);
 
     finishPreset = async (presetToFinish: Presets, shouldSave = true) => {
         if (this.status === 'disabled') {
@@ -568,6 +555,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return false;
         }
 
+        const temporaryRun = this.temporaryRuns.get(presetSlug);
+
         await this.ensureRunning();
         this.progressLoadedGuard();
 
@@ -576,9 +565,21 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return true;
         }
 
+        if (
+            this.isTemporaryPreset(presetSlug) &&
+            (!temporaryRun || this.temporaryRuns.get(presetSlug) !== temporaryRun)
+        ) {
+            return false;
+        }
+
         this.logger.debug('Preset finished', presetToFinish);
 
-        this.events.emit('finishPreset', {preset: presetSlug});
+        if (temporaryRun) {
+            this.state.progress.finishedPresets.push(presetSlug);
+            this.completeTemporaryRun(presetSlug, temporaryRun, !shouldSave);
+        } else {
+            this.events.emit('finishPreset', {preset: presetSlug});
+        }
 
         this.options.config.presets[presetToFinish]?.hooks?.onEnd?.();
 
@@ -586,14 +587,18 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             this.options.config.presets[presetSlug].hooks?.onEnd?.();
         }
 
-        this.state.base.activePresets = this.state.base.activePresets.filter(
-            (activePresetSlug) => activePresetSlug !== presetSlug,
-        );
-
-        this.state.progress.finishedPresets?.push(presetSlug);
+        if (!temporaryRun) {
+            this.state.base.activePresets = this.state.base.activePresets.filter(
+                (activePresetSlug) => activePresetSlug !== presetSlug,
+            );
+            this.state.progress.finishedPresets?.push(presetSlug);
+        }
 
         if (shouldSave) {
-            await this.updateBaseState();
+            if (!temporaryRun) {
+                await this.updateBaseState();
+            }
+
             await this.updateProgress();
         }
 
@@ -626,6 +631,11 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         for (const preset of presets) {
             delete this.state.progress.presetPassedSteps[preset];
+            const run = this.temporaryRuns.get(preset);
+
+            if (run) {
+                this.cancelTemporaryRun(preset, run);
+            }
         }
 
         this.state.base.activePresets = this.state.base.activePresets.filter(
@@ -680,6 +690,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     }
 
     async resetToDefaultState() {
+        for (const [preset, run] of this.temporaryRuns) {
+            this.cancelTemporaryRun(preset, run);
+        }
+
         this.state = {
             base: this.fulfillUserBaseState({}),
             progress: getDefaultProgressState(),
@@ -707,6 +721,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
     emitStateChange = () => {
         this.state = JSON.parse(JSON.stringify(this.state));
+        this.discardStoredTemporaryState();
 
         this.events.emit('stateChange', {state: this.state});
     };
@@ -723,6 +738,104 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         for (const [stepSlug, element] of this.reachedElements) {
             this.stepElementReached({stepSlug, element});
         }
+    }
+
+    private async startPreset(
+        presetToRunSlug: string,
+        allowTemporary: boolean,
+        signal?: AbortSignal,
+    ) {
+        if (this.status === 'disabled') {
+            return false;
+        }
+
+        await this.ensurePresetsLoaded();
+
+        if (!this.presetExistsGuard(presetToRunSlug)) {
+            return false;
+        }
+
+        const presetToRun = this.options.config.presets[presetToRunSlug];
+        const presetSlug = (
+            presetToRun.type === 'combined' ? await presetToRun.pickPreset() : presetToRunSlug
+        ) as Presets;
+        const temporary = this.isTemporaryPreset(presetSlug);
+        const canStartTemporaryRun = () =>
+            !signal?.aborted &&
+            !this.temporaryRuns.has(presetSlug) &&
+            !this.state.progress?.finishedPresets.includes(presetSlug);
+
+        if (temporary) {
+            if (!allowTemporary || !canStartTemporaryRun()) {
+                return false;
+            }
+
+            await this.ensureRunning();
+            this.progressLoadedGuard();
+
+            if (!canStartTemporaryRun()) {
+                return false;
+            }
+        }
+
+        this.logger.debug('Running preset', presetSlug);
+
+        await presetToRun.hooks?.onBeforeStart?.();
+        if (presetSlug !== presetToRunSlug) {
+            await this.options.config.presets[presetSlug].hooks?.onBeforeStart?.();
+        }
+
+        await this.events.emit('beforeRunPreset', {preset: presetSlug});
+
+        if (temporary) {
+            if (!canStartTemporaryRun()) {
+                return false;
+            }
+
+            this.startTemporaryRun(presetSlug, signal);
+        } else {
+            if (!this.state.base.availablePresets.includes(presetSlug)) {
+                this.state.base.availablePresets.push(presetSlug);
+            }
+
+            if (this.state.base.activePresets.includes(presetSlug)) {
+                return false;
+            }
+
+            this.state.base.activePresets.push(presetSlug);
+
+            if (!this.state.base.suggestedPresets.includes(presetSlug)) {
+                this.state.base.suggestedPresets.push(presetSlug);
+            }
+
+            await this.closeHint();
+        }
+
+        const actualPreset = this.options.config.presets[presetSlug] as CommonPreset<
+            HintParams,
+            Steps
+        >;
+        actualPreset.steps?.forEach(({slug}) => {
+            this.closedHints.delete(slug);
+        });
+
+        this.events.emit('runPreset', {preset: presetSlug});
+        presetToRun.hooks?.onStart?.();
+        if (presetSlug !== presetToRunSlug) {
+            this.options.config.presets[presetSlug].hooks?.onStart?.();
+        }
+
+        this.checkReachedHints();
+
+        if (temporary) {
+            this.emitStateChange();
+        } else {
+            await this.updateBaseState();
+        }
+
+        this.logger.debug('Preset ran', presetSlug);
+
+        return true;
     }
 
     private resolveOnePreset = (
@@ -824,9 +937,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return undefined;
         }
 
-        const activeInternalPreset = this.state.base.activePresets.find((activePreset) =>
-            preset.internalPresets.includes(activePreset),
-        ) as Presets | undefined;
+        const activeInternalPreset = [
+            ...this.state.base.activePresets,
+            ...this.temporaryRuns.keys(),
+        ].find((slug) => preset.internalPresets.includes(slug)) as Presets | undefined;
 
         const finishedInternalPreset = this.state.progress?.finishedPresets.find((finishedPreset) =>
             preset.internalPresets.includes(finishedPreset),
@@ -840,6 +954,114 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         return presets.filter((slug) => Boolean(this.options.config.presets[slug])) as Presets[];
     };
 
+    private isTemporaryPreset(preset: string) {
+        const config = this.options.config.presets[preset as Presets];
+
+        return config?.type !== 'combined' && config?.persistence === 'temporary';
+    }
+
+    private isActivePreset(preset: Presets) {
+        return this.isTemporaryPreset(preset)
+            ? this.temporaryRuns.has(preset)
+            : this.state.base.activePresets.includes(preset);
+    }
+
+    private startTemporaryRun(preset: Presets, signal?: AbortSignal) {
+        const run: TemporaryPresetRun<Steps> = {passedSteps: []};
+
+        this.temporaryRuns.set(preset, run);
+
+        if (signal) {
+            const abort = () => this.cancelTemporaryRun(preset, run);
+
+            signal.addEventListener('abort', abort, {once: true});
+            run.detachAbort = () => signal.removeEventListener('abort', abort);
+        }
+    }
+
+    private removeTemporaryRun(preset: Presets, run: TemporaryPresetRun<Steps>) {
+        if (this.temporaryRuns.get(preset) !== run) {
+            return false;
+        }
+
+        this.temporaryRuns.delete(preset);
+        run.detachAbort?.();
+
+        return true;
+    }
+
+    private completeTemporaryRun(
+        preset: Presets,
+        run: TemporaryPresetRun<Steps>,
+        autoPassed: boolean,
+    ) {
+        const finish = () => {
+            if (this.removeTemporaryRun(preset, run)) {
+                this.events.emit('finishPreset', {preset});
+                this.checkReachedHints();
+            }
+        };
+        const {hint} = this.hintStore.state;
+
+        if (autoPassed && hint?.preset === preset && hint.step.passMode === 'onShowHint') {
+            const onHide = ({state}: EventsMap['hintDataChanged']) => {
+                if (state.hint?.preset !== preset) {
+                    finish();
+                }
+            };
+            const detachAbort = run.detachAbort;
+
+            this.events.subscribe('hintDataChanged', onHide);
+            run.detachAbort = () => {
+                detachAbort?.();
+                this.events.unsubscribe('hintDataChanged', onHide);
+            };
+            return;
+        }
+
+        if (hint?.preset === preset) {
+            this.closeHint(undefined, 'interrupted');
+        }
+
+        finish();
+    }
+
+    private cancelTemporaryRun(preset: Presets, run: TemporaryPresetRun<Steps>) {
+        if (!this.removeTemporaryRun(preset, run)) {
+            return;
+        }
+
+        if (this.hintStore.state.open && this.hintStore.state.hint?.preset === preset) {
+            this.closeHint(undefined, 'interrupted');
+        }
+
+        if (this.state.progress?.finishedPresets.includes(preset)) {
+            this.events.emit('finishPreset', {preset});
+        } else {
+            this.events.emit('cancelTemporaryPreset', {preset});
+        }
+
+        this.emitStateChange();
+        this.checkReachedHints();
+    }
+
+    private discardStoredTemporaryState() {
+        const {base, progress} = this.state;
+        const isPersistent = (preset: string) => !this.isTemporaryPreset(preset);
+
+        for (const field of ['availablePresets', 'activePresets', 'suggestedPresets'] as const) {
+            base[field] = base[field].filter(isPersistent);
+        }
+
+        if (progress) {
+            for (const preset of Object.keys(progress.presetPassedSteps)) {
+                if (!isPersistent(preset)) {
+                    delete progress.presetPassedSteps[preset];
+                }
+            }
+        }
+    }
+
     private isVisiblePreset = (presetSlug: string) => {
         if (!this.checkPresetExists(presetSlug)) {
             return false;
@@ -847,8 +1069,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         const preset = this.options.config.presets[presetSlug as Presets];
 
-        const isInternal = preset.type === 'internal';
-        if (isInternal) {
+        if (preset.type === 'internal' || this.isTemporaryPreset(presetSlug)) {
             return false;
         }
 
@@ -872,7 +1093,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
 
         const presetSteps = preset.steps.map((step) => step.slug);
-        const passedSteps = this.state.progress.presetPassedSteps[presetSlug] ?? [];
+        const passedSteps = this.getPassedSteps(presetSlug);
 
         if (!presetSteps || !passedSteps) {
             this.logger.debug('Unknown preset', preset);
@@ -884,7 +1105,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
     private findActivePresetWithStep(stepSlug: Steps) {
         const presets = this.findPresetsWithStep(stepSlug).filter((presetName) =>
-            this.state.base.activePresets.includes(presetName),
+            this.isActivePreset(presetName),
         );
 
         if (presets.length > 1) {
@@ -896,15 +1117,15 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
     private findAvailablePresetWithStep(stepSlug: Steps) {
         const presets = this.findPresetsWithStep(stepSlug).filter((presetName) =>
-            this.state.base.availablePresets.includes(presetName),
+            this.isTemporaryPreset(presetName)
+                ? this.temporaryRuns.has(presetName)
+                : this.state.base.availablePresets.includes(presetName),
         );
 
         let targetPreset = presets[0];
         if (presets.length > 1) {
             this.logger.error('More than 1 available preset for step', stepSlug, presets);
-            const activePreset = presets.find((presetName) =>
-                this.state.base.activePresets.includes(presetName),
-            );
+            const activePreset = presets.find((presetName) => this.isActivePreset(presetName));
 
             if (activePreset) {
                 targetPreset = activePreset;
@@ -926,26 +1147,43 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }) as Array<Presets>;
     }
 
+    private getPassedSteps(preset: Presets) {
+        return (
+            this.temporaryRuns.get(preset)?.passedSteps ??
+            this.state.progress?.presetPassedSteps[preset] ??
+            []
+        );
+    }
+
     private async savePassedStepData(preset: Presets, step: Steps, callback?: () => void) {
         this.logger.debug('Save passed step data', preset, step);
 
         this.progressLoadedGuard();
 
-        const passedSteps = this.state.progress.presetPassedSteps[preset] ?? [];
+        const temporaryRun = this.temporaryRuns.get(preset);
+        const passedSteps = this.getPassedSteps(preset);
 
         if (passedSteps.includes(step)) {
             this.logger.debug('Step already passed', preset, step);
             return;
         }
 
-        this.state.progress.presetPassedSteps[preset] = [...passedSteps, step];
+        if (temporaryRun) {
+            temporaryRun.passedSteps.push(step);
+        } else {
+            this.state.progress.presetPassedSteps[preset] = [...passedSteps, step];
+        }
 
         // eslint-disable-next-line callback-return
         callback?.();
 
-        await this.checkAndProcessPresetFinish(preset);
+        const finished = await this.checkAndProcessPresetFinish(preset);
 
-        await this.updateProgress();
+        if (!temporaryRun || finished) {
+            await this.updateProgress();
+        } else {
+            this.emitStateChange();
+        }
     }
 
     private async checkAndProcessPresetFinish(presetSlug: Presets) {
@@ -954,17 +1192,21 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         if (!preset || preset.type === 'combined') {
             // no combined presets here
-            return;
+            return false;
         }
 
         const lastStepSlug = preset.steps[preset.steps.length - 1].slug;
-        const isFinishPreset =
-            this.state.progress?.presetPassedSteps[presetSlug]?.includes(lastStepSlug);
+        if (!this.getPassedSteps(presetSlug).includes(lastStepSlug)) {
+            return false;
+        }
 
-        if (isFinishPreset) {
-            await this.finishPreset(presetSlug, false);
+        const finished = await this.finishPreset(presetSlug, false);
+
+        if (!this.isTemporaryPreset(presetSlug)) {
             await this.updateBaseState();
         }
+
+        return finished;
     }
 
     private async updateProgress() {
@@ -1052,23 +1294,40 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return;
         }
 
+        const temporaryRun = this.temporaryRuns.get(presetSlug);
+
+        if (this.isTemporaryPreset(presetSlug) && !temporaryRun) {
+            return;
+        }
+
         const presetSteps = preset.steps.map((step) => step.slug);
-        const passedSteps = this.state.progress.presetPassedSteps[presetSlug] ?? [];
+        const passedSteps = this.getPassedSteps(presetSlug);
 
         const lastPassedStep = passedSteps[passedSteps.length - 1];
-        const lastPassedStepIndex = presetSteps.findIndex((step) => step === lastPassedStep);
+        const lastPassedStepIndex = presetSteps.indexOf(lastPassedStep as Steps);
 
         if (lastPassedStepIndex === -1) {
             return;
         }
-        this.state.progress.presetPassedSteps[presetSlug] = presetSteps.slice(
-            0,
-            lastPassedStepIndex,
-        );
+        const previousSteps = presetSteps.slice(0, lastPassedStepIndex);
 
-        this.closeHint();
+        if (temporaryRun) {
+            temporaryRun.passedSteps = previousSteps;
+        } else {
+            this.state.progress.presetPassedSteps[presetSlug] = previousSteps;
+        }
+
+        if (!temporaryRun || this.hintStore.state.hint?.preset === presetSlug) {
+            this.closeHint();
+        }
+
         this.closedHints.delete(lastPassedStep as Steps);
         this.checkReachedHints();
-        await this.updateProgress();
+
+        if (temporaryRun) {
+            this.emitStateChange();
+        } else {
+            await this.updateProgress();
+        }
     }
 }

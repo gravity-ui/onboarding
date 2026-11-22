@@ -61,6 +61,12 @@ export class MultiTabSyncPlugin implements OnboardingPlugin {
     };
 
     closeHint = ({hint}: EventsMap['closeHint']) => {
+        const preset = this.onboardingInstance?.options.config.presets[hint.preset];
+
+        if (preset?.type !== 'combined' && preset?.persistence === 'temporary') {
+            return;
+        }
+
         window.localStorage.setItem(this.options.closeHintLSKey, hint.step.slug);
     };
 

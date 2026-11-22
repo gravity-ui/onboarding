@@ -279,6 +279,24 @@ const onboardingOptions = {
 };
 ```
 
+### Temporary presets
+
+Set `persistence: 'temporary'` on a common or internal preset to keep its active run and passed steps in memory. Use `runPreset` to start it explicitly. Temporary presets are omitted from the wizard and cannot be started by `suggestPresetOnce`.
+
+Finishing the run saves the preset in `finishedPresets`. A finished preset can be started again after `resetPresetProgress`. By default, presets use `persistence: 'persistent'`.
+
+For a page-scoped run, pass an abort signal and abort it when leaving the page:
+
+```ts
+const pageLifetime = new AbortController();
+
+await controller.runPreset('pageGuide', {signal: pageLifetime.signal});
+
+pageLifetime.abort();
+```
+
+Aborting an unfinished run clears it without recording completion. For presets managed by the promo manager, the slot is released on completion or abort. A final hint with `passMode: 'onShowHint'` is recorded as complete when shown and keeps its slot until it closes.
+
 ### Combined presets
 
 For combined preset you need to add internal preset to config and specify `pickPreset` function.
@@ -372,7 +390,7 @@ Semantics:
 
 ## Events
 
-You can use event system. Available events: `showHint`, `stepPass`, `addPreset`, `beforeRunPreset`, `runPreset`, `finishPreset`, `beforeSuggestPreset`, `stepElementReached`, `beforeShowHint`, `stateChange`, `hintDataChanged`, `closeHint`, `init`, `wizardStateChange`
+You can use event system. Available events: `showHint`, `stepPass`, `addPreset`, `beforeRunPreset`, `runPreset`, `finishPreset`, `cancelTemporaryPreset`, `beforeSuggestPreset`, `stepElementReached`, `beforeShowHint`, `stateChange`, `hintDataChanged`, `closeHint`, `init`, `wizardStateChange`
 
 ```typescript jsx
 controller.events.subscribe('beforeShowHint', callback);

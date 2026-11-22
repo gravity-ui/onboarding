@@ -483,6 +483,190 @@ describe('promos behavior', function () {
     });
 });
 
+describe('temporary presets', () => {
+    const getTemporaryData = ({
+        beforeShowHint,
+        autoPass = false,
+    }: {beforeShowHint?: () => Promise<boolean>; autoPass?: boolean} = {}) => {
+        const options = getOptionsWithPromo({
+            wizardState: 'hidden',
+            availablePresets: [],
+            activePresets: [],
+            suggestedPresets: [],
+        });
+        const preset = options.config.presets.coolNewFeature;
+        const onboardingController = new OnboardingController({
+            ...options,
+            dateNow: () => new Date(Date.UTC(2025, 0, 1)),
+            hooks: {beforeShowHint},
+            config: {
+                presets: {
+                    ...options.config.presets,
+                    coolNewFeature: {
+                        ...preset,
+                        persistence: 'temporary',
+                        steps: autoPass
+                            ? [{...preset.steps[0], passMode: 'onShowHint'}]
+                            : [
+                                  ...preset.steps,
+                                  {slug: 'showSecondStep', name: '', description: ''},
+                              ],
+                    },
+                },
+            },
+        });
+        const controller = new Controller({
+            ...testOptions,
+            config: {
+                promoGroups: [
+                    {
+                        slug: 'hintPromos',
+                        promos: [
+                            {slug: 'coolNewFeature', trigger: {on: 'enterPage'}},
+                            {slug: 'nextPromo'},
+                        ],
+                    },
+                ],
+            },
+            onboarding: {
+                getInstance: () => onboardingController,
+                groupSlug: 'hintPromos',
+            },
+            dateNow: () => Date.UTC(2025, 0, 1),
+        });
+        const abort = new AbortController();
+
+        return {onboardingController, controller, abort};
+    };
+
+    const startTemporaryPreset = async () => {
+        const {onboardingController, controller, abort} = getTemporaryData();
+
+        await controller.ensureInit();
+        await onboardingController.runPreset('coolNewFeature', {signal: abort.signal});
+        await onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature',
+            element: getAnchorElement(),
+        });
+        expect(controller.getActivePromo()).toBe('coolNewFeature');
+        expect(onboardingController.hintStore.state.open).toBe(true);
+        expect(await controller.requestStart('nextPromo')).toBe(false);
+
+        return {onboardingController, controller, abort};
+    };
+
+    it('does not start a temporary promo from a configured trigger', async () => {
+        const {controller} = getTemporaryData();
+
+        await controller.ensureInit();
+        await controller.sendEvent('enterPage');
+
+        expect(controller.getActivePromo()).toBe(null);
+        expect(controller.state.base.activeQueue).toEqual([]);
+    });
+
+    it('holds the promo slot between steps and releases it on completion', async () => {
+        const {onboardingController, controller} = await startTemporaryPreset();
+
+        await onboardingController.passStep('showCoolFeature');
+        expect(controller.getActivePromo()).toBe('coolNewFeature');
+        expect(controller.state.base.activeQueue).toEqual(['nextPromo']);
+
+        await onboardingController.stepElementReached({
+            stepSlug: 'showSecondStep',
+            element: getAnchorElement(),
+        });
+        expect(onboardingController.hintStore.state.hint?.step.slug).toBe('showSecondStep');
+        await onboardingController.passStep('showSecondStep');
+
+        expect(controller.getActivePromo()).toBe('nextPromo');
+        expect(controller.state.progress?.finishedPromos).toEqual(['coolNewFeature']);
+    });
+
+    it('releases the promo slot without saving progress when aborted between hints', async () => {
+        const {onboardingController, controller, abort} = await startTemporaryPreset();
+
+        await onboardingController.passStep('showCoolFeature');
+        expect(onboardingController.hintStore.state.open).toBe(false);
+        expect(controller.getActivePromo()).toBe('coolNewFeature');
+
+        const cancelled = new Promise<void>((resolve) => {
+            onboardingController.events.subscribe('cancelTemporaryPreset', () => resolve());
+        });
+        abort.abort();
+        await cancelled;
+
+        expect(controller.getActivePromo()).toBe('nextPromo');
+        expect(controller.state.progress?.finishedPromos).toEqual([]);
+        expect(controller.state.progress?.progressInfoByPromo).toEqual({});
+    });
+
+    it.each(['dismissed', 'aborted'] as const)(
+        'saves completion while the final hint is visible and releases the slot when %s',
+        async (action) => {
+            const {onboardingController, controller, abort} = getTemporaryData({autoPass: true});
+
+            await controller.ensureInit();
+            await onboardingController.runPreset('coolNewFeature', {signal: abort.signal});
+            await onboardingController.stepElementReached({
+                stepSlug: 'showCoolFeature',
+                element: getAnchorElement(),
+            });
+            expect(onboardingController.options.onSave.progress).toHaveBeenCalledWith({
+                finishedPresets: ['coolNewFeature'],
+                presetPassedSteps: {},
+            });
+            expect(onboardingController.hintStore.state.open).toBe(true);
+            expect(controller.getActivePromo()).toBe('coolNewFeature');
+            expect(await controller.requestStart('nextPromo')).toBe(false);
+            expect(controller.state.base.activeQueue).toEqual(['nextPromo']);
+
+            if (action === 'dismissed') {
+                onboardingController.closeHintByUser('showCoolFeature');
+            } else {
+                abort.abort();
+            }
+
+            expect(onboardingController.hintStore.state.open).toBe(false);
+            expect(controller.getActivePromo()).toBe('nextPromo');
+            expect(controller.state.progress?.finishedPromos).toEqual(['coolNewFeature']);
+        },
+    );
+
+    it('does not acquire the slot after an earlier hint hook outlives an aborted run', async () => {
+        let notifyHookStarted!: () => void;
+        let resolveHook!: (allow: boolean) => void;
+        const hookStarted = new Promise<void>((resolve) => {
+            notifyHookStarted = resolve;
+        });
+        const hookResult = new Promise<boolean>((resolve) => {
+            resolveHook = resolve;
+        });
+        const {onboardingController, controller, abort} = getTemporaryData({
+            beforeShowHint: () => {
+                notifyHookStarted();
+                return hookResult;
+            },
+        });
+
+        await controller.ensureInit();
+        await onboardingController.runPreset('coolNewFeature', {signal: abort.signal});
+        const appearance = onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature',
+            element: getAnchorElement(),
+        });
+        await hookStarted;
+
+        abort.abort();
+        resolveHook(true);
+        await appearance;
+
+        expect(controller.getActivePromo()).toBe(null);
+        expect(controller.state.base.activeQueue).toEqual([]);
+        expect(onboardingController.hintStore.state.open).toBe(false);
+    });
+});
+
 describe('reset progress', function () {
     it('reset promoManager progress -> erase onboarding presets', async function () {
         const {options, onboardingController} = getData();
