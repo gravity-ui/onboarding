@@ -744,11 +744,28 @@ The preset lifecycle owns the slot:
 | `finishPreset` | `finishPromo` |
 | `resetPresetProgress` | `resetPromoProgress` |
 | `closeHint` | **not subscribed** — slot is held across all steps |
+| promo manager `init` | drain pending suggest retries (see below) |
+
+In preset mode the `promoGroups` config is a **whitelist**: every promo preset
+(`visibility: 'alwaysHidden'`) must be declared in the group's `promos` explicitly.
+Unlike hint mode, presets are **not auto-injected** — an undeclared preset is
+vetoed by `beforeSuggestPreset` and its hints never show. Hint mode (default)
+keeps auto-injection: every non-internal `alwaysHidden` preset is registered as
+a promo with empty conditions.
 
 ```typescript
 const {controller} = createPromoManager({
     config: {
-        promoGroups: [{slug: 'hintPromos', conditions: [ShowOnceForSession()], promos: []}],
+        promoGroups: [{
+            slug: 'hintPromos',
+            conditions: [ShowOnceForSession()],
+            // Preset mode requires explicit declarations — alwaysHidden
+            // presets are not auto-injected here.
+            promos: [
+                {slug: 'coolNewFeature', conditions: []},
+                {slug: 'coolNewFeature2', conditions: []},
+            ],
+        }],
     },
     onboarding: {
         getInstance: () => onboardingController,
@@ -770,6 +787,36 @@ steps: [{
         },
     },
 }]
+```
+
+#### Suggest retry after a veto
+
+A suggest vetoed by `requestStart` (the slot was taken, or promo conditions
+failed) is **not lost**: the attempt is recorded and replayed on every gate
+opening — the initial readiness event, each `reinitialize()` cycle, and the
+timeout fallback. The retry re-enters `suggestPresetOnce`, so:
+
+- the once-guard is never burned by a veto — a later retry or a fresh manual
+  suggest still works;
+- promo conditions are re-evaluated live at retry time — a preset whose
+  context became ineligible stays pending and is retried on the next cycle;
+- product vetoes are final: a `beforeSuggestPreset` listener returning `false`
+  is never retried (only integration-caused failures are recorded).
+
+The retry replays the product's *intent at suggest time*. If page context
+decides whether a preset should be suggested at all, expose it in a
+`beforeSuggestPreset` listener or in promo conditions — both are consulted
+fresh on every retry — or gate retries explicitly:
+
+```typescript
+onboarding: {
+    getInstance: () => onboardingController,
+    groupSlug: 'hintPromos',
+    mode: 'preset',
+    // Evaluated at drain time with current page state.
+    // Return false to drop the pending entry silently.
+    shouldRetrySuggest: (preset) => isSuggestablePage(preset),
+}
 ```
 
 ### Multiple onboarding groups
@@ -820,6 +867,12 @@ logging a debug warning. If the configured event name also matches a promo
 // Re-arms a fresh listener for the configured init event + timeout fallback.
 controller.reinitialize();
 
+// Or preserve the active promo across the re-arm (pause parity) —
+// useful in preset mode, where an in-progress preset cannot re-acquire its slot.
+controller.reinitialize({keepActive: true});
+
 // Open the gate — send the configured event (or let the timeout win).
 controller.sendEvent('app:ready');
 ```
+
+By default the active promo is dropped; pass `{keepActive: true}` to keep it.

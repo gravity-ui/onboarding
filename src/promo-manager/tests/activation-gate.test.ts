@@ -300,6 +300,33 @@ describe('activation gate (initType: event)', () => {
         expect(controller.getActivePromo()).toBe('ganttPoll');
     });
 
+    it('reinitialize({keepActive: true}) preserves the active promo (pause parity)', async () => {
+        const controller = makeEventGatedController();
+        await openGate(controller);
+        await vi.advanceTimersByTimeAsync(0);
+        await controller.requestStart('boardPoll');
+        await controller.requestStart('ganttPoll');
+
+        expect(controller.getActivePromo()).toBe('boardPoll');
+
+        // Re-arm while keeping the active promo.
+        controller.reinitialize({keepActive: true});
+
+        // boardPoll preserved as active; ganttPoll re-queued behind it.
+        expect(controller.getActivePromo()).toBe('boardPoll');
+        expect(controller.state.base.activeQueue).toEqual(['ganttPoll']);
+
+        await openGate(controller);
+        await vi.advanceTimersByTimeAsync(0);
+        // Gate reopened, but the slot is held — ganttPoll stays queued.
+        expect(controller.getActivePromo()).toBe('boardPoll');
+        expect(controller.state.base.activeQueue).toEqual(['ganttPoll']);
+
+        // Finishing the kept promo lets the next one through.
+        controller.finishPromo('boardPoll');
+        expect(controller.getActivePromo()).toBe('ganttPoll');
+    });
+
     it('callers parked across reinitialize() resolve rather than hang or throw', async () => {
         const controller = makeEventGatedController();
         const settled = vi.fn();

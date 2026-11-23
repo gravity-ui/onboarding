@@ -4,6 +4,7 @@ import {testOptions} from './options';
 import {getAnchorElement, getOptionsWithPromo} from '../../tests/utils';
 import {waitForNextTick} from './utils';
 import {PromoPresetsPlugin} from '../../plugins/promo-presets';
+import type {OnboardingIntegrationOptions, PromoOptions} from '../core/types';
 
 const getData = () => {
     const onboardingController = new OnboardingController(
@@ -67,12 +68,67 @@ const getPresetModeData = () => {
     const options = {
         ...testOptions,
         config: {
-            promoGroups: [{slug: 'hintPromos', conditions: [], promos: []}],
+            promoGroups: [
+                {
+                    slug: 'hintPromos',
+                    conditions: [],
+                    promos: [
+                        {slug: 'coolNewFeature', conditions: []},
+                        {slug: 'coolNewFeature2', conditions: []},
+                    ],
+                },
+            ],
         },
         onboarding: {
             getInstance: () => onboardingController,
             groupSlug: 'hintPromos',
             mode: 'preset' as const,
+        },
+    };
+
+    return {onboardingController, options};
+};
+
+const getSuggestRetryData = (
+    promoGroups: PromoOptions['config']['promoGroups'],
+    integrationOverrides: Partial<OnboardingIntegrationOptions> = {},
+) => {
+    const onboardingController = new OnboardingController({
+        config: {
+            presets: {
+                promoFeature: {
+                    name: 'Promo feature',
+                    visibility: 'alwaysHidden' as const,
+                    steps: [{slug: 'showPromoFeature', name: '', description: ''}],
+                },
+            },
+        },
+        baseState: {
+            wizardState: 'hidden' as const,
+            availablePresets: [],
+            activePresets: [],
+            suggestedPresets: [],
+            enabled: true,
+        },
+        getProgressState: async () => ({}),
+        onSave: {state: vi.fn(), progress: vi.fn()},
+        logger: {
+            level: 'error' as const,
+            logger: {debug: () => {}, error: () => {}},
+        },
+    });
+
+    const options = {
+        ...testOptions,
+        config: {
+            promoGroups,
+            init: {initType: 'event' as const, timeout: 3000, event: 'ready'},
+        },
+        onboarding: {
+            getInstance: () => onboardingController,
+            groupSlug: 'hintPromos',
+            mode: 'preset' as const,
+            ...integrationOverrides,
         },
     };
 
@@ -700,6 +756,31 @@ describe('preset mode', function () {
         expect(onboardingController.hintStore.state.open).toBe(false);
     });
 
+    it('alwaysHidden preset without declared promo is vetoed and never suggested', async function () {
+        const {onboardingController, options} = getPresetModeData();
+        // Strip the promo declarations — the preset exists only in the onboarding config.
+        const controller = new Controller({
+            ...options,
+            config: {
+                promoGroups: [{slug: 'hintPromos', conditions: [], promos: []}],
+            },
+        });
+        await controller.ensureInit();
+
+        const result = await onboardingController.suggestPresetOnce('coolNewFeature2');
+
+        expect(result).toBe(false);
+        expect(onboardingController.state.base.suggestedPresets).not.toContain('coolNewFeature2');
+        expect(controller.state.base.activePromo).toBe(null);
+
+        // A reached hint anchor stays suppressed too: the preset never acquired the promo slot.
+        await onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature2',
+            element: getAnchorElement(),
+        });
+        expect(onboardingController.hintStore.state.open).toBe(false);
+    });
+
     it('presets split across two groups with independent conditions', async function () {
         const onboardingController = new OnboardingController({
             config: {
@@ -772,6 +853,85 @@ describe('preset mode', function () {
         expect(groupA?.promos.map((p) => p.slug)).toContain('featureA');
         expect(groupB?.promos.map((p) => p.slug)).toContain('featureB');
     });
+
+    it('reinitialize({keepActive: true}) keeps an in-progress multi-step preset alive', async function () {
+        const onboardingController = new OnboardingController({
+            config: {
+                presets: {
+                    multiStepFeature: {
+                        name: 'Multi-step feature',
+                        visibility: 'alwaysHidden' as const,
+                        steps: [
+                            {slug: 'stepOne', name: '', description: ''},
+                            {slug: 'stepTwo', name: '', description: ''},
+                        ],
+                    },
+                },
+            },
+            baseState: {
+                wizardState: 'hidden' as const,
+                availablePresets: ['multiStepFeature'],
+                activePresets: ['multiStepFeature'],
+                suggestedPresets: [],
+                enabled: true,
+            },
+            getProgressState: async () => ({}),
+            onSave: {state: vi.fn(), progress: vi.fn()},
+            logger: {
+                level: 'error' as const,
+                logger: {debug: () => {}, error: () => {}},
+            },
+            plugins: [new PromoPresetsPlugin()],
+        });
+
+        const controller = new Controller({
+            ...testOptions,
+            config: {
+                promoGroups: [
+                    {
+                        slug: 'hintPromos',
+                        conditions: [],
+                        promos: [{slug: 'multiStepFeature', conditions: []}],
+                    },
+                ],
+            },
+            onboarding: {
+                getInstance: () => onboardingController,
+                groupSlug: 'hintPromos',
+                mode: 'preset',
+            },
+        });
+        await controller.ensureInit();
+
+        // Acquire the promo slot (as beforeSuggestPreset would).
+        await controller.requestStart('multiStepFeature');
+        expect(controller.state.base.activePromo).toBe('multiStepFeature');
+
+        await onboardingController.stepElementReached({
+            stepSlug: 'stepOne',
+            element: getAnchorElement(),
+        });
+        expect(onboardingController.hintStore.state.open).toBe(true);
+        expect(onboardingController.hintStore.state.hint?.step.slug).toBe('stepOne');
+
+        // Pass step one — the preset continues to step two, slot still held.
+        await onboardingController.passStep('stepOne');
+        await waitForNextTick();
+        expect(controller.state.base.activePromo).toBe('multiStepFeature');
+
+        // Re-arm the gate while keeping the active promo.
+        controller.reinitialize({keepActive: true});
+        await waitForNextTick();
+        expect(controller.state.base.activePromo).toBe('multiStepFeature');
+
+        // Step two's hint still shows — the preset did not lose its slot.
+        await onboardingController.stepElementReached({
+            stepSlug: 'stepTwo',
+            element: getAnchorElement(),
+        });
+        expect(onboardingController.hintStore.state.open).toBe(true);
+        expect(onboardingController.hintStore.state.hint?.step.slug).toBe('stepTwo');
+    });
 });
 
 describe('hint mode (default) regression', function () {
@@ -794,5 +954,274 @@ describe('hint mode (default) regression', function () {
         await waitForNextTick();
 
         expect(controller.state.base.activePromo).toBe(null);
+    });
+});
+
+describe('preset mode suggest retry', function () {
+    it('lost-slot veto is retried and recovers after reinitialize + readiness event', async function () {
+        const {onboardingController, options} = getSuggestRetryData([
+            {slug: 'otherPromos', conditions: [], promos: [{slug: 'otherPromo'}]},
+            {slug: 'hintPromos', conditions: [], promos: [{slug: 'promoFeature'}]},
+        ]);
+        const controller = new Controller(options);
+
+        // Open gate #1.
+        await controller.sendEvent('ready');
+        await controller.ensureInit();
+
+        // Hold the slot with an unrelated promo.
+        await controller.requestStart('otherPromo');
+        expect(controller.state.base.activePromo).toBe('otherPromo');
+
+        // Suggest — vetoed because the slot is taken; the slug stays queued.
+        const suggested = await onboardingController.suggestPresetOnce('promoFeature');
+        expect(suggested).toBe(false);
+        expect(onboardingController.state.base.suggestedPresets).not.toContain('promoFeature');
+        expect(controller.state.base.activeQueue).toContain('promoFeature');
+
+        // Context change re-arms the gate; the readiness event opens it again.
+        controller.reinitialize();
+        await controller.sendEvent('ready');
+        await waitForNextTick();
+
+        // The drain re-suggested the preset; the slot was won from the queue.
+        expect(controller.state.base.activePromo).toBe('promoFeature');
+        expect(onboardingController.state.base.suggestedPresets).toContain('promoFeature');
+        expect(onboardingController.state.base.activePresets).toContain('promoFeature');
+
+        // Hints render — the read-only beforeShowHint gate passes now.
+        await onboardingController.stepElementReached({
+            stepSlug: 'showPromoFeature',
+            element: getAnchorElement(),
+        });
+        expect(onboardingController.hintStore.state.open).toBe(true);
+        expect(onboardingController.hintStore.state.hint?.step.slug).toBe('showPromoFeature');
+    });
+
+    it('not-able-to-run veto recovers when conditions flip; stays pending otherwise', async function () {
+        let featureAllowed = false;
+        const {onboardingController, options} = getSuggestRetryData([
+            {
+                slug: 'hintPromos',
+                conditions: [() => featureAllowed],
+                promos: [{slug: 'promoFeature'}],
+            },
+        ]);
+        const controller = new Controller(options);
+
+        await controller.sendEvent('ready');
+        await controller.ensureInit();
+
+        // Conditions fail — vetoed before enqueue.
+        const suggested = await onboardingController.suggestPresetOnce('promoFeature');
+        expect(suggested).toBe(false);
+        expect(onboardingController.state.base.suggestedPresets).not.toContain('promoFeature');
+        expect(controller.state.base.activeQueue).toEqual([]);
+
+        // Still not able — exactly one retry per gate cycle, entry stays pending.
+        controller.reinitialize();
+        await controller.sendEvent('ready');
+        await waitForNextTick();
+        expect(onboardingController.state.base.suggestedPresets).not.toContain('promoFeature');
+        expect(controller.state.base.activePromo).toBe(null);
+
+        // Conditions flip — the next gate cycle recovers.
+        featureAllowed = true;
+        controller.reinitialize();
+        await controller.sendEvent('ready');
+        await waitForNextTick();
+
+        expect(controller.state.base.activePromo).toBe('promoFeature');
+        expect(onboardingController.state.base.suggestedPresets).toContain('promoFeature');
+    });
+
+    it('product veto (requestStart succeeded) is not retried', async function () {
+        const {onboardingController, options} = getSuggestRetryData([
+            {slug: 'hintPromos', conditions: [], promos: [{slug: 'promoFeature'}]},
+        ]);
+        const controller = new Controller(options);
+
+        await controller.sendEvent('ready');
+        await controller.ensureInit();
+
+        // The product vetoes while the integration's requestStart succeeds.
+        onboardingController.events.subscribe('beforeSuggestPreset', () => false);
+
+        const suggested = await onboardingController.suggestPresetOnce('promoFeature');
+        expect(suggested).toBe(false);
+        // requestStart won the slot even though the suggest was vetoed.
+        expect(controller.state.base.activePromo).toBe('promoFeature');
+
+        // Gate cycle: no retry — the product's veto is final.
+        controller.reinitialize();
+        await controller.sendEvent('ready');
+        await waitForNextTick();
+
+        expect(onboardingController.state.base.suggestedPresets).not.toContain('promoFeature');
+        expect(onboardingController.state.base.activePresets).not.toContain('promoFeature');
+    });
+
+    it('product veto on the retry is final — no re-record, no further retries', async function () {
+        const {onboardingController, options} = getSuggestRetryData([
+            {slug: 'otherPromos', conditions: [], promos: [{slug: 'otherPromo'}]},
+            {slug: 'hintPromos', conditions: [], promos: [{slug: 'promoFeature'}]},
+        ]);
+        const controller = new Controller(options);
+
+        await controller.sendEvent('ready');
+        await controller.ensureInit();
+        await controller.requestStart('otherPromo');
+
+        // Integration-caused veto — recorded for retry.
+        await onboardingController.suggestPresetOnce('promoFeature');
+        expect(onboardingController.state.base.suggestedPresets).not.toContain('promoFeature');
+
+        // The product starts vetoing before the retry lands.
+        onboardingController.events.subscribe('beforeSuggestPreset', () => false);
+
+        controller.reinitialize();
+        await controller.sendEvent('ready');
+        await waitForNextTick();
+
+        // The retry ran, the product vetoed it — requestStart had succeeded,
+        // so the entry was not re-recorded.
+        expect(onboardingController.state.base.suggestedPresets).not.toContain('promoFeature');
+        expect(onboardingController.state.base.activePresets).not.toContain('promoFeature');
+
+        // A further gate cycle does not retry again.
+        controller.reinitialize();
+        await controller.sendEvent('ready');
+        await waitForNextTick();
+        expect(onboardingController.state.base.suggestedPresets).not.toContain('promoFeature');
+    });
+
+    it('timeout fallback opens the gate and drains pending suggests', async function () {
+        vi.useFakeTimers();
+        try {
+            const {onboardingController, options} = getSuggestRetryData([
+                {slug: 'otherPromos', conditions: [], promos: [{slug: 'otherPromo'}]},
+                {slug: 'hintPromos', conditions: [], promos: [{slug: 'promoFeature'}]},
+            ]);
+            const controller = new Controller(options);
+
+            // Gate #1 via the readiness event.
+            await controller.sendEvent('ready');
+            await controller.ensureInit();
+            await controller.requestStart('otherPromo');
+            await onboardingController.suggestPresetOnce('promoFeature');
+            expect(onboardingController.state.base.suggestedPresets).not.toContain('promoFeature');
+
+            // Re-arm; let the timeout fallback open gate #2 — no event sent.
+            controller.reinitialize();
+            await vi.advanceTimersByTimeAsync(3000);
+            await vi.advanceTimersByTimeAsync(0);
+
+            expect(controller.state.base.activePromo).toBe('promoFeature');
+            expect(onboardingController.state.base.suggestedPresets).toContain('promoFeature');
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('stale pending entry is a harmless no-op after a direct runPreset', async function () {
+        const {onboardingController, options} = getSuggestRetryData([
+            {slug: 'otherPromos', conditions: [], promos: [{slug: 'otherPromo'}]},
+            {slug: 'hintPromos', conditions: [], promos: [{slug: 'promoFeature'}]},
+        ]);
+        const controller = new Controller(options);
+
+        await controller.sendEvent('ready');
+        await controller.ensureInit();
+        await controller.requestStart('otherPromo');
+
+        // Integration-caused veto — recorded.
+        await onboardingController.suggestPresetOnce('promoFeature');
+        expect(onboardingController.state.base.suggestedPresets).not.toContain('promoFeature');
+
+        // The consumer runs the preset directly — bypasses beforeSuggestPreset,
+        // so the pending entry goes stale.
+        await controller.finishPromo('otherPromo');
+        await onboardingController.runPreset('promoFeature');
+        expect(onboardingController.state.base.suggestedPresets).toContain('promoFeature');
+
+        const runPresetSpy = vi.fn();
+        onboardingController.events.subscribe('runPreset', runPresetSpy);
+
+        // Gate cycle: the drain hits the once-guard, drops the entry, no re-run.
+        controller.reinitialize();
+        await controller.sendEvent('ready');
+        await waitForNextTick();
+
+        expect(runPresetSpy).not.toHaveBeenCalled();
+        expect(onboardingController.state.base.suggestedPresets).toEqual(['promoFeature']);
+    });
+
+    it('context flip after a lost-slot veto: retry vetoed, once-guard not burned, later cycle recovers', async function () {
+        let pageAllowed = true;
+        const {onboardingController, options} = getSuggestRetryData([
+            {slug: 'otherPromos', conditions: [], promos: [{slug: 'otherPromo'}]},
+            {
+                slug: 'hintPromos',
+                conditions: [() => pageAllowed],
+                promos: [{slug: 'promoFeature'}],
+            },
+        ]);
+        const controller = new Controller(options);
+
+        await controller.sendEvent('ready');
+        await controller.ensureInit();
+        await controller.requestStart('otherPromo');
+
+        // Lost-slot veto while the page context still allows the feature.
+        await onboardingController.suggestPresetOnce('promoFeature');
+        expect(controller.state.base.activeQueue).toContain('promoFeature');
+
+        // Page context changes — the feature is no longer eligible.
+        pageAllowed = false;
+        controller.reinitialize();
+        await controller.sendEvent('ready');
+        await waitForNextTick();
+
+        // The retry was vetoed by the fresh condition check; nothing ran or burned.
+        expect(onboardingController.state.base.suggestedPresets).toEqual([]);
+        expect(onboardingController.state.base.activePresets).not.toContain('promoFeature');
+        expect(controller.state.base.activePromo).toBe(null);
+
+        // Context returns — the standing retry recovers on the next cycle.
+        pageAllowed = true;
+        controller.reinitialize();
+        await controller.sendEvent('ready');
+        await waitForNextTick();
+
+        expect(controller.state.base.activePromo).toBe('promoFeature');
+        expect(onboardingController.state.base.suggestedPresets).toContain('promoFeature');
+    });
+
+    it('shouldRetrySuggest=false drops the pending entry without re-suggesting', async function () {
+        const {onboardingController, options} = getSuggestRetryData(
+            [
+                {slug: 'otherPromos', conditions: [], promos: [{slug: 'otherPromo'}]},
+                {slug: 'hintPromos', conditions: [], promos: [{slug: 'promoFeature'}]},
+            ],
+            {shouldRetrySuggest: () => false},
+        );
+        const controller = new Controller(options);
+
+        await controller.sendEvent('ready');
+        await controller.ensureInit();
+        await controller.requestStart('otherPromo');
+
+        await onboardingController.suggestPresetOnce('promoFeature');
+        expect(onboardingController.state.base.suggestedPresets).not.toContain('promoFeature');
+
+        const suggestSpy = vi.spyOn(onboardingController, 'suggestPresetOnce');
+
+        controller.reinitialize();
+        await controller.sendEvent('ready');
+        await waitForNextTick();
+
+        expect(suggestSpy).not.toHaveBeenCalled();
+        expect(onboardingController.state.base.suggestedPresets).not.toContain('promoFeature');
+        suggestSpy.mockRestore();
     });
 });

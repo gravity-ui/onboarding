@@ -206,8 +206,8 @@ export class Controller {
         await this.initializationPromise;
     };
 
-    reinitialize = () => {
-        this.invalidateBaseState();
+    reinitialize = (options?: {keepActive?: boolean}) => {
+        this.invalidateBaseState(options);
 
         this.initGeneration++;
 
@@ -454,10 +454,16 @@ export class Controller {
         await Promise.all(requests);
     };
 
-    invalidateBaseState = () => {
-        const previousPromos = [this.state.base.activePromo, ...this.state.base.activeQueue];
+    invalidateBaseState = (options?: {keepActive?: boolean}) => {
+        const keepActive = options?.keepActive ?? false;
+        const activePromo = this.state.base.activePromo;
+        const previousPromos = [activePromo, ...this.state.base.activeQueue];
+
         const promoToValidate = previousPromos.filter((slug): slug is string => {
             if (!slug) {
+                return false;
+            }
+            if (keepActive && slug === activePromo) {
                 return false;
             }
             return this.isAbleToRun(slug);
@@ -465,9 +471,13 @@ export class Controller {
 
         this.state.base = {activePromo: null, activeQueue: []};
 
+        if (keepActive && activePromo) {
+            this.stateActions.setActivePromo(activePromo);
+        }
+
         promoToValidate.forEach((slug) => this.addPromoToActiveQueue(slug));
         previousPromos.forEach((slug) => {
-            if (slug && !this.isPending(slug)) {
+            if (slug && !(keepActive && slug === activePromo) && !this.isPending(slug)) {
                 this.invalidateStartRequests(slug);
             }
         });
@@ -631,21 +641,30 @@ export class Controller {
             return declared ?? promoGroupsToIntegrate[0]!;
         };
 
+        const mode = this.options.onboarding.mode ?? 'hint';
+
         for (const [presetKey, preset] of Object.entries(instance.options.config.presets)) {
-            const shouldInjectPreset =
+            const isPromoPreset =
                 preset?.type !== 'internal' && preset?.visibility === 'alwaysHidden';
 
-            if (shouldInjectPreset) {
-                this.promoPresets.add(presetKey);
-                const targetGroup = getTargetGroup(presetKey);
-                const hasPromo = targetGroup.promos.some((promo) => promo.slug === presetKey);
+            if (!isPromoPreset) {
+                continue;
+            }
 
-                if (!hasPromo) {
-                    targetGroup.promos.push({
-                        slug: presetKey,
-                        conditions: [],
-                    });
-                }
+            this.promoPresets.add(presetKey);
+
+            if (mode === 'preset') {
+                continue;
+            }
+
+            const targetGroup = getTargetGroup(presetKey);
+            const hasPromo = targetGroup.promos.some((promo) => promo.slug === presetKey);
+
+            if (!hasPromo) {
+                targetGroup.promos.push({
+                    slug: presetKey,
+                    conditions: [],
+                });
             }
         }
 
@@ -655,7 +674,7 @@ export class Controller {
         instance.events.subscribe(
             'finishPreset',
             async ({preset}: OnboardingEventsMap['finishPreset']) => {
-                if (this.promoPresets.has(preset)) {
+                if (this.promoPresets.has(preset) && this.getGroupBySlug(preset)) {
                     this.finishPromo(preset);
                 }
             },
@@ -668,7 +687,6 @@ export class Controller {
             },
         );
 
-        const mode = this.options.onboarding.mode ?? 'hint';
         if (mode === 'preset') {
             this.applyPresetModeIntegration(instance);
         } else {
@@ -710,15 +728,38 @@ export class Controller {
     };
 
     private applyPresetModeIntegration = (instance: OnboardingController<any, any, any>) => {
+        const pendingSuggests = new Set<PromoSlug>();
+        const shouldRetrySuggest = this.options.onboarding?.shouldRetrySuggest ?? (() => true);
+
         instance.events.subscribe(
             'beforeSuggestPreset',
             async ({preset}: OnboardingEventsMap['beforeSuggestPreset']) => {
                 if (!this.promoPresets.has(preset)) {
                     return true;
                 }
-                return this.requestStart(preset);
+                const started = await this.requestStart(preset);
+                if (started) {
+                    pendingSuggests.delete(preset);
+                } else {
+                    pendingSuggests.add(preset);
+                }
+                return started;
             },
         );
+
+        this.events.subscribe('init', () => {
+            for (const preset of [...pendingSuggests]) {
+                pendingSuggests.delete(preset);
+
+                if (!shouldRetrySuggest(preset)) {
+                    continue;
+                }
+
+                instance.suggestPresetOnce(preset).catch((error) => {
+                    this.logger.debug('Suggest retry failed', preset, error);
+                });
+            }
+        });
 
         instance.events.subscribe(
             'runPreset',

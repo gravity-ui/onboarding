@@ -39,6 +39,8 @@ export type OnboardingIntegrationOptions = {
     groupSlug: string | string[];
 
     mode?: OnboardingIntegrationMode;
+
+    shouldRetrySuggest?: (preset: string) => boolean;
 };
 
 export type PromoManagerPlugin = {
