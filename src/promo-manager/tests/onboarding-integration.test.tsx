@@ -486,8 +486,15 @@ describe('promos behavior', function () {
 describe('temporary presets', () => {
     const getTemporaryData = ({
         beforeShowHint,
+        finishPreset,
         autoPass = false,
-    }: {beforeShowHint?: () => Promise<boolean>; autoPass?: boolean} = {}) => {
+        internal = false,
+    }: {
+        beforeShowHint?: () => Promise<boolean>;
+        finishPreset?: () => Promise<void>;
+        autoPass?: boolean;
+        internal?: boolean;
+    } = {}) => {
         const options = getOptionsWithPromo({
             wizardState: 'hidden',
             availablePresets: [],
@@ -498,12 +505,14 @@ describe('temporary presets', () => {
         const onboardingController = new OnboardingController({
             ...options,
             dateNow: () => new Date(Date.UTC(2025, 0, 1)),
-            hooks: {beforeShowHint},
+            plugins: internal ? [] : options.plugins,
+            hooks: {beforeShowHint, finishPreset},
             config: {
                 presets: {
                     ...options.config.presets,
                     coolNewFeature: {
                         ...preset,
+                        ...(internal ? {type: 'internal' as const} : {}),
                         persistence: 'temporary',
                         steps: autoPass
                             ? [{...preset.steps[0], passMode: 'onShowHint'}]
@@ -581,6 +590,158 @@ describe('temporary presets', () => {
 
         expect(controller.getActivePromo()).toBe('nextPromo');
         expect(controller.state.progress?.finishedPromos).toEqual(['coolNewFeature']);
+    });
+
+    it.each([false, true])('clears completion before replay, internal=%s', async (internal) => {
+        const {onboardingController, controller} = getTemporaryData({internal});
+        const saveProgress = vi.fn().mockResolvedValue(undefined);
+
+        if (internal) {
+            onboardingController.events.subscribe('beforeShowHint', ({stepData}) =>
+                controller.requestStart(stepData.preset),
+            );
+            onboardingController.events.subscribe('finishPreset', ({preset}) =>
+                controller.finishPromo(preset),
+            );
+        }
+
+        controller.options.onSave.progress = saveProgress;
+        await controller.ensureInit();
+
+        for (let run = 0; run < 2; run++) {
+            expect(await onboardingController.runPreset('coolNewFeature')).toBe(true);
+            await controller.saveProgress();
+
+            expect(onboardingController.state.progress?.finishedPresets).toEqual([]);
+            expect(controller.state.progress?.finishedPromos).toEqual([]);
+            expect(controller.state.progress?.progressInfoByPromo).toEqual({});
+            await onboardingController.stepElementReached({
+                stepSlug: 'showCoolFeature',
+                element: getAnchorElement(),
+            });
+            expect(onboardingController.hintStore.state.hint?.step.slug).toBe('showCoolFeature');
+            expect(controller.getActivePromo()).toBe('coolNewFeature');
+            await onboardingController.passStep('showCoolFeature');
+            await onboardingController.stepElementReached({
+                stepSlug: 'showSecondStep',
+                element: getAnchorElement(),
+            });
+            await onboardingController.passStep('showSecondStep');
+            await controller.saveProgress();
+
+            expect(onboardingController.state.progress?.finishedPresets).toEqual([
+                'coolNewFeature',
+            ]);
+            expect(controller.state.progress?.finishedPromos).toEqual(['coolNewFeature']);
+            expect(saveProgress).toHaveBeenLastCalledWith({
+                finishedPromos: ['coolNewFeature'],
+                progressInfoByPromo: {
+                    coolNewFeature: {lastCallTime: Date.UTC(2025, 0, 1)},
+                },
+            });
+        }
+    });
+
+    it('settles the old completion event before resetting and starting a replay', async () => {
+        let releaseFinish!: () => void;
+        let notifyFinish!: () => void;
+        const finishing = new Promise<void>((resolve) => {
+            notifyFinish = resolve;
+        });
+        const finishGate = new Promise<void>((resolve) => {
+            releaseFinish = resolve;
+        });
+        const {onboardingController, controller} = getTemporaryData({
+            finishPreset: () => {
+                notifyFinish();
+                return finishGate;
+            },
+        });
+
+        await controller.ensureInit();
+        await onboardingController.runPreset('coolNewFeature');
+        await onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature',
+            element: getAnchorElement(),
+        });
+        await onboardingController.passStep('showCoolFeature');
+        await onboardingController.stepElementReached({
+            stepSlug: 'showSecondStep',
+            element: getAnchorElement(),
+        });
+        await onboardingController.passStep('showSecondStep');
+        await finishing;
+
+        const resetting = vi.fn();
+        onboardingController.events.subscribe('resetPresetProgress', resetting);
+        const replay = onboardingController.runPreset('coolNewFeature');
+
+        await waitForNextTick();
+        expect(resetting).not.toHaveBeenCalled();
+        releaseFinish();
+        expect(await replay).toBe(true);
+        await onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature',
+            element: getAnchorElement(),
+        });
+
+        expect(controller.getActivePromo()).toBe('coolNewFeature');
+        expect(controller.state.progress?.finishedPromos).toEqual([]);
+        expect(onboardingController.hintStore.state.hint?.step.slug).toBe('showCoolFeature');
+    });
+
+    it('waits for cold promo progress and its async reset listeners before starting', async () => {
+        const {onboardingController, options} = getData();
+        const preset = onboardingController.options.config.presets.coolNewFeature;
+
+        if (preset.type !== 'combined') preset.persistence = 'temporary';
+
+        const saved = {
+            finishedPromos: ['coolNewFeature', 'coolNewFeature2'],
+            progressInfoByPromo: {
+                coolNewFeature: {lastCallTime: 1},
+                coolNewFeature2: {lastCallTime: 2},
+            },
+        };
+        const controller = new Controller({
+            ...options,
+            progressState: undefined,
+            getProgressState: async () => saved,
+        });
+        let releaseReset!: () => void;
+        let notifyReset!: () => void;
+        const resetStarted = new Promise<void>((resolve) => {
+            notifyReset = resolve;
+        });
+        const resetGate = new Promise<void>((resolve) => {
+            releaseReset = resolve;
+        });
+
+        onboardingController.events.map.resetPresetProgress = new Set([
+            async () => {
+                notifyReset();
+                await resetGate;
+            },
+            ...onboardingController.events.map.resetPresetProgress,
+        ]);
+
+        const replay = onboardingController.runPreset('coolNewFeature');
+
+        await resetStarted;
+        expect(onboardingController.hintStore.state.open).toBe(false);
+        releaseReset();
+        expect(await replay).toBe(true);
+        await onboardingController.stepElementReached({
+            stepSlug: 'showCoolFeature',
+            element: getAnchorElement(),
+        });
+
+        expect(onboardingController.hintStore.state.hint?.step.slug).toBe('showCoolFeature');
+        expect(controller.getActivePromo()).toBe('coolNewFeature');
+        expect(controller.state.progress).toEqual({
+            finishedPromos: ['coolNewFeature2'],
+            progressInfoByPromo: {coolNewFeature2: {lastCallTime: 2}},
+        });
     });
 
     it('releases the promo slot without saving progress when aborted between hints', async () => {

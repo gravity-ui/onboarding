@@ -86,6 +86,10 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
     private presetsLoadingPromise: Promise<void> | undefined;
     private temporaryRuns = new Map<Presets, TemporaryPresetRun<Steps>>();
+    private presetRunSequence = 0;
+    private temporaryRunRequests = new Map<Presets, number>();
+    private temporaryResets = new Map<Presets, Promise<boolean>>();
+    private temporaryTerminalEvents = new Map<Presets, Promise<boolean>>();
 
     constructor(
         options: InitOptions<HintParams, Presets, Steps>,
@@ -625,33 +629,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             .map((preset) => this.resolvePresetSlug(preset))
             .filter((preset) => Boolean(preset)) as Presets[];
 
-        this.state.progress.finishedPresets = this.state.progress.finishedPresets.filter(
-            (preset) => !presets.includes(preset as Presets),
-        );
-
-        for (const preset of presets) {
-            delete this.state.progress.presetPassedSteps[preset];
-            const run = this.temporaryRuns.get(preset);
-
-            if (run) {
-                this.cancelTemporaryRun(preset, run);
-            }
-        }
-
-        this.state.base.activePresets = this.state.base.activePresets.filter(
-            (preset) => !presets.includes(preset as Presets),
-        );
-
-        if (removeFromSuggested) {
-            this.state.base.suggestedPresets = this.state.base.suggestedPresets.filter(
-                (preset) => !presets.includes(preset as Presets),
-            );
-        }
-
-        this.events.emit('resetPresetProgress', {presets});
-
-        await this.updateBaseState();
-        await this.updateProgress();
+        await this.resetResolvedPresetsProgress(presets, {removeFromSuggested});
         this.logger.debug('Progress reset finished', presetArg);
     };
 
@@ -749,6 +727,8 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             return false;
         }
 
+        const request = ++this.presetRunSequence;
+
         await this.ensurePresetsLoaded();
 
         if (!this.presetExistsGuard(presetToRunSlug)) {
@@ -760,35 +740,34 @@ export class Controller<HintParams, Presets extends string, Steps extends string
             presetToRun.type === 'combined' ? await presetToRun.pickPreset() : presetToRunSlug
         ) as Presets;
         const temporary = this.isTemporaryPreset(presetSlug);
-        const canStartTemporaryRun = () =>
-            !signal?.aborted &&
-            !this.temporaryRuns.has(presetSlug) &&
-            !this.state.progress?.finishedPresets.includes(presetSlug);
+        const canStart = temporary
+            ? await this.prepareTemporaryRunRequest(presetSlug, request, allowTemporary, signal)
+            : () => true;
 
-        if (temporary) {
-            if (!allowTemporary || !canStartTemporaryRun()) {
-                return false;
-            }
-
-            await this.ensureRunning();
-            this.progressLoadedGuard();
-
-            if (!canStartTemporaryRun()) {
-                return false;
-            }
+        if (!canStart || !canStart()) {
+            return false;
         }
 
         this.logger.debug('Running preset', presetSlug);
 
         await presetToRun.hooks?.onBeforeStart?.();
+
+        if (!canStart()) {
+            return false;
+        }
+
         if (presetSlug !== presetToRunSlug) {
             await this.options.config.presets[presetSlug].hooks?.onBeforeStart?.();
+        }
+
+        if (!canStart()) {
+            return false;
         }
 
         await this.events.emit('beforeRunPreset', {preset: presetSlug});
 
         if (temporary) {
-            if (!canStartTemporaryRun()) {
+            if (!(await this.resetTemporaryPreset(presetSlug, canStart)) || !canStart()) {
                 return false;
             }
 
@@ -834,6 +813,112 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         }
 
         this.logger.debug('Preset ran', presetSlug);
+
+        return true;
+    }
+
+    private async prepareTemporaryRunRequest(
+        preset: Presets,
+        request: number,
+        allowTemporary: boolean,
+        signal?: AbortSignal,
+    ) {
+        if (
+            !allowTemporary ||
+            signal?.aborted ||
+            request < (this.temporaryRunRequests.get(preset) ?? 0)
+        ) {
+            return undefined;
+        }
+
+        this.temporaryRunRequests.set(preset, request);
+        await this.ensureRunning();
+        this.progressLoadedGuard();
+
+        const isCurrent = () =>
+            !signal?.aborted && this.temporaryRunRequests.get(preset) === request;
+
+        return isCurrent() ? isCurrent : undefined;
+    }
+
+    private async resetTemporaryPreset(preset: Presets, isCurrent: () => boolean) {
+        await this.temporaryResets.get(preset)?.catch(() => undefined);
+        let terminal = this.temporaryTerminalEvents.get(preset);
+
+        while (terminal) {
+            await terminal.catch(() => undefined);
+            terminal = this.temporaryTerminalEvents.get(preset);
+        }
+
+        if (!isCurrent()) {
+            return false;
+        }
+
+        const reset = this.resetResolvedPresetsProgress([preset], {
+            waitForListeners: true,
+            isCurrent,
+        });
+
+        this.temporaryResets.set(preset, reset);
+
+        try {
+            return (await reset) && isCurrent();
+        } finally {
+            if (this.temporaryResets.get(preset) === reset) {
+                this.temporaryResets.delete(preset);
+            }
+        }
+    }
+
+    private async resetResolvedPresetsProgress(
+        presets: Presets[],
+        {
+            removeFromSuggested = false,
+            waitForListeners = false,
+            isCurrent,
+        }: {
+            removeFromSuggested?: boolean;
+            waitForListeners?: boolean;
+            isCurrent?: () => boolean;
+        } = {},
+    ) {
+        this.progressLoadedGuard();
+
+        if (isCurrent?.() === false) {
+            return false;
+        }
+
+        this.state.progress.finishedPresets = this.state.progress.finishedPresets.filter(
+            (preset) => !presets.includes(preset as Presets),
+        );
+
+        for (const preset of presets) {
+            delete this.state.progress.presetPassedSteps[preset];
+            const run = this.temporaryRuns.get(preset);
+
+            if (run) {
+                const cancellation = this.cancelTemporaryRun(preset, run);
+
+                if (waitForListeners) await cancellation;
+            }
+        }
+
+        this.state.base.activePresets = this.state.base.activePresets.filter(
+            (preset) => !presets.includes(preset as Presets),
+        );
+
+        if (removeFromSuggested) {
+            this.state.base.suggestedPresets = this.state.base.suggestedPresets.filter(
+                (preset) => !presets.includes(preset as Presets),
+            );
+        }
+
+        const reset = this.events.emit('resetPresetProgress', {presets});
+
+        if (waitForListeners) await reset;
+
+        await this.updateBaseState();
+        await this.updateProgress();
 
         return true;
     }
@@ -972,7 +1057,9 @@ export class Controller<HintParams, Presets extends string, Steps extends string
         this.temporaryRuns.set(preset, run);
 
         if (signal) {
-            const abort = () => this.cancelTemporaryRun(preset, run);
+            const abort = () => {
+                this.cancelTemporaryRun(preset, run).catch((error) => this.logger.error(error));
+            };
 
             signal.addEventListener('abort', abort, {once: true});
             run.detachAbort = () => signal.removeEventListener('abort', abort);
@@ -997,7 +1084,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
     ) {
         const finish = () => {
             if (this.removeTemporaryRun(preset, run)) {
-                this.events.emit('finishPreset', {preset});
+                this.emitTemporaryTerminalEvent(preset, 'finishPreset');
                 this.checkReachedHints();
             }
         };
@@ -1028,21 +1115,44 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
     private cancelTemporaryRun(preset: Presets, run: TemporaryPresetRun<Steps>) {
         if (!this.removeTemporaryRun(preset, run)) {
-            return;
+            return Promise.resolve(false);
         }
 
         if (this.hintStore.state.open && this.hintStore.state.hint?.preset === preset) {
             this.closeHint(undefined, 'interrupted');
         }
 
-        if (this.state.progress?.finishedPresets.includes(preset)) {
-            this.events.emit('finishPreset', {preset});
-        } else {
-            this.events.emit('cancelTemporaryPreset', {preset});
-        }
+        const event = this.emitTemporaryTerminalEvent(
+            preset,
+            this.state.progress?.finishedPresets.includes(preset)
+                ? 'finishPreset'
+                : 'cancelTemporaryPreset',
+        );
 
         this.emitStateChange();
         this.checkReachedHints();
+
+        return event;
+    }
+
+    private emitTemporaryTerminalEvent(
+        preset: Presets,
+        type: 'finishPreset' | 'cancelTemporaryPreset',
+    ) {
+        const event = this.events.emit(type, {preset});
+        const cleanup = () => {
+            if (this.temporaryTerminalEvents.get(preset) === event) {
+                this.temporaryTerminalEvents.delete(preset);
+            }
+        };
+
+        this.temporaryTerminalEvents.set(preset, event);
+        event.then(cleanup, (error) => {
+            cleanup();
+            this.logger.error(error);
+        });
+
+        return event;
     }
 
     private discardStoredTemporaryState() {

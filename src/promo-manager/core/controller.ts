@@ -676,9 +676,8 @@ export class Controller {
 
         instance.events.subscribe(
             'resetPresetProgress',
-            async ({presets}: OnboardingEventsMap['resetPresetProgress']) => {
-                this.resetPromoProgress(presets);
-            },
+            ({presets}: OnboardingEventsMap['resetPresetProgress']) =>
+                this.resetPromoProgress(presets),
         );
 
         this.logger.debug('Onboarding integration applied');
@@ -834,12 +833,33 @@ export class Controller {
         this.triggerNextPromo();
     };
 
-    private resetPromoProgress(promoSlugs: PromoSlug[]) {
-        for (const slug of promoSlugs) {
+    private async resetPromoProgress(promoSlugs: PromoSlug[]) {
+        if (promoSlugs.length === 0) {
+            return;
+        }
+
+        if (!this.state.progress) {
+            await this.fetchProgressState();
+        }
+
+        this.assertProgressLoaded();
+        const {finishedPromos, progressInfoByPromo} = this.state.progress;
+        const promosWithProgress = promoSlugs.filter(
+            (slug) =>
+                finishedPromos.includes(slug) ||
+                Object.prototype.hasOwnProperty.call(progressInfoByPromo, slug),
+        );
+
+        if (promosWithProgress.length === 0) {
+            return;
+        }
+
+        for (const slug of promosWithProgress) {
             this.stateActions.deletePromoProgress(slug);
         }
 
         this.emitChange();
+        this.saveProgress();
     }
 
     // eslint-disable-next-line @typescript-eslint/member-ordering

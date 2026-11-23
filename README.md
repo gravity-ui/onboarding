@@ -283,7 +283,7 @@ const onboardingOptions = {
 
 Set `persistence: 'temporary'` on a common or internal preset to keep its active run and passed steps in memory. Use `runPreset` to start it explicitly. Temporary presets are omitted from the wizard and cannot be started by `suggestPresetOnce`.
 
-Finishing the run saves the preset in `finishedPresets`. A finished preset can be started again after `resetPresetProgress`. By default, presets use `persistence: 'persistent'`.
+Finishing the run saves the preset in `finishedPresets`. Each explicit `runPreset` call resets that temporary preset's progress and starts from the first step, including when the previous run is active or complete. By default, presets use `persistence: 'persistent'`.
 
 For a page-scoped run, pass an abort signal and abort it when leaving the page:
 
