@@ -406,6 +406,11 @@ export class Controller {
                 .resetPresetProgress([...this.promoPresets], {removeFromSuggested: true});
         }
 
+        this.state.base = {activePromo: null, activeQueue: []};
+        for (const slug of [...this.startRequestVersions.keys()]) {
+            this.invalidateStartRequests(slug);
+        }
+
         this.emitChange();
         this.saveProgress();
     }
@@ -728,9 +733,6 @@ export class Controller {
     };
 
     private applyPresetModeIntegration = (instance: OnboardingController<any, any, any>) => {
-        const pendingSuggests = new Set<PromoSlug>();
-        const shouldRetrySuggest = this.options.onboarding?.shouldRetrySuggest ?? (() => true);
-
         instance.events.subscribe(
             'beforeSuggestPreset',
             async ({preset}: OnboardingEventsMap['beforeSuggestPreset']) => {
@@ -738,28 +740,28 @@ export class Controller {
                     return true;
                 }
                 const started = await this.requestStart(preset);
-                if (started) {
-                    pendingSuggests.delete(preset);
-                } else {
-                    pendingSuggests.add(preset);
+                if (!started) {
+                    this.skipPromo(preset);
                 }
                 return started;
             },
         );
 
-        this.events.subscribe('init', () => {
-            for (const preset of [...pendingSuggests]) {
-                pendingSuggests.delete(preset);
-
-                if (!shouldRetrySuggest(preset)) {
-                    continue;
+        instance.events.subscribe(
+            'suggestPresetCancelled',
+            async ({preset}: OnboardingEventsMap['suggestPresetCancelled']) => {
+                if (!this.promoPresets.has(preset)) {
+                    return;
                 }
+                const holdsSlot =
+                    this.isActive(preset) || this.state.base.activeQueue.includes(preset);
+                const ranInOnboarding = instance.state.base.activePresets.includes(preset);
 
-                instance.suggestPresetOnce(preset).catch((error) => {
-                    this.logger.debug('Suggest retry failed', preset, error);
-                });
-            }
-        });
+                if (holdsSlot && !ranInOnboarding) {
+                    this.skipPromo(preset);
+                }
+            },
+        );
 
         instance.events.subscribe(
             'runPreset',
@@ -780,7 +782,27 @@ export class Controller {
                 if (!this.promoPresets.has(stepData.preset)) {
                     return true;
                 }
-                return this.getActivePromo() === stepData.preset;
+
+                if (this.getActivePromo() === stepData.preset) {
+                    return true;
+                }
+
+                if (!instance.state.base.activePresets.includes(stepData.preset)) {
+                    return false;
+                }
+
+                const requestVersion = this.startRequestVersions.get(stepData.preset);
+                const result = await this.requestStart(stepData.preset);
+                if (requestVersion !== this.startRequestVersions.get(stepData.preset)) {
+                    return false;
+                }
+
+                const currentElement = instance.reachedElements.get(stepData.stepSlug);
+                if (!result || !currentElement?.isConnected) {
+                    this.skipPromo(stepData.preset);
+                    return false;
+                }
+                return result;
             },
         );
     };

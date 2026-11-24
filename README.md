@@ -738,13 +738,13 @@ The preset lifecycle owns the slot:
 
 | Onboarding event | Promo action |
 |---|---|
-| `beforeSuggestPreset` | `requestStart` — vetoes the suggest if the slot is unavailable |
+| `beforeSuggestPreset` | `requestStart` — vetoes the suggest if the slot is unavailable; a refused suggest releases its queued request (no ghost in the queue) |
+| `suggestPresetCancelled` | releases the slot if it was won before a product veto |
 | `runPreset` | `requestStart` — non-vetoing (manual run always proceeds) |
-| `beforeShowHint` | read-only gate — `true` only while this preset holds the slot |
+| `beforeShowHint` | active gate — re-acquires the slot via `requestStart` when it is not held; `true` when this preset holds it (see below) |
 | `finishPreset` | `finishPromo` |
 | `resetPresetProgress` | `resetPromoProgress` |
 | `closeHint` | **not subscribed** — slot is held across all steps |
-| promo manager `init` | drain pending suggest retries (see below) |
 
 In preset mode the `promoGroups` config is a **whitelist**: every promo preset
 (`visibility: 'alwaysHidden'`) must be declared in the group's `promos` explicitly.
@@ -789,35 +789,26 @@ steps: [{
 }]
 ```
 
-#### Suggest retry after a veto
+#### Reload continuation and suggest lifecycle
 
-A suggest vetoed by `requestStart` (the slot was taken, or promo conditions
-failed) is **not lost**: the attempt is recorded and replayed on every gate
-opening — the initial readiness event, each `reinitialize()` cycle, and the
-timeout fallback. The retry re-enters `suggestPresetOnce`, so:
+A preset that already ran — e.g. restored from persisted base state after a
+page reload — re-acquires the promo slot **on demand**: the first
+`beforeShowHint` (fired when a step element is reached) calls `requestStart`
+against the fresh promo manager, so the scenario continues without a new
+suggest.
 
-- the once-guard is never burned by a veto — a later retry or a fresh manual
-  suggest still works;
-- promo conditions are re-evaluated live at retry time — a preset whose
-  context became ineligible stays pending and is retried on the next cycle;
-- product vetoes are final: a `beforeSuggestPreset` listener returning `false`
-  is never retried (only integration-caused failures are recorded).
+Refused suggests are **not retried** by the library:
 
-The retry replays the product's *intent at suggest time*. If page context
-decides whether a preset should be suggested at all, expose it in a
-`beforeSuggestPreset` listener or in promo conditions — both are consulted
-fresh on every retry — or gate retries explicitly:
+- the once-guard is never burned by a veto — a later manual suggest still works;
+- a suggest vetoed by `requestStart` releases its queued request immediately,
+  so other promos are never blocked by a preset that did not run;
+- a slot won before a product veto (a `beforeSuggestPreset` listener returning
+  `false`) is released when the suggest is cancelled (`suggestPresetCancelled`).
 
-```typescript
-onboarding: {
-    getInstance: () => onboardingController,
-    groupSlug: 'hintPromos',
-    mode: 'preset',
-    // Evaluated at drain time with current page state.
-    // Return false to drop the pending entry silently.
-    shouldRetrySuggest: (preset) => isSuggestablePage(preset),
-}
-```
+If a vetoed suggest should still happen later, call `suggestPresetOnce` again
+from your own trigger — promo conditions and the once-guard are evaluated live
+on every call. Page-context gating belongs in a `beforeSuggestPreset` listener
+or in promo conditions, not only in the trigger callback.
 
 ### Multiple onboarding groups
 
@@ -867,8 +858,9 @@ logging a debug warning. If the configured event name also matches a promo
 // Re-arms a fresh listener for the configured init event + timeout fallback.
 controller.reinitialize();
 
-// Or preserve the active promo across the re-arm (pause parity) —
-// useful in preset mode, where an in-progress preset cannot re-acquire its slot.
+// Or preserve the active promo across the re-arm (pause parity).
+// In preset mode an in-progress preset can re-acquire its slot on the next
+// hint attempt, but keepActive avoids the gap entirely.
 controller.reinitialize({keepActive: true});
 
 // Open the gate — send the configured event (or let the timeout win).

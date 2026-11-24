@@ -486,6 +486,7 @@ export class Controller<HintParams, Presets extends string, Steps extends string
 
         if (!allowRun) {
             this.logger.debug('Preset suggestion cancelled', preset);
+            await this.events.emit('suggestPresetCancelled', {preset});
             return false;
         }
 
