@@ -415,7 +415,7 @@ export class Controller {
 
         const requests: Promise<boolean>[] = [];
         for (const promoSlug of this.triggersMap[eventName]) {
-            if (this.promoPresets.has(promoSlug) && this.isTemporaryPreset(promoSlug)) {
+            if (this.options.onboarding?.getInstance().isTemporaryPreset(promoSlug)) {
                 continue;
             }
 
@@ -559,11 +559,6 @@ export class Controller {
         }
     };
 
-    private isTemporaryPreset(slug: PromoSlug) {
-        const preset = this.options.onboarding?.getInstance().options.config.presets[slug];
-        return preset?.type !== 'combined' && preset?.persistence === 'temporary';
-    }
-
     private initOnboardingIntegration = async () => {
         if (!this.options.onboarding) {
             return;
@@ -608,22 +603,15 @@ export class Controller {
 
         instance.events.subscribe(
             'beforeShowHint',
-            async ({stepData, isCurrentRun}: OnboardingEventsMap['beforeShowHint']) => {
+            async ({stepData}: OnboardingEventsMap['beforeShowHint']) => {
                 if (!this.promoPresets.has(stepData.preset)) {
                     return true;
-                }
-
-                if (isCurrentRun?.() === false) {
-                    return false;
                 }
 
                 const requestVersion = this.startRequestVersions.get(stepData.preset);
                 const result = await this.requestStart(stepData.preset);
                 // An obsolete hint attempt must not skip a newer run of the same promo.
-                if (
-                    requestVersion !== this.startRequestVersions.get(stepData.preset) ||
-                    isCurrentRun?.() === false
-                ) {
+                if (requestVersion !== this.startRequestVersions.get(stepData.preset)) {
                     return false;
                 }
 
@@ -636,18 +624,30 @@ export class Controller {
             },
         );
 
+        let finishedVisiblePromo: string | undefined;
+
         instance.events.subscribe(
             'finishPreset',
-            async ({preset}: OnboardingEventsMap['finishPreset']) => {
-                if (this.promoPresets.has(preset)) {
+            ({preset}: OnboardingEventsMap['finishPreset']) => {
+                if (!this.promoPresets.has(preset)) return;
+
+                const {hint} = instance.hintStore.state;
+
+                if (
+                    instance.isTemporaryPreset(preset) &&
+                    hint?.preset === preset &&
+                    hint.step.passMode === 'onShowHint'
+                ) {
+                    finishedVisiblePromo = preset;
+                } else {
                     this.finishPromo(preset);
                 }
             },
         );
 
         instance.events.subscribe(
-            'cancelTemporaryPreset',
-            ({preset}: OnboardingEventsMap['cancelTemporaryPreset']) => {
+            'cancelPreset',
+            ({preset}: OnboardingEventsMap['cancelPreset']) => {
                 if (this.promoPresets.has(preset)) {
                     this.skipPromo(preset);
                 }
@@ -661,16 +661,15 @@ export class Controller {
                     return;
                 }
 
-                if (
-                    this.isTemporaryPreset(hint.preset) &&
-                    (eventSource === 'stepPassed' ||
-                        eventSource === 'interrupted' ||
-                        instance.state.progress?.finishedPresets.includes(hint.preset))
+                if (finishedVisiblePromo === hint.preset) {
+                    finishedVisiblePromo = undefined;
+                    this.finishPromo(hint.preset);
+                } else if (
+                    !instance.isTemporaryPreset(hint.preset) ||
+                    (eventSource !== 'stepPassed' && eventSource !== 'interrupted')
                 ) {
-                    return;
+                    this.skipPromo(hint.preset);
                 }
-
-                this.skipPromo(hint.preset);
             },
         );
 

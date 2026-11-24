@@ -545,7 +545,7 @@ describe('temporary presets', () => {
         });
         const abort = new AbortController();
 
-        return {onboardingController, controller, abort};
+        return {onboardingController, controller, abort, onSave: options.onSave};
     };
 
     const startTemporaryPreset = async () => {
@@ -752,7 +752,7 @@ describe('temporary presets', () => {
         expect(controller.getActivePromo()).toBe('coolNewFeature');
 
         const cancelled = new Promise<void>((resolve) => {
-            onboardingController.events.subscribe('cancelTemporaryPreset', () => resolve());
+            onboardingController.events.subscribe('cancelPreset', () => resolve());
         });
         abort.abort();
         await cancelled;
@@ -765,19 +765,24 @@ describe('temporary presets', () => {
     it.each(['dismissed', 'aborted'] as const)(
         'saves completion while the final hint is visible and releases the slot when %s',
         async (action) => {
-            const {onboardingController, controller, abort} = getTemporaryData({autoPass: true});
+            const {onboardingController, controller, abort, onSave} = getTemporaryData({
+                autoPass: true,
+            });
+            const finished = vi.fn();
 
+            onboardingController.events.subscribe('finishPreset', finished);
             await controller.ensureInit();
             await onboardingController.runPreset('coolNewFeature', {signal: abort.signal});
             await onboardingController.stepElementReached({
                 stepSlug: 'showCoolFeature',
                 element: getAnchorElement(),
             });
-            expect(onboardingController.options.onSave.progress).toHaveBeenCalledWith({
+            expect(onSave.progress).toHaveBeenCalledWith({
                 finishedPresets: ['coolNewFeature'],
                 presetPassedSteps: {},
             });
             expect(onboardingController.hintStore.state.open).toBe(true);
+            expect(finished).toHaveBeenCalledOnce();
             expect(controller.getActivePromo()).toBe('coolNewFeature');
             expect(await controller.requestStart('nextPromo')).toBe(false);
             expect(controller.state.base.activeQueue).toEqual(['nextPromo']);
@@ -789,6 +794,7 @@ describe('temporary presets', () => {
             }
 
             expect(onboardingController.hintStore.state.open).toBe(false);
+            expect(finished).toHaveBeenCalledOnce();
             expect(controller.getActivePromo()).toBe('nextPromo');
             expect(controller.state.progress?.finishedPromos).toEqual(['coolNewFeature']);
         },

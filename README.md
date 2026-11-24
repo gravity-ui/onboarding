@@ -283,6 +283,8 @@ const onboardingOptions = {
 
 Set `persistence: 'temporary'` on a common or internal preset to keep its active run and passed steps in memory. Use `runPreset` to start it explicitly. Temporary presets are omitted from the wizard and cannot be started by `suggestPresetOnce`.
 
+Read `controller.state.base.activePresets` and `controller.state.progress?.presetPassedSteps` for live progress in the current tab. Both preset modes use the same step and completion events. The snapshots passed to `onSave` and shared by `MultiTabSyncPlugin` omit temporary activation and steps.
+
 Finishing the run saves the preset in `finishedPresets`. Each explicit `runPreset` call resets that temporary preset's progress and starts from the first step, including when the previous run is active or complete. By default, presets use `persistence: 'persistent'`.
 
 For a page-scoped run, pass an abort signal and abort it when leaving the page:
@@ -390,7 +392,7 @@ Semantics:
 
 ## Events
 
-You can use event system. Available events: `showHint`, `stepPass`, `addPreset`, `beforeRunPreset`, `runPreset`, `finishPreset`, `cancelTemporaryPreset`, `beforeSuggestPreset`, `stepElementReached`, `beforeShowHint`, `stateChange`, `hintDataChanged`, `closeHint`, `init`, `wizardStateChange`
+You can use event system. Available events: `showHint`, `stepPass`, `addPreset`, `beforeRunPreset`, `runPreset`, `finishPreset`, `cancelPreset`, `beforeSuggestPreset`, `stepElementReached`, `beforeShowHint`, `stateChange`, `hintDataChanged`, `closeHint`, `init`, `wizardStateChange`
 
 ```typescript jsx
 controller.events.subscribe('beforeShowHint', callback);

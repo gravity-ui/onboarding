@@ -1,5 +1,6 @@
 import {Controller} from '../controller';
 import {createControlledPromise} from '../debounce';
+import type {PresetPersistence} from '../types';
 import {getAnchorElement, getOptions, getOptionsWithCombined} from './utils';
 
 const NOW_DATE = new Date(2025, 2, 7);
@@ -245,7 +246,10 @@ describe('store api', function () {
 });
 
 describe('temporary presets', () => {
-    const getTemporaryPresetOptions = () => {
+    const getTemporaryPresetOptions = (
+        persistence: PresetPersistence = 'temporary',
+        finalPassMode?: 'onShowHint',
+    ) => {
         const options = getOptions();
 
         return {
@@ -256,10 +260,15 @@ describe('temporary presets', () => {
                     ...options.config.presets,
                     temporaryPreset: {
                         name: 'Temporary preset',
-                        persistence: 'temporary' as const,
+                        persistence,
                         steps: [
                             {slug: 'firstHint', name: '', description: ''},
-                            {slug: 'secondHint', name: '', description: ''},
+                            {
+                                slug: 'secondHint',
+                                name: '',
+                                description: '',
+                                passMode: finalPassMode,
+                            },
                         ],
                     },
                 },
@@ -327,7 +336,7 @@ describe('temporary presets', () => {
         const controller = new Controller(options);
         const page = new AbortController();
         const onCancel = vi.fn();
-        controller.events.subscribe('cancelTemporaryPreset', onCancel);
+        controller.events.subscribe('cancelPreset', onCancel);
 
         expect(await controller.runPreset('temporaryPreset', {signal: page.signal})).toBe(true);
         await controller.stepElementReached({stepSlug: 'firstHint', element: getAnchorElement()});
@@ -336,6 +345,10 @@ describe('temporary presets', () => {
 
         await controller.setWizardState('collapsed');
         await controller.passStep('createSprint');
+
+        const snapshot = controller.getSnapshot();
+        expect(snapshot.base.activePresets).toContain('temporaryPreset');
+        expect(snapshot.progress?.presetPassedSteps.temporaryPreset).toEqual(['firstHint']);
         expect(options.onSave.state).toHaveBeenLastCalledWith(
             expect.objectContaining({
                 availablePresets: ['createProject'],
@@ -368,6 +381,58 @@ describe('temporary presets', () => {
             finishedPresets: [],
         });
     });
+
+    it.each(['persistent', 'temporary'] as const)(
+        'finishes a %s preset as soon as its final auto-passed hint is shown',
+        async (persistence) => {
+            const options = getTemporaryPresetOptions(persistence, 'onShowHint');
+            const controller = new Controller(options);
+            const onFinish = vi.fn();
+            controller.events.subscribe('finishPreset', () => {
+                const {base, progress} = controller.getSnapshot();
+
+                onFinish({
+                    active: base.activePresets.includes('temporaryPreset'),
+                    finished: progress?.finishedPresets.includes('temporaryPreset'),
+                    hintOpen: controller.hintStore.state.open,
+                });
+            });
+
+            await controller.runPreset('temporaryPreset');
+            await controller.stepElementReached({
+                stepSlug: 'firstHint',
+                element: getAnchorElement(),
+            });
+            await controller.passStep('firstHint');
+            await controller.stepElementReached({
+                stepSlug: 'secondHint',
+                element: getAnchorElement(),
+            });
+
+            expect(onFinish).toHaveBeenCalledExactlyOnceWith({
+                active: true,
+                finished: false,
+                hintOpen: true,
+            });
+            expect(controller.getSnapshot().base.activePresets).not.toContain('temporaryPreset');
+            expect(controller.hintStore.state.hint?.step.slug).toBe('secondHint');
+            expect(controller.hintStore.state.open).toBe(true);
+            expect(options.onSave.progress).toHaveBeenLastCalledWith({
+                presetPassedSteps:
+                    persistence === 'temporary'
+                        ? {createProject: ['openBoard']}
+                        : {
+                              createProject: ['openBoard'],
+                              temporaryPreset: ['firstHint', 'secondHint'],
+                          },
+                finishedPresets: ['temporaryPreset'],
+            });
+
+            controller.closeHint();
+
+            expect(onFinish).toHaveBeenCalledTimes(1);
+        },
+    );
 
     it('restarts the active temporary run and detaches its previous signal', async () => {
         const options = getTemporaryPresetOptions();
@@ -483,7 +548,7 @@ describe('temporary presets', () => {
         const controller = new Controller(options);
         const page = new AbortController();
         const onCancel = vi.fn();
-        controller.events.subscribe('cancelTemporaryPreset', onCancel);
+        controller.events.subscribe('cancelPreset', onCancel);
 
         await controller.runPreset('temporaryPreset', {signal: page.signal});
         await controller.stepElementReached({stepSlug: 'firstHint', element: getAnchorElement()});
@@ -495,7 +560,10 @@ describe('temporary presets', () => {
 
         expect(controller.hintStore.state.open).toBe(false);
         expect(onCancel).toHaveBeenCalledWith({preset: 'temporaryPreset'}, controller);
-        expect(controller.state.progress?.finishedPresets).toEqual([]);
+        const snapshot = controller.getSnapshot();
+        expect(snapshot.base.activePresets).not.toContain('temporaryPreset');
+        expect(snapshot.progress?.presetPassedSteps).not.toHaveProperty('temporaryPreset');
+        expect(snapshot.progress?.finishedPresets).toEqual([]);
 
         expect(await controller.runPreset('temporaryPreset')).toBe(true);
         await controller.stepElementReached({stepSlug: 'firstHint', element: getAnchorElement()});

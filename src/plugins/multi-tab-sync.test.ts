@@ -329,6 +329,98 @@ describe('state sync', function () {
     });
 });
 
+describe('temporary presets', () => {
+    const getTemporaryData = () => {
+        const options = getOptions(
+            {
+                availablePresets: [],
+                activePresets: [],
+                suggestedPresets: [],
+                wizardState: 'hidden',
+            },
+            {presetPassedSteps: {}},
+        );
+        const plugin = new MultiTabSyncPlugin({__unstable_enableStateSync: true});
+        const controller = new Controller({
+            ...options,
+            config: {
+                presets: {
+                    ...options.config.presets,
+                    createProject: {
+                        ...options.config.presets.createProject,
+                        persistence: 'temporary',
+                    },
+                },
+            },
+            dateNow: () => new Date(Date.UTC(2025, 0, 1)),
+            plugins: [plugin],
+        });
+
+        return {controller, plugin};
+    };
+
+    it('syncs persisted completion and keeps the active preset and passed steps local', async () => {
+        const {controller, plugin} = getTemporaryData();
+        const stateKey = plugin.options.changeStateLSKey;
+        const finishPreset = vi.fn();
+        controller.events.subscribe('finishPreset', finishPreset);
+
+        await controller.runPreset('createProject');
+        await controller.passStep('openBoard');
+
+        const otherTabState = JSON.parse(localStorage.getItem(stateKey) ?? '{}');
+        expect(otherTabState.base.activePresets).toEqual([]);
+        expect(otherTabState.progress.presetPassedSteps).toEqual({});
+
+        otherTabState.base.activePresets.push('createQueue');
+        otherTabState.progress.finishedPresets.push('createProject');
+        otherTabState.progress.presetPassedSteps.createProject = ['openBoard', 'createSprint'];
+        plugin.handleLSEvent(
+            new StorageEvent('storage', {key: stateKey, newValue: JSON.stringify(otherTabState)}),
+        );
+
+        expect(controller.state.base.activePresets).toEqual(
+            expect.arrayContaining(['createProject', 'createQueue']),
+        );
+        await controller.stepElementReached({
+            stepSlug: 'createSprint',
+            element: getAnchorElement(),
+        });
+        expect(controller.hintStore.state.hint?.step.slug).toBe('createSprint');
+        expect(controller.state.progress?.finishedPresets).toEqual(['createProject']);
+
+        await controller.passStep('createSprint');
+        await controller.passStep('createIssue');
+        expect(finishPreset).toHaveBeenCalledTimes(1);
+        expect(controller.state.base.activePresets).not.toContain('createProject');
+
+        const completion = localStorage.getItem(stateKey);
+        const receiver = getTemporaryData();
+        receiver.plugin.handleLSEvent(
+            new StorageEvent('storage', {key: stateKey, newValue: completion}),
+        );
+
+        expect(receiver.controller.state.progress?.finishedPresets).toEqual(['createProject']);
+        expect(receiver.controller.state.progress?.presetPassedSteps).toEqual({});
+    });
+
+    it('does not send or receive cross-tab hint closure for a temporary preset', async () => {
+        const {controller, plugin} = getTemporaryData();
+        const closeKey = plugin.options.closeHintLSKey;
+
+        await controller.runPreset('createProject');
+        await controller.stepElementReached({
+            stepSlug: 'openBoard',
+            element: getAnchorElement(),
+        });
+        plugin.handleLSEvent(new StorageEvent('storage', {key: closeKey, newValue: 'openBoard'}));
+
+        expect(controller.hintStore.state.open).toBe(true);
+        controller.closeHintByUser();
+        expect(localStorage.getItem(closeKey)).toBeNull();
+    });
+});
+
 describe('local storage errors', function () {
     afterAll(() => {
         vi.clearAllMocks();

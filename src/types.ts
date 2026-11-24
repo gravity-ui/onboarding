@@ -194,14 +194,11 @@ export type EventsMap<
     beforeRunPreset: {preset: Presets};
     runPreset: {preset: Presets};
     finishPreset: {preset: Presets};
-    cancelTemporaryPreset: {preset: Presets};
+    cancelPreset: {preset: Presets};
     beforeSuggestPreset: {preset: string};
     resetPresetProgress: {presets: Array<string>};
     stepElementReached: {stepData: ReachElementParams<Presets, Steps>};
-    beforeShowHint: {
-        stepData: ReachElementParams<Presets, Steps>;
-        isCurrentRun?: () => boolean;
-    };
+    beforeShowHint: {stepData: ReachElementParams<Presets, Steps>};
     stateChange: {state: Controller<any, any, any>['state']};
     hintDataChanged: {state: HintState<HintParams, Presets, Steps>};
     closeHint: {

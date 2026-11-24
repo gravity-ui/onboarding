@@ -54,18 +54,13 @@ export class WizardPlugin implements OnboardingPlugin {
     };
 
     onRunPreset = async ({preset}: EventsMap['runPreset']) => {
-        if (!this.onboardingInstance) {
-            return;
-        }
-
-        const currentPreset = this.onboardingInstance?.options.config.presets[preset];
-
-        if (currentPreset.type !== 'combined' && currentPreset.persistence === 'temporary') {
+        if (!this.onboardingInstance || this.onboardingInstance.isTemporaryPreset(preset)) {
             return;
         }
 
         this.onboardingInstance.closeHintByUser();
 
+        const currentPreset = this.onboardingInstance.options.config.presets[preset];
         const presetVisibility =
             'visibility' in currentPreset ? currentPreset.visibility : undefined;
 
@@ -75,16 +70,12 @@ export class WizardPlugin implements OnboardingPlugin {
     };
 
     onFinishPreset = ({preset}: EventsMap['finishPreset']) => {
-        if (!this.onboardingInstance) {
+        if (!this.onboardingInstance || this.onboardingInstance.isTemporaryPreset(preset)) {
             return;
         }
 
         const presets = this.onboardingInstance?.options.config.presets;
         const currentPreset = presets[preset];
-
-        if (currentPreset.type !== 'combined' && currentPreset.persistence === 'temporary') {
-            return;
-        }
 
         const presetVisibility =
             'visibility' in currentPreset ? currentPreset.visibility : undefined;
@@ -101,7 +92,10 @@ export class WizardPlugin implements OnboardingPlugin {
 
         const presetToEraseProgress = this.onboardingInstance.state.base.activePresets.filter(
             (presetSlug) => {
-                if (!this.onboardingInstance) {
+                if (
+                    !this.onboardingInstance ||
+                    this.onboardingInstance.isTemporaryPreset(presetSlug)
+                ) {
                     return false;
                 }
                 const preset = this.onboardingInstance.options.config.presets[presetSlug];

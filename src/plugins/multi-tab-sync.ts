@@ -35,7 +35,9 @@ export class MultiTabSyncPlugin implements OnboardingPlugin {
         window.addEventListener('storage', this.handleLSEvent);
 
         if (this.options.__unstable_enableStateSync) {
-            onboarding.events.subscribe('stateChange', () => this.changeState(onboarding.state));
+            onboarding.events.subscribe('stateChange', () =>
+                this.changeState(onboarding.getPersistedState()),
+            );
         }
 
         if (this.options.enableCloseHintSync) {
@@ -50,20 +52,21 @@ export class MultiTabSyncPlugin implements OnboardingPlugin {
 
         const isChangeStateEvent = event.key === this.options.changeStateLSKey && event.newValue;
         if (this.options.__unstable_enableStateSync && isChangeStateEvent) {
-            this.onboardingInstance.state = JSON.parse(event.newValue);
-            this.onboardingInstance.emitStateChange();
+            this.onboardingInstance.applyPersistedState(JSON.parse(event.newValue));
         }
 
         const isCloseHintEvent = event.key === this.options.closeHintLSKey && event.newValue;
         if (this.options.enableCloseHintSync && isCloseHintEvent) {
-            this.onboardingInstance.closeHintByUser(event.newValue);
+            const {hint} = this.onboardingInstance.hintStore.state;
+
+            if (!hint || !this.onboardingInstance.isTemporaryPreset(hint.preset)) {
+                this.onboardingInstance.closeHintByUser(event.newValue);
+            }
         }
     };
 
     closeHint = ({hint}: EventsMap['closeHint']) => {
-        const preset = this.onboardingInstance?.options.config.presets[hint.preset];
-
-        if (preset?.type !== 'combined' && preset?.persistence === 'temporary') {
+        if (this.onboardingInstance?.isTemporaryPreset(hint.preset)) {
             return;
         }
 
