@@ -698,7 +698,7 @@ const {controller: onboardingController} = createOnboarding({
         }
     },
     plugins: [new PromoPresetsPlugin(),]
-   /**/ 
+   /**/
 })
 
 const {controller} = createPromoManager({
@@ -710,7 +710,7 @@ const {controller} = createPromoManager({
                 conditions: [ShowOnceForSession()], // only 1 promo hint for session
                 promos: [
                     {
-                        slug: 'coolNewFeature', // slug = onboarding preset name 
+                        slug: 'coolNewFeature', // slug = onboarding preset name
                         conditions: [/**/], //  you can add additional conditions
                     },
                 ],
@@ -723,3 +723,148 @@ const {controller} = createPromoManager({
     },
 });
 ```
+
+### Integration modes
+
+#### `mode: 'hint'` (default)
+
+The existing behaviour. The promo slot is requested on every `beforeShowHint`
+and released when the hint is closed (`closeHint`). Omitting `mode` selects
+this path, so there is **no migration needed** for existing consumers.
+
+#### `mode: 'preset'`
+
+The preset lifecycle owns the slot:
+
+| Onboarding event | Promo action |
+|---|---|
+| `beforeSuggestPreset` | `requestStart` — vetoes the suggest if the slot is unavailable; a refused suggest releases its queued request (no ghost in the queue) |
+| `suggestPresetCancelled` | releases the slot if it was won before a product veto |
+| `runPreset` | `requestStart` — non-vetoing (manual run always proceeds) |
+| `beforeShowHint` | active gate — re-acquires the slot via `requestStart` when it is not held; `true` when this preset holds it (see below) |
+| `finishPreset` | `finishPromo` |
+| `resetPresetProgress` | `resetPromoProgress` |
+| `closeHint` | **not subscribed** — slot is held across all steps |
+
+In preset mode the `promoGroups` config is a **whitelist**: every promo preset
+(`visibility: 'alwaysHidden'`) must be declared in the group's `promos` explicitly.
+Unlike hint mode, presets are **not auto-injected** — an undeclared preset is
+vetoed by `beforeSuggestPreset` and its hints never show. Hint mode (default)
+keeps auto-injection: every non-internal `alwaysHidden` preset is registered as
+a promo with empty conditions.
+
+```typescript
+const {controller} = createPromoManager({
+    config: {
+        promoGroups: [{
+            slug: 'hintPromos',
+            conditions: [ShowOnceForSession()],
+            // Preset mode requires explicit declarations — alwaysHidden
+            // presets are not auto-injected here.
+            promos: [
+                {slug: 'coolNewFeature', conditions: []},
+                {slug: 'coolNewFeature2', conditions: []},
+            ],
+        }],
+    },
+    onboarding: {
+        getInstance: () => onboardingController,
+        groupSlug: 'hintPromos',
+        mode: 'preset',  // ← new
+    },
+});
+```
+
+Releasing the slot mid-preset is done from a step hook:
+
+```typescript
+steps: [{
+    slug: 'showCoolFeature',
+    name: '', description: '',
+    hooks: {
+        onCloseHintByUser: ({eventSource}) => {
+            if (eventSource === 'closedByUser') controller.cancelPromo('coolNewFeature');
+        },
+    },
+}]
+```
+
+#### Reload continuation and suggest lifecycle
+
+A preset that already ran — e.g. restored from persisted base state after a
+page reload — re-acquires the promo slot **on demand**: the first
+`beforeShowHint` (fired when a step element is reached) calls `requestStart`
+against the fresh promo manager, so the scenario continues without a new
+suggest.
+
+Refused suggests are **not retried** by the library:
+
+- the once-guard is never burned by a veto — a later manual suggest still works;
+- a suggest vetoed by `requestStart` releases its queued request immediately,
+  so other promos are never blocked by a preset that did not run;
+- a slot won before a product veto (a `beforeSuggestPreset` listener returning
+  `false`) is released when the suggest is cancelled (`suggestPresetCancelled`).
+
+If a vetoed suggest should still happen later, call `suggestPresetOnce` again
+from your own trigger — promo conditions and the once-guard are evaluated live
+on every call. Page-context gating belongs in a `beforeSuggestPreset` listener
+or in promo conditions, not only in the trigger callback.
+
+### Multiple onboarding groups
+
+Pass an array of group slugs plus an optional `resolveGroup` mapper to
+distribute presets across independent budget groups:
+
+```typescript
+onboarding: {
+    getInstance: () => onboardingController,
+    groupSlug: ['helpGroup', 'infoGroup'],
+    resolveGroup: (presetSlug) =>
+        presetSlug.startsWith('info_') ? 'infoGroup' : 'helpGroup',
+}
+```
+
+### Deferred initialization (`initType: 'event'`)
+
+Use `initType: 'event'` when you need to gate all promo activation until some
+app-level condition is met (data loaded, user authenticated, etc.). First
+activation is **passive** — there is no `init()` method; the gate opens when
+the configured event arrives through `sendEvent`:
+
+```typescript
+const {controller} = createPromoManager({
+    config: {
+        // timeout is a mandatory fallback; event names the opener
+        init: {initType: 'event', timeout: 5000, event: 'app:ready'},
+        promoGroups: [/**/],
+    },
+    // …
+});
+
+// Once the app is ready (e.g. bridged from a real signal):
+controller.sendEvent('app:ready');
+```
+
+The `timeout` is mandatory and acts as a safety net: if the event never
+arrives the manager activates automatically after the given milliseconds,
+logging a debug warning. If the configured event name also matches a promo
+`trigger.on`, one `sendEvent` call both opens the gate and fires those promos
+— the two roles are independent.
+
+### Reinitialization
+
+```typescript
+// Gate all future activation and re-evaluate the queue.
+// Re-arms a fresh listener for the configured init event + timeout fallback.
+controller.reinitialize();
+
+// Or preserve the active promo across the re-arm (pause parity).
+// In preset mode an in-progress preset can re-acquire its slot on the next
+// hint attempt, but keepActive avoids the gap entirely.
+controller.reinitialize({keepActive: true});
+
+// Open the gate — send the configured event (or let the timeout win).
+controller.sendEvent('app:ready');
+```
+
+By default the active promo is dropped; pass `{keepActive: true}` to keep it.
