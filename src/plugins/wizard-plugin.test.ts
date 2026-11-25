@@ -175,6 +175,31 @@ describe('open wizard', function () {
 });
 
 describe('close wizard', function () {
+    it('preserves a manually started temporary preset when clearing wizard progress', async () => {
+        const options = getOptions({wizardState: 'visible'});
+        const controller = new Controller({
+            ...options,
+            config: {
+                presets: {
+                    ...options.config.presets,
+                    createProject: {
+                        ...options.config.presets.createProject,
+                        persistence: 'temporary',
+                    },
+                },
+            },
+            plugins: [new WizardPlugin()],
+            dateNow: () => new Date(Date.UTC(2025, 0, 1)),
+        });
+
+        await controller.runPreset('createProject');
+        await controller.passStep('openBoard');
+        await controller.setWizardState('hidden');
+
+        expect(controller.state.base.activePresets).toContain('createProject');
+        expect(controller.state.progress?.presetPassedSteps.createProject).toEqual(['openBoard']);
+    });
+
     it('wizard visible -> remove progress for common preset', async function () {
         const options = getOptions({enabled: true, wizardState: 'visible'});
         options.plugins = [new WizardPlugin()];

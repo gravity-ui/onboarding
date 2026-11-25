@@ -22,7 +22,8 @@ type HintPlacement =
     | 'left-start'
     | 'left-end';
 
-export type HintCloseSource = 'stepPassed' | 'closedByUser' | 'elementHidden' | 'externalEvent';
+export type HintCloseSource =
+    'stepPassed' | 'closedByUser' | 'elementHidden' | 'externalEvent' | 'interrupted';
 
 export type PresetStatus = 'unPassed' | 'inProgress' | 'finished';
 
@@ -43,6 +44,7 @@ export type PresetStep<Steps extends string, HintParams> = {
 };
 
 export type PresetVisibility = 'visible' | 'initialHidden' | 'alwaysHidden';
+export type PresetPersistence = 'persistent' | 'temporary';
 
 export type Preset<HintParams, Steps extends string> =
     CommonPreset<HintParams, Steps> | CombinedPreset<string> | InternalPreset<HintParams, Steps>;
@@ -58,12 +60,14 @@ export type CommonPreset<HintParams, Steps extends string> = {
     description?: ReactNode;
     type?: 'default';
     visibility?: PresetVisibility;
+    persistence?: PresetPersistence;
     steps: PresetStep<Steps, HintParams | undefined>[];
     hooks?: PresetHooks;
 };
 
 export type InternalPreset<HintParams, Steps extends string> = {
     type: 'internal';
+    persistence?: PresetPersistence;
     steps: PresetStep<Steps, HintParams | undefined>[];
     hooks?: PresetHooks;
 };
@@ -186,6 +190,7 @@ export type EventsMap<
     beforeRunPreset: {preset: Presets};
     runPreset: {preset: Presets};
     finishPreset: {preset: Presets};
+    cancelPreset: {preset: Presets};
     beforeSuggestPreset: {preset: string};
     resetPresetProgress: {presets: Array<string>};
     stepElementReached: {stepData: ReachElementParams<Presets, Steps>};

@@ -415,6 +415,10 @@ export class Controller {
 
         const requests: Promise<boolean>[] = [];
         for (const promoSlug of this.triggersMap[eventName]) {
+            if (this.options.onboarding?.getInstance().isTemporaryPreset(promoSlug)) {
+                continue;
+            }
+
             const promo = this.helpers.promoBySlug[promoSlug];
 
             const timeout = promo.trigger?.timeout;
@@ -604,6 +608,13 @@ export class Controller {
                     return true;
                 }
 
+                if (
+                    instance.isTemporaryPreset(stepData.preset) &&
+                    !instance.state.base.activePresets.includes(stepData.preset)
+                ) {
+                    return false;
+                }
+
                 const requestVersion = this.startRequestVersions.get(stepData.preset);
                 const result = await this.requestStart(stepData.preset);
                 // An obsolete hint attempt must not skip a newer run of the same promo.
@@ -620,20 +631,54 @@ export class Controller {
             },
         );
 
+        let finishedVisiblePromo: string | undefined;
+
         instance.events.subscribe(
             'finishPreset',
-            async ({preset}: OnboardingEventsMap['finishPreset']) => {
-                if (this.promoPresets.has(preset)) {
+            ({preset}: OnboardingEventsMap['finishPreset']) => {
+                if (!this.promoPresets.has(preset)) return;
+
+                const {hint} = instance.hintStore.state;
+
+                if (
+                    instance.isTemporaryPreset(preset) &&
+                    hint?.preset === preset &&
+                    hint.step.passMode === 'onShowHint'
+                ) {
+                    finishedVisiblePromo = preset;
+                } else {
                     this.finishPromo(preset);
                 }
             },
         );
 
-        instance.events.subscribe('closeHint', async ({hint}: OnboardingEventsMap['closeHint']) => {
-            if (this.promoPresets.has(hint.preset)) {
-                this.skipPromo(hint.preset);
-            }
-        });
+        instance.events.subscribe(
+            'cancelPreset',
+            ({preset}: OnboardingEventsMap['cancelPreset']) => {
+                if (this.promoPresets.has(preset)) {
+                    this.skipPromo(preset);
+                }
+            },
+        );
+
+        instance.events.subscribe(
+            'closeHint',
+            ({hint, eventSource}: OnboardingEventsMap['closeHint']) => {
+                if (!this.promoPresets.has(hint.preset)) {
+                    return;
+                }
+
+                if (finishedVisiblePromo === hint.preset) {
+                    finishedVisiblePromo = undefined;
+                    this.finishPromo(hint.preset);
+                } else if (
+                    !instance.isTemporaryPreset(hint.preset) ||
+                    (eventSource !== 'stepPassed' && eventSource !== 'interrupted')
+                ) {
+                    this.skipPromo(hint.preset);
+                }
+            },
+        );
 
         instance.events.subscribe(
             'resetPresetProgress',
@@ -711,7 +756,11 @@ export class Controller {
         );
         const isGroupRepeatable = Boolean(group?.repeatable);
 
-        return isPromoRepeatable || isGroupRepeatable;
+        return (
+            isPromoRepeatable ||
+            isGroupRepeatable ||
+            Boolean(this.options.onboarding?.getInstance().isTemporaryPreset(slug))
+        );
     };
 
     private activatePromo = (slug: PromoSlug) => {
