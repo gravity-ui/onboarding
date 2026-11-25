@@ -285,19 +285,17 @@ Set `persistence: 'temporary'` on a common or internal preset to keep its active
 
 Read `controller.state.base.activePresets` and `controller.state.progress?.presetPassedSteps` for live progress in the current tab. Both preset modes use the same step and completion events. The snapshots passed to `onSave` and shared by `MultiTabSyncPlugin` omit temporary activation and steps.
 
-Finishing the run saves the preset in `finishedPresets`. Each explicit `runPreset` call resets that temporary preset's progress and starts from the first step, including when the previous run is active or complete. By default, presets use `persistence: 'persistent'`.
+Finishing a run saves the preset in `finishedPresets`. Each explicit `runPreset` call clears that temporary preset's in-memory steps and starts from the first step. The saved completion is preserved during a replay, and the `finishPreset` event is emitted after each run completes. By default, presets use `persistence: 'persistent'`.
 
-For a page-scoped run, pass an abort signal and abort it when leaving the page:
+For a page-scoped run, call `cancelPreset` when leaving the page:
 
 ```ts
-const pageLifetime = new AbortController();
+await controller.runPreset('pageGuide');
 
-await controller.runPreset('pageGuide', {signal: pageLifetime.signal});
-
-pageLifetime.abort();
+await controller.cancelPreset('pageGuide');
 ```
 
-Aborting an unfinished run clears it without recording completion. For presets managed by the promo manager, the slot is released on completion or abort. A final hint with `passMode: 'onShowHint'` is recorded as complete when shown and keeps its slot until it closes.
+Cancelling an unfinished run clears the temporary progress and preserves any previous completion. For presets managed by the promo manager, the slot is released on completion or cancellation. A final hint with `passMode: 'onShowHint'` is recorded as complete when shown and keeps its slot until it closes.
 
 ### Combined presets
 

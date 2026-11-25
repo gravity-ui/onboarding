@@ -402,6 +402,14 @@ describe('temporary presets', () => {
 
         expect(receiver.controller.state.progress?.finishedPresets).toEqual(['createProject']);
         expect(receiver.controller.state.progress?.presetPassedSteps).toEqual({});
+
+        await controller.runPreset('createProject');
+        await controller.passStep('openBoard');
+        await controller.cancelPreset('createProject');
+
+        const replayedState = JSON.parse(localStorage.getItem(stateKey) ?? '{}');
+        expect(replayedState.progress.finishedPresets).toEqual(['createProject']);
+        expect(replayedState.progress.presetPassedSteps).toEqual({});
     });
 
     it('does not send or receive cross-tab hint closure for a temporary preset', async () => {

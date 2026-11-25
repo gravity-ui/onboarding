@@ -46,10 +46,6 @@ export type PresetStep<Steps extends string, HintParams> = {
 export type PresetVisibility = 'visible' | 'initialHidden' | 'alwaysHidden';
 export type PresetPersistence = 'persistent' | 'temporary';
 
-export type RunPresetOptions = {
-    signal?: AbortSignal;
-};
-
 export type Preset<HintParams, Steps extends string> =
     CommonPreset<HintParams, Steps> | CombinedPreset<string> | InternalPreset<HintParams, Steps>;
 

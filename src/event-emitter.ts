@@ -13,7 +13,7 @@ export class EventEmitter<
         this.extraArg = extraArg;
     }
 
-    emit = async <T extends EventTypes>(type: T, data: EventsMap[T], isCurrent?: () => boolean) => {
+    emit = async <T extends EventTypes>(type: T, data: EventsMap[T]) => {
         const listeners = this.map[type];
 
         if (!listeners || listeners.size === 0) {
@@ -22,8 +22,6 @@ export class EventEmitter<
 
         let canContinue = true;
         for (const listener of listeners) {
-            if (isCurrent?.() === false) return false;
-
             const result = await listener(data, this.extraArg);
             if (result === false) {
                 canContinue = false;

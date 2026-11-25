@@ -608,6 +608,13 @@ export class Controller {
                     return true;
                 }
 
+                if (
+                    instance.isTemporaryPreset(stepData.preset) &&
+                    !instance.state.base.activePresets.includes(stepData.preset)
+                ) {
+                    return false;
+                }
+
                 const requestVersion = this.startRequestVersions.get(stepData.preset);
                 const result = await this.requestStart(stepData.preset);
                 // An obsolete hint attempt must not skip a newer run of the same promo.
@@ -675,8 +682,9 @@ export class Controller {
 
         instance.events.subscribe(
             'resetPresetProgress',
-            ({presets}: OnboardingEventsMap['resetPresetProgress']) =>
-                this.resetPromoProgress(presets),
+            async ({presets}: OnboardingEventsMap['resetPresetProgress']) => {
+                this.resetPromoProgress(presets);
+            },
         );
 
         this.logger.debug('Onboarding integration applied');
@@ -748,7 +756,11 @@ export class Controller {
         );
         const isGroupRepeatable = Boolean(group?.repeatable);
 
-        return isPromoRepeatable || isGroupRepeatable;
+        return (
+            isPromoRepeatable ||
+            isGroupRepeatable ||
+            Boolean(this.options.onboarding?.getInstance().isTemporaryPreset(slug))
+        );
     };
 
     private activatePromo = (slug: PromoSlug) => {
@@ -832,33 +844,12 @@ export class Controller {
         this.triggerNextPromo();
     };
 
-    private async resetPromoProgress(promoSlugs: PromoSlug[]) {
-        if (promoSlugs.length === 0) {
-            return;
-        }
-
-        if (!this.state.progress) {
-            await this.fetchProgressState();
-        }
-
-        this.assertProgressLoaded();
-        const {finishedPromos, progressInfoByPromo} = this.state.progress;
-        const promosWithProgress = promoSlugs.filter(
-            (slug) =>
-                finishedPromos.includes(slug) ||
-                Object.prototype.hasOwnProperty.call(progressInfoByPromo, slug),
-        );
-
-        if (promosWithProgress.length === 0) {
-            return;
-        }
-
-        for (const slug of promosWithProgress) {
+    private resetPromoProgress(promoSlugs: PromoSlug[]) {
+        for (const slug of promoSlugs) {
             this.stateActions.deletePromoProgress(slug);
         }
 
         this.emitChange();
-        this.saveProgress();
     }
 
     // eslint-disable-next-line @typescript-eslint/member-ordering
